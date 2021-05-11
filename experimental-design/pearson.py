@@ -4,35 +4,31 @@ import os
 
 from numpy.typing import ArrayLike
 
-from simulate import AngleTimes
-from simulate import simulate_single_contrast as simulate
-
-from utils import save_plot
-from utils import fisher_multiple_contrasts as fisher
-
+from simulate import AngleTimes, simulate
 from structures import Bilayer
+
+from utils import fisher, save_plot
 
 def pearson(bilayer: Bilayer, initial_contrasts: ArrayLike, contrasts: ArrayLike,
             angle_times: AngleTimes, save_path: str) -> None:
     xi = bilayer.parameters
 
-    models_init, qs_init, counts_init = [], [], []
+    qs_init, counts_init, models_init = [], [], []
     for contrast in initial_contrasts:
-        sample = bilayer.using_contrast(contrast)
-        simulated = simulate(sample, angle_times, include_counts=True)
-        models_init.append(simulated[0])
-        qs_init.append(simulated[1].x)
-        counts_init.append(simulated[2])
+        model, data = simulate(bilayer.using_contrast(contrast), angle_times)
+        
+        qs_init.append(data[:,0])
+        counts_init.append(data[:,3])
+        models_init.append(model)
         
     pearson_rs = {param: [] for param in xi}
     for x, new_contrast in enumerate(contrasts):
-        sample = bilayer.using_contrast(new_contrast)
-        model_new, data_new, counts_new = simulate(sample, angle_times, include_counts=True)
+        model, data = simulate(bilayer.using_contrast(new_contrast), angle_times)
 
         qs, counts, models = qs_init.copy(), counts_init.copy(), models_init.copy()
-        qs.append(data_new.x)
-        counts.append(counts_new)
-        models.append(model_new)
+        qs.append(data[:,0])
+        counts.append(data[:,3])
+        models.append(model)
         
         g = fisher(qs, xi, counts, models)
         f = np.linalg.inv(g)
@@ -45,9 +41,9 @@ def pearson(bilayer: Bilayer, initial_contrasts: ArrayLike, contrasts: ArrayLike
             print('>>> {0}/{1}'.format(x, len(contrasts)))
 
     labels = [param.name for param in xi]
-    save_path = os.path.join(save_path, str(bilayer))
+    save_path = os.path.join(save_path, bilayer.name)
 
-    fig = plt.figure(figsize=[36,14])
+    fig = plt.figure(figsize=[18,7])
 
     # Iterate over each parameter.
     for i, param in enumerate(xi):

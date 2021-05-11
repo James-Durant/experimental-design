@@ -5,10 +5,8 @@ from typing import List
 from refnx.reflect import SLD, Slab, Structure
 from refnx.analysis import Parameter, Objective, GlobalObjective
 
-from utils import Sampler, plot_objectives, save_plot
-
-from simulate import AngleTimes
-from simulate import simulate_single_contrast as simulate
+from simulate import simulate, AngleTimes
+from utils import Sampler, save_plot
 
 class Bilayer:
     """Parent class for the symmetric and asymmetric bilayer classes."""
@@ -43,23 +41,11 @@ class Bilayer:
         save_path = os.path.join(save_path, str(self))
         save_plot(fig, save_path, filename+'_nested_sampling')
 
-    def plot_objectives(self, save_path: str) -> None:
-        """Plots the fitted objectives of each measured contrast.
-
-        Args:
-            save_path (str): path to directory to save plot to.
-
-        """
-        fig, ax = plot_objectives(self.objectives)
-        ax.set_xscale('log')
-
-        save_path = os.path.join(save_path, str(self))
-        save_plot(fig, save_path, 'fitted_reflectivity')
-
 class SymmetricBilayer(Bilayer):
     """Defines a model describing a symmetric bilayer.
 
     Attributes:
+        name
         si_sld (float): SLD of silicon substrate.
         sio2_sld (float): SLD of silicon oxide.
         dmpc_hg_vol (float): headgroup volume of DMPC bilayer.
@@ -80,6 +66,8 @@ class SymmetricBilayer(Bilayer):
 
     """
     def __init__(self) -> None:
+        self.name = 'symmetric_bilayer'
+        
         # Define known values.
         self.si_sld      = 2.073
         self.sio2_sld    = 3.41
@@ -114,9 +102,6 @@ class SymmetricBilayer(Bilayer):
         # Vary all of the parameters defined above.
         for param in self.parameters:
             param.vary=True
-
-    def __str__(self) -> str:
-        return 'symmetric_bilayer'
 
     def using_contrast(self, contrast_sld: float) -> Structure:
         """Creates a structure representing the bilayer measured using a
@@ -256,6 +241,7 @@ class SingleAsymmetricBilayer(AsymmetricBilayer):
        asymmetry value. Inherits all of the attributes of the parent class.
 
     Attributes:
+        name
         asym_value (refnx.analysis.Parameter): bilayer asymmetry.
         inner_tg_sld (refnx.reflect.SLD): inner tailgroup SLD.
         outer_tg_sld (refnx.reflect.SLD): outer tailgroup SLD.
@@ -263,6 +249,7 @@ class SingleAsymmetricBilayer(AsymmetricBilayer):
     """
     def __init__(self) -> None:
         super().__init__() # Call parent class constructor.
+        self.name = 'single_asymmetric_bilayer'
 
         # Define the single asymmetry parameter.
         self.asym_value = Parameter(0.95, 'Asymmetry Value', (0,1), True)
@@ -271,9 +258,6 @@ class SingleAsymmetricBilayer(AsymmetricBilayer):
         # Use asymmetry to define inner and outer tailgroup SLDs.
         self.inner_tg_sld = SLD(self.asym_value*self.dPC_tg  + (1-self.asym_value)*self.hLPS_tg)
         self.outer_tg_sld = SLD(self.asym_value*self.hLPS_tg + (1-self.asym_value)*self.dPC_tg)
-
-    def __str__(self) -> str:
-        return 'single_asymmetric_bilayer'
 
 class DoubleAsymmetricBilayer(AsymmetricBilayer):
     """Defines a model describing an asymmetric bilayer defined by two
@@ -288,6 +272,7 @@ class DoubleAsymmetricBilayer(AsymmetricBilayer):
     """
     def __init__(self) -> None:
         super().__init__() # Call parent class constructor.
+        self.name = 'double_asymmetric_bilayer'
 
         # Define the two asymmetry parameters.
         self.inner_tg_pc = Parameter(0.95, 'Inner Tailgroup PC', (0,1), True)
@@ -298,30 +283,36 @@ class DoubleAsymmetricBilayer(AsymmetricBilayer):
         # Use the asymmetry parameters to define inner and outer tailgroup SLDs.
         self.inner_tg_sld = SLD(self.inner_tg_pc*self.dPC_tg + (1-self.inner_tg_pc)*self.hLPS_tg)
         self.outer_tg_sld = SLD(self.outer_tg_pc*self.dPC_tg + (1-self.outer_tg_pc)*self.hLPS_tg)
-
-    def __str__(self) -> str:
-        return 'double_asymmetric_bilayer'
     
 def QCS_sample() -> Structure:
     air = SLD(0, name='Air')
     layer1 = SLD(1.795, name='Layer 1 - Si')(thick=790.7, rough=24.5)
     layer2 = SLD(6.385, name='Layer 2 - Cu')(thick=297.9, rough=3.5)
     substrate = SLD(3.354, name='Substrate - Quartz')(thick=0, rough=12.9)
-    return air | layer1 | layer2 | substrate
+    
+    structure = air | layer1 | layer2 | substrate
+    structure.name = 'QCS_sample'
+    return structure
 
 def simple_sample() -> Structure:
     air = SLD(0, name='Air')
     layer1 = SLD(4, name='Layer 1')(thick=100, rough=2)
     layer2 = SLD(8, name='Layer 2')(thick=150, rough=2)
     substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
-    return air | layer1 | layer2 | substrate
+    
+    structure = air | layer1 | layer2 | substrate
+    structure.name = 'simple_sample'
+    return structure
 
 def thin_layer_sample_1() -> Structure:
     air = SLD(0, name='Air')
     layer1 = SLD(4, name='Layer 1')(thick=200, rough=2)
     layer2 = SLD(6, name='Layer 2')(thick=6, rough=2)
     substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
-    return air | layer1 | layer2 | substrate
+    
+    structure = air | layer1 | layer2 | substrate
+    structure.name = 'thin_layer_sample_1'
+    return structure
 
 def thin_layer_sample_2() -> Structure:
     air = SLD(0, name='Air')
@@ -329,14 +320,20 @@ def thin_layer_sample_2() -> Structure:
     layer2 = SLD(5, name='Layer 2')(thick=30, rough=6)
     layer3 = SLD(6, name='Layer 3')(thick=6, rough=2)
     substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
-    return air | layer1 | layer2 | layer3 | substrate
+    
+    structure = air | layer1 | layer2 | layer3 | substrate
+    structure.name = 'thin_layer_sample_2'
+    return structure
 
 def similar_sld_sample_1() -> Structure:
     air = SLD(0, name='Air')
     layer1 = SLD(0.9, name='Layer 1')(thick=80, rough=2)
     layer2 = SLD(1.0, name='Layer 2')(thick=50, rough=6)
     substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
-    return air | layer1 | layer2 | substrate
+    
+    structure = air | layer1 | layer2 | substrate
+    structure.name = 'similar_sld_sample_1'
+    return structure
 
 def similar_sld_sample_2() -> Structure:
     air = SLD(0, name='Air')
@@ -344,7 +341,10 @@ def similar_sld_sample_2() -> Structure:
     layer2 = SLD(5.5, name='Layer 2')(thick=30, rough=6)
     layer3 = SLD(6.0, name='Layer 3')(thick=35, rough=2)
     substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
-    return air | layer1 | layer2 | layer3 | substrate
+    
+    structure = air | layer1 | layer2 | layer3 | substrate
+    structure.name = 'similar_sld_sample_2'
+    return structure
 
 def many_param_sample() -> Structure:
     air = SLD(0, name='Air')
@@ -354,4 +354,7 @@ def many_param_sample() -> Structure:
     layer4 = SLD(3.2, name='Layer 4')(thick=40, rough=2)
     layer5 = SLD(4.0, name='Layer 5')(thick=18, rough=2)
     substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
-    return air | layer1 | layer2 | layer3 | layer4 | layer5 | substrate
+    
+    structure = air | layer1 | layer2 | layer3 | layer4 | layer5 | substrate
+    structure.name = 'many_param_sample'
+    return structure

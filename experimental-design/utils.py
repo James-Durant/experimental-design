@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-from typing import Optional, Tuple, List
+from typing import Optional, List
 from numpy.typing import ArrayLike
 
 from refnx.reflect import Structure, ReflectModel
@@ -138,7 +138,6 @@ def vary_structure(structure: Structure, random_init: bool=False, bound_size: fl
         vary_substrate (bool): whether to vary substrate roughness.
 
     Returns:
-        (refnx.reflect.Structure): reference to input `structure`.
         params
 
     """
@@ -185,51 +184,10 @@ def vary_structure(structure: Structure, random_init: bool=False, bound_size: fl
         if random_init:
             component.rough.value = np.random.uniform(*rough_bounds)
 
-    return structure, params
+    return params
 
-def fisher_single_contrast(q: ArrayLike, xi: List[Parameter], counts: ArrayLike,
-                           model: ReflectModel, step: float=0.005) -> ArrayLike:
-    """Calculates the FI matrix for a single `model`.
-
-    Args:
-        q (numpy.ndarray): momentum transfer values.
-        xi (list): varying parameters.
-        counts (numpy.ndarray): incident neutron counts for each Q value.
-        model (refnx.reflect.ReflectModel): model for calculating gradients.
-        step (float): step size to take when calculating gradient.
-
-    Returns:
-        (numpy.ndarray): FI matrix for the given model and data.
-
-    """
-    n = len(q) # Number of data points.
-    m = len(xi) # Number of parameters.
-    J = np.zeros((n,m))
-
-    # Calculate the gradient of the model reflectivity with every model
-    # parameter for every model data point.
-    for i in range(m):
-        parameter = xi[i]
-        old = parameter.value
-
-        # Calculate the model reflectance for the first side of the gradient.
-        x1 = parameter.value = old*(1-step)
-        y1 = model(q)
-
-        # Calculate the model reflectance for the second side of the gradient.
-        x2 = parameter.value = old*(1+step)
-        y2 = model(q)
-
-        parameter.value = old # Reset the parameter.
-
-        J[:,i] = (y2-y1) / (x2-x1) # Calculate the gradient.
-
-    # Calculate the FI matrix using the equations from the paper.
-    M = np.diag(counts / model(q), k=0)
-    return np.dot(np.dot(J.T, M), J)
-
-def fisher_multiple_contrasts(qs: List[ArrayLike], xi: List[Parameter], counts: List[ArrayLike],
-                              models: List[ReflectModel], step: float=0.005) -> ArrayLike:
+def fisher(qs: List[ArrayLike], xi: List[Parameter], counts: List[ArrayLike],
+           models: List[ReflectModel], step: float=0.005) -> ArrayLike:
     """Calculates the FI matrix for multiple `models` containing parameters, `xi`.
 
     Args:
@@ -272,81 +230,18 @@ def fisher_multiple_contrasts(qs: List[ArrayLike], xi: List[Parameter], counts: 
     M = np.diag(np.concatenate(counts) / r, k=0)
     return np.dot(np.dot(J.T, M), J)
 
-def plot_objective(objective: Objective, colour: str='black',
-                   label: bool=False) -> Tuple[plt.Figure, plt.Axes]:
-    """Plots the fit of a given `objective` against the objective's data.
-
-    Args:
-        objective (refnx.analysis.Objective): objective to plot.
-        colour (str): colour to use for objective's data points.
-        label (bool): whether to use structure's name in plot's legend.
-
-    Returns:
-        fig (matplotlib.pyplot.Figure): figure containing plotted objective.
-        ax (matplotlib.pyplot.Axes): axis containing plotted objective.
-
-    """
-    # Plot the reflectivity data.
-    fig = plt.figure(figsize=[9,7], dpi=600)
-    ax = fig.add_subplot(111)
-
-    # Plot the reflectivity data (Q, R, dR).
-    q, r, dr = q = objective.data.x, objective.data.y, objective.data.y_err
-    ax.errorbar(q, r, dr, color=colour, marker='o', ms=3, lw=0,
-                elinewidth=1, capsize=1.5, label=label)
-
-    # Plot the fit.
-    ax.plot(q, objective.model(q), color='red', zorder=20)
-
-    ax.set_xlabel('$\mathregular{Q\ (Å^{-1})}$', fontsize=11, weight='bold')
-    ax.set_ylabel('Reflectivity (arb.)', fontsize=11, weight='bold')
-    ax.set_yscale('log')
-    ax.set_ylim(1e-7, 2)
-    return fig, ax
-
-def plot_objectives(objectives: List[Objective], label: bool=True) -> Tuple[plt.Figure, plt.Axes]:
-    """Plots fits of `objectives` against the objectives' data.
-
-    Args:
-        objectives (list): objectives to plot.
-        label (bool): whether to include a legend in plot.
-
-    Returns:
-        fig (matplotlib.pyplot.Figure): figure containing plotted objectives.
-        ax (matplotlib.pyplot.Axes): axis containing plotted objectives.
-
-    """
-    # Get the figure and axis by plotting the first objective by itself.
-    fig, ax = plot_objective(objectives[0], None, label)
-
-    # Plot the remaining `objectives` on the same axis.
-    for objective in objectives[1:]:
-        q, r = objective.data.x, objective.data.y
-        r_error = objective.data.y_err
-
-        # Plot the reflectivity data.
-        ax.errorbar(q, r, r_error, marker='o', ms=3, lw=0, elinewidth=1, capsize=1.5,
-                    label=objective.model.structure.name if label else None)
-        # Plot the fit.
-        ax.plot(q, objective.model(q), color='red', zorder=20)
-
-    if label: # If labelling, create the legend.
-        ax.legend()
-
-    return fig, ax
-
-def save_plot(fig: plt.Figure, save_path: str, file_name: str) -> None:
+def save_plot(fig: plt.Figure, save_path: str, filename: str) -> None:
     """Saves a figure to a given directory.
 
     Args:
         fig (matplotlib.pyplot.Figure): figure to save.
         save_path (str): path to directory to save the figure to.
-        file_name (str): name of file to save the plot as.
+        filename (str): name of file to save the plot as.
 
     """
     # Create the directory if not present.
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    file_path = os.path.join(save_path, file_name+'.png')
+    file_path = os.path.join(save_path, filename+'.png')
     fig.savefig(file_path, dpi=600)

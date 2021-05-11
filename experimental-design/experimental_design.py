@@ -2,38 +2,31 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-from typing import Callable, List
-from numpy.typing import ArrayLike
-
-from simulate import AngleTimes
-from simulate import simulate_single_contrast as simulate
-
-from utils import vary_structure, save_plot
-from utils import fisher_multiple_contrasts as fisher
-
+from simulate import simulate, AngleTimes
 from structures import Bilayer
 
-def angle_choice(structure: Callable, initial_angle_times: AngleTimes,
-                 angles: ArrayLike, points_new: int, time_new: float, save_path: str) -> None:
-    sample, xi = vary_structure(structure())
+from utils import fisher, vary_structure, save_plot
 
-    models_init, qs_init, counts_init = [], [], []
+def angle_choice(sample, initial_angle_times, angles, points_new, time_new, save_path):
+    xi = vary_structure(sample)
+
+    qs_init, counts_init, models_init = [], [], []
     if initial_angle_times:
-        simulated = simulate(sample, initial_angle_times, include_counts=True)
+        model, data = simulate(sample, initial_angle_times)
         
-        models_init.append(simulated[0])
-        qs_init.append(simulated[1].x)
-        counts_init.append(simulated[2])
+        qs_init.append(data[:,0])
+        counts_init.append(data[:,3])
+        models_init.append(model)
         
     metric = []
     for i, angle_new in enumerate(angles):        
         angle_times = {angle_new: (points_new, time_new)}
-        model_new, data_new, counts_new = simulate(sample, angle_times, include_counts=True)
+        model, data = simulate(sample, angle_times)
 
         qs, counts, models = qs_init.copy(), counts_init.copy(), models_init.copy()
-        qs.append(data_new.x)
-        counts.append(counts_new)
-        models.append(model_new)
+        qs.append(data[:,0])
+        counts.append(data[:,3])
+        models.append(model)
         
         g = fisher(qs, xi, counts, models)
         f = np.linalg.inv(g)
@@ -57,31 +50,28 @@ def angle_choice(structure: Callable, initial_angle_times: AngleTimes,
     for angle in initial_angle_times:
         filename = filename + '_' + str(angle).replace('.', '')
         
-    save_path = os.path.join(save_path, structure.__name__)
+    save_path = os.path.join(save_path, sample.name)
     save_plot(fig, save_path, filename)
 
-def contrast_choice(bilayer: Bilayer, initial_contrasts: List[float], contrasts: ArrayLike,
-                    angle_times: AngleTimes, save_path: str, filename: str) -> None:
+def contrast_choice(bilayer, initial_contrasts, contrasts, angle_times, save_path, filename):
     xi = bilayer.parameters
 
-    models_init, qs_init, counts_init = [], [], []
+    qs_init, counts_init, models_init = [], [], []
     for contrast in initial_contrasts:
-        sample = bilayer.using_contrast(contrast)
-        simulated = simulate(sample, angle_times, include_counts=True)
-        models_init.append(simulated[0])
-        qs_init.append(simulated[1].x)
-        counts_init.append(simulated[2])
+        model, data = simulate(bilayer.using_contrast(contrast), angle_times)
         
-    metric = []
-    valid_contrasts = []
+        qs_init.append(data[:,0])
+        counts_init.append(data[:,3])
+        models_init.append(model)
+        
+    valid_contrasts, metric = [], []
     for i, new_contrast in enumerate(contrasts):
-        sample = bilayer.using_contrast(new_contrast)
-        model_new, data_new, counts_new = simulate(sample, angle_times, include_counts=True)
+        model, data = simulate(bilayer.using_contrast(new_contrast), angle_times)
 
         qs, counts, models = qs_init.copy(), counts_init.copy(), models_init.copy()
-        qs.append(data_new.x)
-        counts.append(counts_new)
-        models.append(model_new)
+        qs.append(data[:,0])
+        counts.append(data[:,3])
+        models.append(model)
         
         g = fisher(qs, xi, counts, models)
         try:
@@ -106,7 +96,7 @@ def contrast_choice(bilayer: Bilayer, initial_contrasts: List[float], contrasts:
     if len(initial_contrasts) < 2:
         ax.set_yscale('log')
     
-    save_path = os.path.join(save_path, str(bilayer))
+    save_path = os.path.join(save_path, bilayer.name)
     save_plot(fig, save_path, 'contrast_choice_'+filename)    
 
 def underlayer_choice(bilayer, thicknesses, slds, contrast_slds, angle_times, save_path):
@@ -120,15 +110,15 @@ def underlayer_choice(bilayer, thicknesses, slds, contrast_slds, angle_times, sa
             x.append(thickness)
             y.append(sld)
             
-            models, datasets, counts = [], [], []
+            qs, counts, models = [], [], []
             for contrast_sld in contrast_slds:
-                structure = bilayer.using_contrast(contrast_sld)
-                simulated = simulate(structure, angle_times, include_counts=True)
-                models.append(simulated[0])
-                datasets.append(simulated[1].x)
-                counts.append(simulated[2])
+                model, data = simulate(bilayer.using_contrast(contrast_sld), angle_times)
+                
+                qs.append(data[:,0])
+                counts.append(data[:,3])
+                models.append(model)
     
-            g = fisher(datasets, xi, counts, models)
+            g = fisher(qs, xi, counts, models)
             f = np.linalg.inv(g)
 
             metric.append(np.sum(np.abs(f)))
@@ -145,7 +135,7 @@ def underlayer_choice(bilayer, thicknesses, slds, contrast_slds, angle_times, sa
     ax.set_ylabel('$\mathregular{Underlayer\ SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
     ax.set_zlabel('Log Metric (arb.)', fontsize=11, weight='bold')
 
-    save_path = os.path.join(save_path, str(bilayer))
+    save_path = os.path.join(save_path, bilayer.name)
     save_plot(fig, save_path, 'underlayer_choice')
 
     minimum = np.argmin(metric)
@@ -158,7 +148,7 @@ def angle_results():
     
     save_path = './results'
     
-    structure = simple_sample
+    structure = simple_sample()
     points = 70
     time = 5
     angles = np.arange(0.2, 2.4, 0.01)

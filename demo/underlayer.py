@@ -12,6 +12,8 @@ class Bilayer:
     """Defines a model describing a symmetric bilayer."""
 
     def __init__(self):
+        self.name = 'symmetric_bilayer'
+        
         self.si_sld      = 2.073
         self.sio2_sld    = 3.41
         self.dmpc_hg_vol = 320.9
@@ -75,15 +77,12 @@ class Bilayer:
         solution  = SLD(contrast_sld)(rough=self.bilayer_rough)
 
         return substrate | sio2 | inner_hg | tg | tg | outer_hg | solution
-
-    def __str__(self):
-        return 'symmetric_bilayer'
   
 # Path to directory to save results to.
 save_path = './results'
 
 # Contrasts, angles and times to simulate with.
-contrasts = [6.36]
+contrasts = [6.36, -0.56]
 angle_times = {0.7: (70, 10),
                2.0: (70, 40)}
 
