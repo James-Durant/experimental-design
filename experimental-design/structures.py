@@ -309,7 +309,7 @@ def QCS_sample() -> Structure:
     substrate = SLD(3.354, name='Substrate - Quartz')(thick=0, rough=12.9)
     return air | layer1 | layer2 | substrate
 
-def easy_sample() -> Structure:
+def simple_sample() -> Structure:
     air = SLD(0, name='Air')
     layer1 = SLD(4, name='Layer 1')(thick=100, rough=2)
     layer2 = SLD(8, name='Layer 2')(thick=150, rough=2)

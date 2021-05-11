@@ -7,7 +7,7 @@ from numpy.typing import ArrayLike
 from refnx.dataset import ReflectDataset
 from refnx.reflect import Structure, ReflectModel
 
-DIRECTBEAM_PATH = './data/directbeam/directbeam_wavelength.dat'
+DIRECTBEAM_PATH = '../experimental-design/data/directbeam/directbeam_wavelength.dat'
 AngleTimes = Dict[float, Tuple[int, float]]
 
 def simulate_single_contrast(structure: Structure, angle_times: AngleTimes, scale: float=1,
