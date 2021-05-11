@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import os
+import os, refl1d.model, refl1d.probe, refl1d.experiment
 
 from typing import Optional, List
 from numpy.typing import ArrayLike
@@ -122,67 +122,28 @@ class Sampler:
             parameter.value = x[i]
         return self.objective.logl()
 
-def vary_structure(structure: Structure, random_init: bool=False, bound_size: float=0.2,
-                   vary_sld: bool=True, vary_thick: bool=True,
-                   vary_rough: bool=False, vary_substrate: bool=False) -> Structure:
-    """Vary the parameters of each layer of a given `structure` and optionally,
-       initialise these values to random values within their bounds.
-
-    Args:
-        structure (refnx.reflect.Structure): structure to vary.
-        random_init (bool): whether to randomly initialise parameters.
-        bound_size (float): size of bounds to place on parameters.
-        vary_sld (bool): whether to vary structure's layers' SLDs.
-        vary_thick (bool): whether to vary structure's layers' thicknesses.
-        vary_rough (bool): whether to vary structure's layers' roughnesses.
-        vary_substrate (bool): whether to vary substrate roughness.
-
-    Returns:
-        params
-
-    """
+def vary_structure(structure, bound_size=0.2):
     params = []
-    # Skip over air/water and substrate.
-    for component in structure.components[1:-1]:
-        # Vary each layers' SLD, thickness and roughness if requested.
-        if vary_sld:
-            sld_bounds = (component.sld.real.value*(1-bound_size),
-                          component.sld.real.value*(1+bound_size))
-            component.sld.real.setp(vary=True, bounds=sld_bounds)
-            params.append(component.sld.real)
+    for component in structure[1:-1]:
+        if isinstance(structure, Structure):
+            sld = component.sld.real
+            sld_bounds = (sld.value*(1-bound_size), sld.value*(1+bound_size))
+            sld.setp(vary=True, bounds=sld_bounds)
+            params.append(sld)
             
-            # Set parameter to an arbitrary initial value within its bounds.
-            if random_init:
-                component.sld.real.value = np.random.uniform(*sld_bounds)
-
-        if vary_thick:
-            thick_bounds = (component.thick.value*(1-bound_size),
-                            component.thick.value*(1+bound_size))
-            component.thick.setp(vary=True, bounds=thick_bounds)
-            params.append(component.thick)
+            thick = component.thick
+            thick_bounds = (thick.value*(1-bound_size), thick.value*(1+bound_size))
+            thick.setp(vary=True, bounds=thick_bounds)
+            params.append(thick)
             
-            if random_init:
-                component.thick.value = np.random.uniform(*thick_bounds)
-
-        if vary_rough:
-            rough_bounds = (component.rough.value*(1-bound_size),
-                            component.rough.value*(1+bound_size))
-            component.rough.setp(vary=True, bounds=rough_bounds)
-            params.append(component.rough)
+        elif isinstance(structure, refl1d.model.Stack): 
+            sld = component.material.rho
+            sld.range(sld.value*(1-bound_size), sld.value*(1+bound_size))
+            params.append(sld)
             
-            if random_init:
-                component.rough.value = np.random.uniform(*rough_bounds)
-
-    # Vary the substrate's roughness.
-    if vary_substrate:
-        component = structure.components[-1]
-        rough_bounds = (component.rough.value*(1-bound_size),
-                        component.rough.value*(1+bound_size))
-        component.rough.setp(vary=True, bounds=rough_bounds)
-        params.append(component.rough)
-        
-        if random_init:
-            component.rough.value = np.random.uniform(*rough_bounds)
+            thick = component.thickness
+            thick.range(thick.value*(1-bound_size), thick.value*(1+bound_size))
+            params.append(thick)
 
     return params
 
@@ -213,22 +174,34 @@ def fisher(qs: List[ArrayLike], xi: List[Parameter], counts: List[ArrayLike],
 
         # Calculate the reflectance for each model for the first side of the gradient.
         x1 = parameter.value = old*(1-step)
-        y1 = np.concatenate([model(q) for q, model in list(zip(qs, models))])
+        y1 = np.concatenate([reflectivity(q, model) for q, model in list(zip(qs, models))])
 
         # Calculate the reflectance for each model for the second side of the gradient.
         x2 = parameter.value = old*(1+step)
-        y2 = np.concatenate([model(q) for q, model in list(zip(qs, models))])
+        y2 = np.concatenate([reflectivity(q, model) for q, model in list(zip(qs, models))])
 
         parameter.value = old # Reset the parameter.
 
         J[:,i] = (y2-y1) / (x2-x1) # Calculate the gradient.
 
     # Calculate the reflectance for each model for the given Q values.
-    r = np.concatenate([model(q) for q, model in list(zip(qs, models))])
+    r = np.concatenate([reflectivity(q, model)for q, model in list(zip(qs, models))])
 
     # Calculate the FI matrix using the equations from the paper.
     M = np.diag(np.concatenate(counts) / r, k=0)
     return np.dot(np.dot(J.T, M), J)
+
+def reflectivity(q, model):
+    if isinstance(model, ReflectModel):
+        return model(q)
+        
+    if isinstance(model, refl1d.experiment.Experiment):
+        scale, bkg = model.probe.intensity, model.probe.background
+        
+        probe = refl1d.probe.QProbe(q, np.zeros_like(q), intensity=scale, background=bkg)
+        experiment = refl1d.experiment.Experiment(probe=probe, sample=model.sample)
+
+        return experiment.reflectivity(resolution=True)[1]
 
 def save_plot(fig: plt.Figure, save_path: str, filename: str) -> None:
     """Saves a figure to a given directory.

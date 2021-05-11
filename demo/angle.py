@@ -14,6 +14,9 @@ substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
 structure = air | layer1 | layer2 | substrate
 structure.name = 'simple_sample'
 
+from structures import refnx_to_refl1d
+structure = refnx_to_refl1d(structure)
+
 # Path to directory to save results to.
 save_path = './results'
 

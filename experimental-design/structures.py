@@ -1,4 +1,4 @@
-import os
+import os, refl1d.material
 
 from typing import List
 
@@ -357,4 +357,15 @@ def many_param_sample() -> Structure:
     
     structure = air | layer1 | layer2 | layer3 | layer4 | layer5 | substrate
     structure.name = 'many_param_sample'
+    return structure
+
+def refnx_to_refl1d(sample):
+    structure = refl1d.material.SLD(rho=0, name='Air')
+    for component in sample[1:]:
+        name, sld = component.name, component.sld.real.value,
+        thick, rough = component.thick.value, component.rough.value
+        
+        structure |= refl1d.material.SLD(rho=sld, name=name)(thick, rough)
+        
+    structure.name = sample.name
     return structure
