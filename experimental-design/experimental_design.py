@@ -2,9 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-from simulate import simulate, AngleTimes
-from structures import Bilayer
-
+from simulate import simulate
 from utils import fisher, vary_structure, save_plot
 
 def angle_choice(sample, initial_angle_times, angles, points_new, time_new, save_path):
@@ -193,11 +191,11 @@ def underlayer_results():
 
     bilayer.parameters = [param for param in bilayer.parameters if param.name != 'SiO2 Thickness']
 
-    bilayer.sample([6.36], angle_times, './results', 'normal')
+    bilayer.sample([6.36], angle_times, save_path, 'normal')
     
     bilayer.sio2_sld = 8.9
     bilayer.sio2_thick = 80
-    bilayer.sample([6.36], angle_times, './results', 'new')
+    bilayer.sample([6.36], angle_times, save_path, 'new')
 
 if __name__ == '__main__':
     angle_results()

@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 
@@ -10,22 +9,22 @@ import refl1d.probe, refl1d.model, refl1d.experiment
 import refnx.reflect, refnx.analysis
 
 class Sampler:
-    def __init__(self, objective, parameters=None):  
+    def __init__(self, objective):  
+        self.objective = objective
+        
         if isinstance(objective, refnx.analysis.BaseObjective):
-            structure = objective.model.structure
+            self.params = objective.varying_parameters()
             logl = objective.logl
             prior_transform = objective.prior_transform
             
         elif isinstance(objective, refl1d.experiment.Experiment): 
-            structure = objective.sample
-            self.experiment = objective
+            self.params = vary_structure(objective.sample)
             logl = self.logl_refl1d
             prior_transform = self.prior_transform_refl1d
             
         else:
             raise RuntimeError('invalid objective/experiment given')
-        
-        self.params = vary_structure(structure) if parameters is None else parameters
+
         self.ndim = len(self.params)
         self.sampler_nested = NestedSampler(logl, prior_transform, self.ndim)
 
@@ -62,11 +61,11 @@ class Sampler:
     def logl_refl1d(self, x):
         self.set_params(x)
             
-        q  = self.experiment.probe.Q
-        r  = self.experiment.probe.R
-        dr = self.experiment.probe.dR
+        q  = self.objective.probe.Q
+        r  = self.objective.probe.R
+        dr = self.objective.probe.dR
         
-        r_model = reflectivity(q, self.experiment)
+        r_model = reflectivity(q, self.objective)
         var_r = dr**2
         return -0.5 * np.sum(np.log(2*np.pi*var_r) + (r-r_model)**2 / var_r)
 
@@ -157,7 +156,7 @@ def reflectivity(q, model):
         experiment = refl1d.experiment.Experiment(probe=probe, sample=model.sample)
         return experiment.reflectivity(resolution=True)[1]
 
-def save_plot(fig: plt.Figure, save_path: str, filename: str) -> None:
+def save_plot(fig, save_path, filename):
     """Saves a figure to a given directory.
 
     Args:

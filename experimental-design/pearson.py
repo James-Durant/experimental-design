@@ -2,15 +2,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-from numpy.typing import ArrayLike
-
-from simulate import AngleTimes, simulate
-from structures import Bilayer
-
+from simulate import simulate
 from utils import fisher, save_plot
 
-def pearson(bilayer: Bilayer, initial_contrasts: ArrayLike, contrasts: ArrayLike,
-            angle_times: AngleTimes, save_path: str) -> None:
+def pearson(bilayer, initial_contrasts, contrasts, angle_times, save_path):
     xi = bilayer.parameters
 
     qs_init, counts_init, models_init = [], [], []

@@ -1,10 +1,9 @@
 import numpy as np
-import refnx.reflect, refl1d
 
-from typing import Tuple, Dict
+import refnx.reflect
+import refl1d.model, refl1d.probe, refl1d.experiment
 
 DIRECTBEAM_PATH = '../experimental-design/data/directbeam/directbeam_wavelength.dat'
-AngleTimes = Dict[float, Tuple[int, float]]
 
 def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
     q, r, dr, counts = [], [], [], []
