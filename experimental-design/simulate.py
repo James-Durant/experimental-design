@@ -34,7 +34,9 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
         model = refnx.reflect.ReflectModel(sample, scale=scale, bkg=bkg, dq=dq)
         
     elif isinstance(sample, refl1d.model.Stack):
-        probe = refl1d.probe.QProbe(data[:,0], np.zeros_like(data[:,0]), intensity=scale, background=bkg)
+        q, r, dr = data[:,0], data[:,1], data[:,2]
+        probe = refl1d.probe.QProbe(q, np.zeros_like(q), data=(r,dr),
+                                    intensity=scale, background=bkg)
         model = refl1d.experiment.Experiment(probe=probe, sample=sample)
 
     return model, data

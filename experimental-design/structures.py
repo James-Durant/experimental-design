@@ -35,7 +35,7 @@ class Bilayer:
 
         # Sample the objective using nested sampling.
         sampler = Sampler(global_objective)
-        fig = sampler.sample_nested(dynamic=False)
+        fig = sampler.sample_nested()
 
         # Save the sampling corner plot.
         save_path = os.path.join(save_path, str(self))
