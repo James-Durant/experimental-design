@@ -17,7 +17,7 @@ class Sampler:
             logl = objective.logl
             prior_transform = objective.prior_transform
             
-        elif isinstance(objective, refl1d.experiment.Experiment): 
+        elif isinstance(objective, refl1d.experiment.ExperimentBase): 
             self.params = vary_structure(objective.sample)
             logl = self.logl_refl1d
             prior_transform = self.prior_transform_refl1d
@@ -60,20 +60,13 @@ class Sampler:
 
     def logl_refl1d(self, x):
         self.set_params(x)
-            
-        q  = self.objective.probe.Q
-        r  = self.objective.probe.R
-        dr = self.objective.probe.dR
-        
-        r_model = reflectivity(q, self.objective)
-        var_r = dr**2
-        return -0.5 * np.sum(np.log(2*np.pi*var_r) + (r-r_model)**2 / var_r)
+        self.objective.update()
+        return -self.objective.nllf()
 
     def prior_transform_refl1d(self, u):
-        x = []
+        x = np.zeros_like(u)
         for i, param in enumerate(self.params):
-            new_min, new_max = param.bounds.limits
-            x.append(u[i]*(new_max-new_min) + new_min)
+            x[i] = param.bounds.put01(u[i])
             
         return x
 
@@ -171,3 +164,18 @@ def save_plot(fig, save_path, filename):
 
     file_path = os.path.join(save_path, filename+'.png')
     fig.savefig(file_path, dpi=600)
+
+if __name__ == '__main__':
+    from structures import simple_sample, refnx_to_refl1d
+    from simulate import simulate
+    
+    sample = refnx_to_refl1d(simple_sample())
+    
+    angle_times = {0.7: (70, 5),
+                   2.0: (70, 20)}
+    
+    model, data = simulate(sample, angle_times)
+    
+    sampler = Sampler(model)
+    sampler.sample()
+    
