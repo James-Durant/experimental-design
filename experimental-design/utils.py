@@ -28,6 +28,22 @@ class Sampler:
         self.ndim = len(self.params)
         self.sampler_nested = NestedSampler(logl, prior_transform, self.ndim)
 
+    def logl_refl1d(self, x):
+        self.set_params(x)
+        self.objective.update()
+        return -self.objective.nllf()
+
+    def prior_transform_refl1d(self, u):
+        x = np.zeros_like(u)
+        for i, param in enumerate(self.params):
+            x[i] = param.bounds.put01(u[i])
+            
+        return x
+    
+    def set_params(self, x):
+        for i, param in enumerate(self.params):
+            param.value = x[i]
+
     def sample(self, verbose=True):
         self.sampler_nested.run_nested(print_progress=verbose)
         results = self.sampler_nested.results
@@ -53,22 +69,6 @@ class Sampler:
 
         axes[self.ndim-1, self.ndim-1].set_xlabel(self.params[-1].name)
         return fig
-
-    def set_params(self, x):
-        for i, param in enumerate(self.params):
-            param.value = x[i]
-
-    def logl_refl1d(self, x):
-        self.set_params(x)
-        self.objective.update()
-        return -self.objective.nllf()
-
-    def prior_transform_refl1d(self, u):
-        x = np.zeros_like(u)
-        for i, param in enumerate(self.params):
-            x[i] = param.bounds.put01(u[i])
-            
-        return x
 
 def vary_structure(structure, bound_size=0.2):
     params = []
