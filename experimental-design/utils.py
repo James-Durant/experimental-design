@@ -7,6 +7,7 @@ from dynesty import utils as dyfunc
 
 import refl1d.probe, refl1d.model, refl1d.experiment
 import refnx.reflect, refnx.analysis
+import bumps.fitproblem
 
 class Sampler:
     def __init__(self, objective):  
@@ -17,32 +18,24 @@ class Sampler:
             logl = objective.logl
             prior_transform = objective.prior_transform
             
-        elif isinstance(objective, refl1d.experiment.ExperimentBase): 
-            self.params = vary_structure(objective.sample)
+        elif isinstance(objective, bumps.fitproblem.BaseFitProblem): 
+            self.params = self.objective._parameters
             logl = self.logl_refl1d
             prior_transform = self.prior_transform_refl1d
             
         else:
-            raise RuntimeError('invalid objective/experiment given')
+            raise RuntimeError('invalid objective/fitproblem given')
 
         self.ndim = len(self.params)
         self.sampler_nested = NestedSampler(logl, prior_transform, self.ndim)
 
     def logl_refl1d(self, x):
-        self.set_params(x)
-        self.objective.update()
-        return -self.objective.nllf()
+        self.objective.setp(x)
+        return -self.objective.model_nllf()
 
     def prior_transform_refl1d(self, u):
-        x = np.zeros_like(u)
-        for i, param in enumerate(self.params):
-            x[i] = param.bounds.put01(u[i])
-            
-        return x
-    
-    def set_params(self, x):
-        for i, param in enumerate(self.params):
-            param.value = x[i]
+        x = [param.bounds.put01(u[i]) for i, param in enumerate(self.params)]
+        return np.asarray(x)
 
     def sample(self, verbose=True):
         self.sampler_nested.run_nested(print_progress=verbose)
@@ -51,12 +44,17 @@ class Sampler:
         # Calculate the parameter means.
         weights = np.exp(results.logwt - results.logz[-1])
         mean, _ = dyfunc.mean_and_cov(results.samples, weights)
+        
+        for i, param in enumerate(self.params):
+            param.value = mean[i]
 
-        # Update objective to use mean parameter values.
-        self.set_params(mean)
+        self.corner(results)
 
-        fig, _ = dyplot.cornerplot(results, color='blue', quantiles=None, show_titles=True,
-                                   max_n_ticks=3, truths=np.zeros(self.ndim), truth_color='black')
+    def corner(self, results):
+        fig, _ = dyplot.cornerplot(results, color='blue', quantiles=None,
+                                   show_titles=True, max_n_ticks=3,
+                                   truths=np.zeros(self.ndim),
+                                   truth_color='black')
 
         # Label axes with parameter names.
         axes = np.reshape(np.array(fig.get_axes()), (self.ndim, self.ndim))
@@ -170,12 +168,15 @@ if __name__ == '__main__':
     from simulate import simulate
     
     sample = refnx_to_refl1d(simple_sample())
+    vary_structure(sample)
     
     angle_times = {0.7: (70, 5),
                    2.0: (70, 20)}
     
     model, data = simulate(sample, angle_times)
     
-    sampler = Sampler(model)
+    objective = bumps.fitproblem.FitProblem(model)
+    
+    sampler = Sampler(objective)
     sampler.sample()
     
