@@ -362,7 +362,7 @@ def refnx_to_refl1d(sample):
         name, sld = component.name, component.sld.real.value,
         thick, rough = component.thick.value, component.rough.value
         
-        structure |= refl1d.material.SLD(rho=sld, name=name)(thick, rough)
+        structure = refl1d.material.SLD(rho=sld, name=name)(thick, rough) | structure
         
     structure.name = sample.name
     return structure

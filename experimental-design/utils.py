@@ -48,7 +48,7 @@ class Sampler:
         for i, param in enumerate(self.params):
             param.value = mean[i]
 
-        self.corner(results)
+        return self.corner(results)
 
     def corner(self, results):
         fig, _ = dyplot.cornerplot(results, color='blue', quantiles=None,
@@ -145,7 +145,7 @@ def reflectivity(q, model):
         probe = refl1d.probe.QProbe(q, dq, intensity=scale, background=bkg)
         
         experiment = refl1d.experiment.Experiment(probe=probe, sample=model.sample)
-        return experiment.reflectivity(resolution=True)[1]
+        return experiment.reflectivity()[1]
 
 def save_plot(fig, save_path, filename):
     """Saves a figure to a given directory.
