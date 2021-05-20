@@ -136,6 +136,10 @@ def fisher(qs, xi, counts, models, step=0.005):
     M = np.diag(np.concatenate(counts) / r, k=0)
     return np.dot(np.dot(J.T, M), J)
 
+def metric(g):
+    eigenvalues, eigenvectors = np.linalg.eigh(g)
+    return eigenvalues[0] # Eigenvalues are sorted in ascending order.
+
 def reflectivity(q, model):
     if isinstance(model, refnx.reflect.ReflectModel):
         return model(q)

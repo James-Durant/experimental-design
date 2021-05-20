@@ -3,11 +3,7 @@ import numpy as np
 import os
 
 from simulate import simulate
-from utils import fisher, vary_structure, save_plot
-
-def metric(g):
-    eigenvalues, eigenvectors = np.linalg.eigh(g)
-    return eigenvalues[0] # Eigenvalues are sorted in ascending order.
+from utils import fisher, metric, vary_structure, save_plot
 
 def angle_choice(sample, initial_angle_times, angles, points_new, time_new, save_path):
     xi = vary_structure(sample)
@@ -175,7 +171,7 @@ def underlayer_results():
     
     save_path = './results'
 
-    bilayer = DoubleAsymmetricBilayer()
+    bilayer = SymmetricBilayer()
     contrasts = [6.36]
     angle_times = {0.7: (70, 10),
                    2.0: (70, 40)}
@@ -190,8 +186,8 @@ def underlayer_results():
 
     bilayer.sample(contrasts, angle_times, save_path, 'normal')
     
-    bilayer.sio2_sld = sld #8.95
-    bilayer.sio2_thick = thick #70
+    bilayer.sio2_sld = sld
+    bilayer.sio2_thick = thick
     bilayer.sample(contrasts, angle_times, save_path, 'new')
 
 if __name__ == '__main__':

@@ -64,7 +64,9 @@ def run_experiment(sample, angle, points, time, scale, bkg, dq):
         r_model = model(q_binned)
         
     elif isinstance(sample, refl1d.model.Stack):
-        probe = refl1d.probe.QProbe(q_binned, np.zeros_like(q_binned), intensity=scale, background=bkg)
+        probe = refl1d.probe.QProbe(q, q*(dq/100), intensity=scale, background=bkg)
+        probe._sf_L = np.array([1.])
+        probe.calc_Qo = probe.Q
         experiment = refl1d.experiment.Experiment(probe=probe, sample=sample)
         _, r_model = experiment.reflectivity(resolution=True)
 
