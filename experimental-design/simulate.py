@@ -34,8 +34,8 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
         
     elif isinstance(sample, refl1d.model.Stack):
         q, r, dr = data[:,0], data[:,1], data[:,2]
-        probe = refl1d.probe.QProbe(q, np.zeros_like(q), data=(r,dr),
-                                    intensity=scale, background=bkg)
+        dq /= 100*np.sqrt(8*np.log(2))
+        probe = refl1d.probe.QProbe(q, q*dq, data=(r,dr), intensity=scale, background=bkg)
         model = refl1d.experiment.Experiment(probe=probe, sample=sample)
 
     return model, data
@@ -48,11 +48,10 @@ def run_experiment(sample, angle, points, time, scale, bkg, dq):
     # Adjust flux by measurement angle.
     direct_flux = direct_beam[:,1] * pow(angle/0.3, 2)
 
-    theta = angle*np.pi / 180 # Convert angle from degrees to radians.
-    q = 4*np.pi*np.sin(theta) / wavelengths # Calculate Q values.
+    q = 4*np.pi*np.sin(np.radians(angle)) / wavelengths # Calculate Q values.
 
     # Bin Q values in equally log-spaced bins using flux as weighting.
-    q_bin_edges = np.logspace(np.log10(np.min(q)), np.log10(np.max(q)), points+1)
+    q_bin_edges = np.geomspace(np.min(q), np.max(q), points+1)
 
     flux_binned, _ = np.histogram(q, q_bin_edges, weights=direct_flux)
 
@@ -64,11 +63,10 @@ def run_experiment(sample, angle, points, time, scale, bkg, dq):
         r_model = model(q_binned)
         
     elif isinstance(sample, refl1d.model.Stack):
-        probe = refl1d.probe.QProbe(q, q*(dq/100), intensity=scale, background=bkg)
-        probe._sf_L = np.array([1.])
-        probe.calc_Qo = probe.Q
+        dq /= 100*np.sqrt(8*np.log(2))
+        probe = refl1d.probe.QProbe(q, q*dq, intensity=scale, background=bkg)
         experiment = refl1d.experiment.Experiment(probe=probe, sample=sample)
-        _, r_model = experiment.reflectivity(resolution=True)
+        _, r_model = experiment.reflectivity()
 
     # Calculate the number of incident neutrons for each bin.
     counts_incident = flux_binned*time

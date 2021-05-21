@@ -27,8 +27,6 @@ def angle_choice(sample, initial_angle_times, angles, points_new, time_new, save
         models.append(model)
         
         g = fisher(qs, xi, counts, models)
-        eigenvalues, _ = np.linalg.eig(g)
-        
         metrics.append(metric(g))
 
         if i % 50 == 0:
