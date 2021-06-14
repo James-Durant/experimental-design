@@ -10,7 +10,7 @@ from utils import fisher, vary_structure, save_plot
 
 from structures import Bilayer
 
-def angle_choice_single(sample, initial_angle_times, angle_range, points_new, time_new, save_path, contrasts=[]):
+def angle_choice_single(sample, initial_angle_times, angle_range, points_new, time_new, save_path, filename, contrasts=[]):
     if isinstance(sample, refnx.reflect.Structure):
         xi = vary_structure(sample)
         qs_init, counts_init, models_init = [], [], []
@@ -48,7 +48,7 @@ def angle_choice_single(sample, initial_angle_times, angle_range, points_new, ti
         g = fisher(qs, xi, counts, models)
         min_eigs.append(np.linalg.eigvalsh(g)[0])
 
-        if i % 50 == 0:
+        if i % 100 == 0:
             print('>>> {0}/{1}'.format(i, len(angle_range)))
     
     fig = plt.figure(figsize=[9,7], dpi=600)
@@ -58,38 +58,18 @@ def angle_choice_single(sample, initial_angle_times, angle_range, points_new, ti
 
     ax.set_xlabel('Angle (°)', fontsize=11, weight='bold')
     ax.set_ylabel('Minimum Eigenvalue (arb.)', fontsize=11, weight='bold')
-    
-    filename = 'angle_choice_single' if initial_angle_times else 'angle_choice_single_initial'
-    for angle in initial_angle_times:
-        filename = filename + '_' + str(angle).replace('.', '')
-        
+
     save_path = os.path.join(save_path, sample.name)
     save_plot(fig, save_path, filename)
 
     return angle_range[np.argmax(min_eigs)]
+
 def contrast_choice_single(bilayer, contrast_range, contrasts, angle_times, save_path, filename):
     xi = bilayer.parameters
-    qs_init, counts_init, models_init = [], [], []
-    for contrast in initial_contrasts:
-        model, data = simulate(bilayer.using_contrast(contrast), angle_times)
-        
-        qs_init.append(data[:,0])
-        counts_init.append(data[:,3])
-        models_init.append(model)
-    
-    lb = np.array([param.bounds.lb for param in xi])
-    ub = np.array([param.bounds.ub for param in xi])
-    J = np.diag(1/(ub-lb))
-    
-    metrics = []
-    for i, new_contrast in enumerate(contrasts):
-        model, data = simulate(bilayer.using_contrast(new_contrast), angle_times)
-    xi = bilayer.parameters
-    
     qs_init, counts_init, models_init = bilayer.contrast_information(angle_times, contrasts)
     
     min_eigs = []
-    for contrast in contrast_range:
+    for i, contrast in enumerate(contrast_range):
         qs_new, counts_new, models_new = bilayer.contrast_information(angle_times, [contrast])
         
         qs = qs_init + qs_new
@@ -100,7 +80,7 @@ def contrast_choice_single(bilayer, contrast_range, contrasts, angle_times, save
         min_eigs.append(np.linalg.eigvalsh(g)[0])
 
         # Display progress.
-        if i % 50 == 0:
+        if i % 100 == 0:
             print('>>> {0}/{1}'.format(i, len(contrast_range)))
     
     fig = plt.figure(figsize=[9,7], dpi=600)
@@ -110,10 +90,7 @@ def contrast_choice_single(bilayer, contrast_range, contrasts, angle_times, save
     
     ax.set_xlabel("$\mathregular{Contrast\ SLD\ (10^{-6} \AA^{-2})}$", fontsize=11, weight='bold')
     ax.set_ylabel("Minimum Eigenvalue", fontsize=11, weight='bold')
-    
-    #if len(initial_contrasts) < 2:
-    #    ax.set_yscale('log')
-    
+
     save_path = os.path.join(save_path, bilayer.name)
     save_plot(fig, save_path, 'contrast_choice_single_'+filename)    
 
@@ -121,7 +98,7 @@ def contrast_choice_double(bilayer, contrast_range, angle_times, save_path):
     xi = bilayer.parameters
     contrasts = np.asarray(list(combinations(contrast_range, 2)))
 
-    metrics = []
+    min_eigs = []
     for i, (contrast_1, contrast_2) in enumerate(contrasts):
         model_1, data_1 = simulate(bilayer.using_contrast(contrast_1), angle_times)
         model_2, data_2 = simulate(bilayer.using_contrast(contrast_2), angle_times)
@@ -131,7 +108,7 @@ def contrast_choice_double(bilayer, contrast_range, angle_times, save_path):
         models = [model_1, model_2]
         
         g = fisher(qs, xi, counts, models)
-        metrics.append(np.linalg.eigvalsh(g)[0])
+        min_eigs.append(np.linalg.eigvalsh(g)[0])
 
         # Display progress.
         if i % 500 == 0:
@@ -140,11 +117,11 @@ def contrast_choice_double(bilayer, contrast_range, angle_times, save_path):
     x = np.concatenate([contrasts[:,0], contrasts[:,1]])
     y = np.concatenate([contrasts[:,1], contrasts[:,0]])
     
-    metrics.extend(metrics)
+    min_eigs.extend(min_eigs)
 
     fig = plt.figure(figsize=[10,8])
     ax = fig.add_subplot(111, projection='3d')
-    ax.plot_trisurf(x, y, metrics, cmap='Spectral')
+    ax.plot_trisurf(x, y, min_eigs, cmap='Spectral')
     
     ax.set_ylim(ax.get_ylim()[::-1])
     ax.set_xlabel("$\mathregular{Contrast \ 1 \ SLD \ (10^{-6} \AA^{-2})}$", fontsize=11, weight='bold')
@@ -155,7 +132,7 @@ def contrast_choice_double(bilayer, contrast_range, angle_times, save_path):
     save_path = os.path.join(save_path, bilayer.name)
     save_plot(fig, save_path, 'contrast_choice_double')
 
-    maximum = np.argmax(metrics)
+    maximum = np.argmax(min_eigs)
     return x[maximum], y[maximum]
 
 def underlayer_choice(bilayer, thickness_range, sld_range, contrasts, angle_times, save_path):
@@ -173,7 +150,7 @@ def underlayer_choice(bilayer, thickness_range, sld_range, contrasts, angle_time
             min_eigs.append(np.linalg.eigvalsh(g)[0])
             
         if i % 5 == 0:
-            print('>>> {0}/{1}'.format(i, len(thickness_range)))
+            print('>>> {0}/{1}'.format(i*len(sld_range), len(thickness_range)*len(sld_range)))
 
     fig = plt.figure(figsize=[9,7])
     ax = fig.add_subplot(111, projection='3d')
@@ -192,57 +169,55 @@ def underlayer_choice(bilayer, thickness_range, sld_range, contrasts, angle_time
     return x[maximum], y[maximum]
 
 def angle_results_normal(save_path='./results'):
-    from structures import similar_sld_sample_1, similar_sld_sample_2
-    from structures import thin_layer_sample_1, thin_layer_sample_2
-    from structures import simple_sample, QCS_sample, many_param_sample
-    
-    structure = many_param_sample()
+    from structures import STRUCTURES
     
     points = 70
-    time = 5
+    time = 20
     angle_range = np.linspace(0.2, 2.4, 500)
     
-    initial = {}
-    first = {0.7: (points, time)}
-    second = {0.7: (points, time), 2.0: (points, time)}
-    
-    for angle_times in [initial, first, second]:
-        angle_choice_single(structure, angle_times, angle_range, points, time, save_path)
+    for structure in STRUCTURES:
+        angle_times = {}
+        for i in range(4):
+            filename = 'angle_choice_single_{}'.format(i+1)
+            angle = angle_choice_single(structure(), angle_times, angle_range, points, time, save_path, filename)
+            if angle in angle_times:
+                angle_times[angle] = (angle_times[angle][0]+points, angle_times[angle][1]+time)
+            else:
+                angle_times[angle] = (points, time)
 
 def angle_results_bilayer(save_path='./results'):
-    from structures import SymmetricBilayer
-    from structures import SingleAsymmetricBilayer, DoubleAsymmetricBilayer
-    
-    bilayer = SymmetricBilayer()
+    from structures import BILAYERS
     
     points = 70
-    time = 10
+    time = 20
     angle_range = np.linspace(0.2, 2.4, 500)
     contrasts = [-0.56, 6.36]
     
-    initial = {}
-    first = {0.7: (points, time)}
-    second = {0.7: (points, time), 2.0: (points, time)}
-    
-    for angle_times in [initial, first, second]:
-        angle_choice_single(bilayer, angle_times, angle_range, points, time, save_path)
+    for bilayer in BILAYERS:
+        angle_times = {}
+        for i in range(4):
+            filename = 'angle_choice_single_{}'.format(i+1)
+            angle = angle_choice_single(bilayer(), angle_times, angle_range, points, time, save_path, filename, contrasts)
+            if angle in angle_times:
+                angle_times[angle] = (angle_times[angle][0]+points, angle_times[angle][1]+time)
+            else:
+                angle_times[angle] = (points, time)
 
-def contrast_results():
+def contrast_results(save_path='./results'):
     from structures import SymmetricBilayer
     from structures import SingleAsymmetricBilayer, DoubleAsymmetricBilayer
 
-    save_path = './results'
-
-    bilayer = SymmetricBilayer()
-    contrast_range = np.linspace(-0.55, 6.36, 60)
+    bilayer = DoubleAsymmetricBilayer()
     angle_times = {0.7: (70, 10),
                    2.3: (70, 40)}
     
-    contrast_choice_single(bilayer, contrast_range, [], angle_times, save_path, 'initial')
-    contrast_choice_single(bilayer, contrast_range, [6.36], angle_times, save_path, 'D2O')
-    contrast_choice_single(bilayer, contrast_range, [-0.56], angle_times, save_path, 'H2O')
-    contrast_choice_single(bilayer, contrast_range, [-0.56, 6.36], angle_times, save_path, 'H2O_D2O')
+    #contrast_range = np.linspace(-0.55, 6.36, 500)
+    #contrast_choice_single(bilayer, contrast_range, [], angle_times, save_path, 'initial')
+    #contrast_choice_single(bilayer, contrast_range, [6.36], angle_times, save_path, 'D2O')
+    #contrast_choice_single(bilayer, contrast_range, [-0.56], angle_times, save_path, 'H2O')
+    #contrast_choice_single(bilayer, contrast_range, [-0.56, 6.36], angle_times, save_path, 'H2O_D2O')
     
+    contrast_range = np.linspace(-0.55, 6.36, 50)
     contrast_choice_double(bilayer, contrast_range, angle_times, save_path)
     
 def underlayer_results():
@@ -252,12 +227,12 @@ def underlayer_results():
     save_path = './results'
 
     bilayer = SymmetricBilayer()
-    contrasts = [6.36]
+    contrasts = [-0.56, 6.36]
     angle_times = {0.7: (70, 10),
                    2.3: (70, 40)}
     
-    thickness_range = np.linspace(5, 500, 150)
-    sld_range = np.linspace(1, 9, 150)
+    thickness_range = np.linspace(5, 500, 50)
+    sld_range = np.linspace(1, 9, 50)
     thick, sld = underlayer_choice(bilayer, thickness_range, sld_range, contrasts, angle_times, save_path)
     print('Thickness: {}'.format(thick))
     print('SLD: {}'.format(sld))

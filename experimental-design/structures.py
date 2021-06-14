@@ -306,16 +306,6 @@ class DoubleAsymmetricBilayer(AsymmetricBilayer):
         # Use the asymmetry parameters to define inner and outer tailgroup SLDs.
         self.inner_tg_sld = SLD(self.inner_tg_pc*self.dPC_tg + (1-self.inner_tg_pc)*self.hLPS_tg)
         self.outer_tg_sld = SLD(self.outer_tg_pc*self.dPC_tg + (1-self.outer_tg_pc)*self.hLPS_tg)
-    
-def QCS_sample():
-    air = SLD(0, name='Air')
-    layer1 = SLD(1.795, name='Layer 1 - Si')(thick=790.7, rough=24.5)
-    layer2 = SLD(6.385, name='Layer 2 - Cu')(thick=297.9, rough=3.5)
-    substrate = SLD(3.354, name='Substrate - Quartz')(thick=0, rough=12.9)
-    
-    structure = air | layer1 | layer2 | substrate
-    structure.name = 'QCS_sample'
-    return structure
 
 def simple_sample():
     air = SLD(0, name='Air')
@@ -381,6 +371,10 @@ def many_param_sample():
     structure = air | layer1 | layer2 | layer3 | layer4 | layer5 | substrate
     structure.name = 'many_param_sample'
     return structure
+
+STRUCTURES = [simple_sample, thin_layer_sample_1, thin_layer_sample_2,
+              similar_sld_sample_1, similar_sld_sample_2, many_param_sample]
+BILAYERS = [SymmetricBilayer, SingleAsymmetricBilayer, DoubleAsymmetricBilayer]
 
 def refnx_to_refl1d(sample):
     structure = refl1d.material.SLD(rho=0, name='Air')

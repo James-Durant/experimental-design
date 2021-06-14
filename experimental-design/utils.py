@@ -167,21 +167,4 @@ def save_plot(fig, save_path, filename):
 
     file_path = os.path.join(save_path, filename+'.png')
     fig.savefig(file_path, dpi=600)
-
-if __name__ == '__main__':
-    from structures import simple_sample, refnx_to_refl1d
-    from simulate import simulate
-    
-    sample = refnx_to_refl1d(simple_sample())
-    vary_structure(sample)
-    
-    angle_times = {0.7: (70, 5),
-                   2.0: (70, 20)}
-    
-    model, data = simulate(sample, angle_times)
-    
-    objective = bumps.fitproblem.FitProblem(model)
-    
-    sampler = Sampler(objective)
-    sampler.sample()
     
