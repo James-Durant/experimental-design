@@ -123,6 +123,7 @@ def contrast_choice_double(bilayer, contrast_range, angle_times, save_path):
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_trisurf(x, y, min_eigs, cmap='Spectral')
     
+    ax.set_xlim(ax.get_xlim()[::-1])
     ax.set_ylim(ax.get_ylim()[::-1])
     ax.set_xlabel("$\mathregular{Contrast \ 1 \ SLD \ (10^{-6} \AA^{-2})}$", fontsize=11, weight='bold')
     ax.set_ylabel("$\mathregular{Contrast \ 2 \ SLD \ (10^{-6} \AA^{-2})}$", fontsize=11, weight='bold')
@@ -154,13 +155,12 @@ def underlayer_choice(bilayer, thickness_range, sld_range, contrasts, angle_time
 
     fig = plt.figure(figsize=[9,7])
     ax = fig.add_subplot(111, projection='3d')
-    ax.plot_trisurf(y, x, min_eigs, cmap='Spectral')
+    ax.plot_trisurf(x, y, min_eigs, cmap='Spectral')
     
-    ax.set_xlim(ax.get_xlim()[::-1])
-    ax.set_ylim(ax.get_ylim()[::-1])
     ax.set_ylabel('$\mathregular{Underlayer\ Thickness\ (\AA)}$', fontsize=11, weight='bold')
     ax.set_xlabel('$\mathregular{Underlayer\ SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
     ax.set_zlabel('Minimum Eigenvalue', fontsize=11, weight='bold')
+    ax.ticklabel_format(axis='z', style='sci', scilimits=(0,0))
 
     save_path = os.path.join(save_path, bilayer.name)
     save_plot(fig, save_path, 'underlayer_choice')
@@ -211,23 +211,21 @@ def contrast_results(save_path='./results'):
     angle_times = {0.7: (70, 10),
                    2.3: (70, 40)}
     
-    #contrast_range = np.linspace(-0.55, 6.36, 500)
-    #contrast_choice_single(bilayer, contrast_range, [], angle_times, save_path, 'initial')
-    #contrast_choice_single(bilayer, contrast_range, [6.36], angle_times, save_path, 'D2O')
-    #contrast_choice_single(bilayer, contrast_range, [-0.56], angle_times, save_path, 'H2O')
-    #contrast_choice_single(bilayer, contrast_range, [-0.56, 6.36], angle_times, save_path, 'H2O_D2O')
+    contrast_range = np.linspace(-0.55, 6.36, 500)
+    contrast_choice_single(bilayer, contrast_range, [], angle_times, save_path, 'initial')
+    contrast_choice_single(bilayer, contrast_range, [6.36], angle_times, save_path, 'D2O')
+    contrast_choice_single(bilayer, contrast_range, [-0.56], angle_times, save_path, 'H2O')
+    contrast_choice_single(bilayer, contrast_range, [-0.56, 6.36], angle_times, save_path, 'H2O_D2O')
     
     contrast_range = np.linspace(-0.55, 6.36, 50)
     contrast_choice_double(bilayer, contrast_range, angle_times, save_path)
     
-def underlayer_results():
+def underlayer_results(save_path='./results'):
     from structures import SymmetricBilayer
     from structures import SingleAsymmetricBilayer, DoubleAsymmetricBilayer
-    
-    save_path = './results'
 
     bilayer = SymmetricBilayer()
-    contrasts = [-0.56, 6.36]
+    contrasts = [6.36]
     angle_times = {0.7: (70, 10),
                    2.3: (70, 40)}
     
@@ -240,5 +238,5 @@ def underlayer_results():
 if __name__ == '__main__':
     #angle_results_normal()
     #angle_results_bilayer()
-    contrast_results()
-    #underlayer_results()
+    #contrast_results()
+    underlayer_results()
