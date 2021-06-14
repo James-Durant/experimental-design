@@ -64,6 +64,57 @@ def angle_choice_single(sample, initial_angle_times, angle_range, points_new, ti
 
     return angle_range[np.argmax(min_eigs)]
 
+def angle_choice_double(sample, angle_range, points_new, time_new, save_path, contrasts=[]):
+    if isinstance(sample, refnx.reflect.Structure):
+        xi = vary_structure(sample)
+     
+    elif isinstance(sample, Bilayer):
+        xi = sample.parameters
+              
+    else:
+        raise RuntimeError('invalid sample given')
+        
+    angles = np.asarray(list(combinations(angle_range, 2)))
+
+    min_eigs = []
+    for i, (angle_1, angle_2) in enumerate(angles):
+        angle_times = {angle_1: (points_new, time_new),
+                       angle_2: (points_new, time_new)}
+        
+        if isinstance(sample, refnx.reflect.Structure):
+            model, data = simulate(sample, angle_times)
+            qs, counts, models = [data[:,0]], [data[:,3]], [model]
+            
+        elif isinstance(sample, Bilayer):
+            qs, counts, models = sample.contrast_information(contrasts, angle_times)
+
+        g = fisher(qs, xi, counts, models)
+        min_eigs.append(np.linalg.eigvalsh(g)[0])
+
+        # Display progress.
+        if i % 500 == 0:
+            print('>>> {0}/{1}'.format(i, len(angles)))
+
+    x = np.concatenate([angles[:,0], angles[:,1]])
+    y = np.concatenate([angles[:,1], angles[:,0]])
+    
+    min_eigs.extend(min_eigs)
+
+    fig = plt.figure(figsize=[10,8])
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_trisurf(x, y, min_eigs, cmap='Spectral')
+
+    ax.set_xlabel("$\mathregular{Angle \ 1 \ (°)}$", fontsize=11, weight='bold')
+    ax.set_ylabel("$\mathregular{Angle \ 2 \ (°)}$", fontsize=11, weight='bold')
+    ax.set_zlabel('Minimum Eigenvalue', fontsize=11, weight='bold')
+    ax.ticklabel_format(axis='z', style='sci', scilimits=(0,0))
+
+    save_path = os.path.join(save_path, sample.name)
+    save_plot(fig, save_path, 'angle_choice_double')
+
+    maximum = np.argmax(min_eigs)
+    return x[maximum], y[maximum]
+
 def contrast_choice_single(bilayer, contrast_range, contrasts, angle_times, save_path, filename):
     xi = bilayer.parameters
     qs_init, counts_init, models_init = bilayer.contrast_information(angle_times, contrasts)
@@ -173,8 +224,8 @@ def angle_results_normal(save_path='./results'):
     
     points = 70
     time = 20
+    """
     angle_range = np.linspace(0.2, 2.4, 500)
-    
     for structure in STRUCTURES:
         angle_times = {}
         for i in range(4):
@@ -184,6 +235,10 @@ def angle_results_normal(save_path='./results'):
                 angle_times[angle] = (angle_times[angle][0]+points, angle_times[angle][1]+time)
             else:
                 angle_times[angle] = (points, time)
+    """
+    angle_range = np.linspace(0.2, 2.4, 50)
+    for structure in STRUCTURES:
+        angle_choice_double(structure(), angle_range, points, time, save_path)
 
 def angle_results_bilayer(save_path='./results'):
     from structures import BILAYERS
@@ -224,19 +279,19 @@ def underlayer_results(save_path='./results'):
     from structures import SymmetricBilayer
     from structures import SingleAsymmetricBilayer, DoubleAsymmetricBilayer
 
-    bilayer = SymmetricBilayer()
+    bilayer = DoubleAsymmetricBilayer()
     contrasts = [6.36]
     angle_times = {0.7: (70, 10),
                    2.3: (70, 40)}
     
     thickness_range = np.linspace(5, 500, 50)
-    sld_range = np.linspace(1, 9, 50)
+    sld_range = np.linspace(1, 9, 100)
     thick, sld = underlayer_choice(bilayer, thickness_range, sld_range, contrasts, angle_times, save_path)
-    print('Thickness: {}'.format(thick))
-    print('SLD: {}'.format(sld))
+    print('Thickness: {}'.format(round(thick)))
+    print('SLD: {}'.format(round(sld, 2)))
 
 if __name__ == '__main__':
-    #angle_results_normal()
+    angle_results_normal()
     #angle_results_bilayer()
     #contrast_results()
-    underlayer_results()
+    #underlayer_results()
