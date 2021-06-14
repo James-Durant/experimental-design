@@ -6,9 +6,10 @@ sys.path.append('../experimental-design')
 from refnx.reflect import SLD, Slab
 from refnx.analysis import Parameter
 
-from experimental_design import contrast_choice
+from structures import Bilayer
+from design import contrast_choice_single
 
-class Bilayer():
+class AsymmetricBilayer(Bilayer):
     """Defines a model describing an asymmetric bilayer."""
 
     def __init__(self):
@@ -59,17 +60,21 @@ class Bilayer():
         for param in self.parameters:
             param.vary=True
 
-    def using_contrast(self, contrast_sld):
+    def using_contrast(self, contrast_sld, underlayer=None):
         """Creates a structure representing the bilayer measured using a
            contrast of given `contrast_sld`.
 
         Args:
             contrast_sld (float): SLD of contrast to simulate.
+            underlayer (tuple): SLD and thickness of underlayer.
 
         Returns:
             refnx.reflect.Structure: structure in given contrast.
 
         """
+        # We do not need to consider underlayers for this example.
+        assert underlayer is None
+        
         # Rescales the H2O to D2O scale from 0 to 1.
         contrast_point = (contrast_sld + 0.56) / (6.35 + 0.56)
         # Calculate core SLD with the given contrast SLD.
@@ -89,21 +94,24 @@ class Bilayer():
 # Path to directory to save results to.
 save_path = './results'
 
+# Define the model.
+bilayer = AsymmetricBilayer()
+
 # Number of points and times to simulate for each angle.
-angle_times = {0.7: (70, 100),
-               2.0: (70, 400)} # Angle: (Points, Time)
+angle_times = {0.7: (70, 10),
+               2.3: (70, 40)} # Angle: (Points, Time)
 
 # Contrast SLDs to calculate over.
-contrasts = np.arange(-0.55, 6.36, 0.05)
+contrast_range = np.linspace(-0.55, 6.36, 200)
 
 # Initial contrast choice.
-contrast_choice(Bilayer(), [], contrasts, angle_times, save_path, 'initial')
+contrast_choice_single(bilayer, contrast_range, [], angle_times, save_path, 'initial')
 
 # Second contrast choice, assuming D2O was first measured.
-contrast_choice(Bilayer(), [6.36], contrasts, angle_times, save_path, 'D2O')
+contrast_choice_single(bilayer, contrast_range, [6.36], angle_times, save_path, 'D2O')
 
 # Second contrast choice, assuming H2O was first measured.
-contrast_choice(Bilayer(), [-0.56], contrasts, angle_times, save_path, 'H2O')
+contrast_choice_single(bilayer, contrast_range, [-0.56], angle_times, save_path, 'H2O')
 
 # Third contrast choice, assuming D2O and H2O were measured.
-contrast_choice(Bilayer(), [-0.56, 6.36], contrasts, angle_times, save_path, 'H2O_D2O')
+contrast_choice_single(bilayer, contrast_range, [-0.56, 6.36], angle_times, save_path, 'H2O_D2O')
