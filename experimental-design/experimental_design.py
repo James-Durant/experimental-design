@@ -86,7 +86,7 @@ def angle_choice_double(sample, angle_range, points_new, time_new, save_path, co
             qs, counts, models = [data[:,0]], [data[:,3]], [model]
             
         elif isinstance(sample, Bilayer):
-            qs, counts, models = sample.contrast_information(contrasts, angle_times)
+            qs, counts, models = sample.contrast_information(angle_times, contrasts)
 
         g = fisher(qs, xi, counts, models)
         min_eigs.append(np.linalg.eigvalsh(g)[0])
@@ -104,6 +104,7 @@ def angle_choice_double(sample, angle_range, points_new, time_new, save_path, co
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_trisurf(x, y, min_eigs, cmap='Spectral')
 
+    ax.set_xlim(ax.get_xlim()[::-1])
     ax.set_xlabel("$\mathregular{Angle \ 1 \ (°)}$", fontsize=11, weight='bold')
     ax.set_ylabel("$\mathregular{Angle \ 2 \ (°)}$", fontsize=11, weight='bold')
     ax.set_zlabel('Minimum Eigenvalue', fontsize=11, weight='bold')
@@ -224,7 +225,7 @@ def angle_results_normal(save_path='./results'):
     
     points = 70
     time = 20
-    """
+
     angle_range = np.linspace(0.2, 2.4, 500)
     for structure in STRUCTURES:
         angle_times = {}
@@ -235,7 +236,7 @@ def angle_results_normal(save_path='./results'):
                 angle_times[angle] = (angle_times[angle][0]+points, angle_times[angle][1]+time)
             else:
                 angle_times[angle] = (points, time)
-    """
+
     angle_range = np.linspace(0.2, 2.4, 50)
     for structure in STRUCTURES:
         angle_choice_double(structure(), angle_range, points, time, save_path)
@@ -247,7 +248,7 @@ def angle_results_bilayer(save_path='./results'):
     time = 20
     angle_range = np.linspace(0.2, 2.4, 500)
     contrasts = [-0.56, 6.36]
-    
+
     for bilayer in BILAYERS:
         angle_times = {}
         for i in range(4):
@@ -257,6 +258,10 @@ def angle_results_bilayer(save_path='./results'):
                 angle_times[angle] = (angle_times[angle][0]+points, angle_times[angle][1]+time)
             else:
                 angle_times[angle] = (points, time)
+
+    angle_range = np.linspace(0.2, 2.4, 50)
+    for structure in BILAYERS:
+        angle_choice_double(structure(), angle_range, points, time, save_path, contrasts)
 
 def contrast_results(save_path='./results'):
     from structures import SymmetricBilayer
@@ -292,6 +297,6 @@ def underlayer_results(save_path='./results'):
 
 if __name__ == '__main__':
     angle_results_normal()
-    #angle_results_bilayer()
-    #contrast_results()
-    #underlayer_results()
+    angle_results_bilayer()
+    contrast_results()
+    underlayer_results()
