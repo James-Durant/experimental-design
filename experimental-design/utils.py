@@ -134,11 +134,12 @@ def fisher(qs, xi, counts, models, step=0.005):
 
     # Calculate the FI matrix using the equations from the paper.
     M = np.diag(np.concatenate(counts) / r, k=0)
-    return np.dot(np.dot(J.T, M), J)
-
-def metric(g):
-    eigenvalues, eigenvectors = np.linalg.eigh(g)
-    return eigenvalues[0] # Eigenvalues are sorted in ascending order.
+    g = np.dot(np.dot(J.T, M), J)
+    
+    lb = np.array([param.bounds.lb for param in xi])
+    ub = np.array([param.bounds.ub for param in xi])
+    H = np.diag(1/(ub-lb))
+    return np.dot(np.dot(H.T, g), H)
 
 def reflectivity(q, model):
     if isinstance(model, refnx.reflect.ReflectModel):

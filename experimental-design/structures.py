@@ -10,7 +10,22 @@ from utils import Sampler, save_plot
 class Bilayer:
     """Parent class for the symmetric and asymmetric bilayer classes."""
 
-    def sample(self, contrasts, angle_times, save_path, filename):
+    def remove_param(self, param_name):
+        self.parameters = [param for param in self.parameters if param.name != param_name]
+
+    def contrast_information(self, angle_times, contrasts, underlayer=None):
+        qs, counts, models = [], [], []
+        if angle_times:
+            for contrast in contrasts:
+                model, data = simulate(self.using_contrast(contrast, underlayer), angle_times)
+                
+                qs.append(data[:,0])
+                counts.append(data[:,3])
+                models.append(model)
+        
+        return qs, counts, models
+
+    def sample(self, contrasts, angle_times, save_path, filename, underlayer=None):
         """Samples the bilayer model using nested sampling on simulated data.
 
         Args:
@@ -24,7 +39,7 @@ class Bilayer:
         objectives = []
         for contrast in contrasts:
             # Simulate an experiment using the given contrast.
-            model, data = simulate(self.using_contrast(contrast), angle_times)
+            model, data = simulate(self.using_contrast(contrast, underlayer), angle_times)
             dataset = ReflectDataset([data[:,0], data[:,1], data[:,2]])
             objectives.append(Objective(model, dataset))
 
@@ -102,12 +117,13 @@ class SymmetricBilayer(Bilayer):
         for param in self.parameters:
             param.vary=True
 
-    def using_contrast(self, contrast_sld):
+    def using_contrast(self, contrast_sld, underlayer=None):
         """Creates a structure representing the bilayer measured using a
            contrast of given `contrast_sld`.
 
         Args:
             contrast_sld (float): SLD of contrast to simulate.
+            underlayer
 
         Returns:
             (refnx.reflect.Structure): structure in given contrast.
@@ -128,10 +144,15 @@ class SymmetricBilayer(Bilayer):
         inner_hg = Slab(hg_thick,        hg_sld,        self.sio2_rough,    vfsolv=self.bilayer_solv)
         outer_hg = Slab(hg_thick,        hg_sld,        self.bilayer_rough, vfsolv=self.bilayer_solv)
         tg       = Slab(tg_thick,        self.tg_sld,   self.bilayer_rough, vfsolv=self.bilayer_solv)
-
-        solution  = SLD(contrast_sld)(rough=self.bilayer_rough)
-
-        return substrate | sio2 | inner_hg | tg | tg | outer_hg | solution
+        
+        solution = SLD(contrast_sld)(rough=self.bilayer_rough)
+        
+        if underlayer is None:
+            return substrate | sio2 | inner_hg | tg | tg | outer_hg | solution
+        else:
+            sld, thick = underlayer
+            underlayer = SLD(sld)(thick, self.sio2_rough, self.sio2_solv)
+            return substrate | sio2 | underlayer | inner_hg | tg | tg | outer_hg | solution
 
 class AsymmetricBilayer(Bilayer):
     """Defines a model describing an asymmetric bilayer. This model can either
@@ -202,7 +223,7 @@ class AsymmetricBilayer(Bilayer):
         for param in self.parameters:
             param.vary=True
 
-    def using_contrast(self, contrast_sld):
+    def using_contrast(self, contrast_sld, underlayer=None):
         """Creates a structure representing the bilayer measured using a
            contrast of given `contrast_sld`.
 
@@ -231,7 +252,12 @@ class AsymmetricBilayer(Bilayer):
         outer_tg = Slab(self.outer_tg_thick, self.outer_tg_sld, self.bilayer_rough, vfsolv=self.tg_solv)
         core     = Slab(self.core_thick,     core_sld,          self.bilayer_rough, vfsolv=self.core_solv)
 
-        return substrate | sio2 | inner_hg | inner_tg | outer_tg | core | solution
+        if underlayer is None:
+            return substrate | sio2 | inner_hg | inner_tg | outer_tg | core | solution
+        else:
+            sld, thick = underlayer
+            underlayer = SLD(sld)(thick, self.sio2_rough, self.sio2_solv)
+            return substrate | sio2 | underlayer | inner_hg | inner_tg | outer_tg | core | solution
 
 class SingleAsymmetricBilayer(AsymmetricBilayer):
     """Defines a model describing an asymmetric bilayer defined by a single
