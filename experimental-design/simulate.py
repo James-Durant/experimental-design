@@ -1,7 +1,10 @@
 import numpy as np
 
-import refnx.reflect
-import refl1d.model, refl1d.probe, refl1d.experiment
+from refnx.reflect import Structure, ReflectModel
+
+from refl1d.model import Stack
+from refl1d.probe import QProbe
+from refl1d.experiment import Experiment
 
 DIRECTBEAM_PATH = '../experimental-design/data/directbeam/directbeam_wavelength.dat'
 
@@ -29,14 +32,14 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
     data = data[(data != 0).all(1)] # Remove points of zero reflectivity.
     data = data[data[:,0].argsort()] # Sort by Q.
 
-    if isinstance(sample, refnx.reflect.Structure):
-        model = refnx.reflect.ReflectModel(sample, scale=scale, bkg=bkg, dq=dq)
+    if isinstance(sample, Structure):
+        model = ReflectModel(sample, scale=scale, bkg=bkg, dq=dq)
         
-    elif isinstance(sample, refl1d.model.Stack):
+    elif isinstance(sample, Stack):
         q, r, dr = data[:,0], data[:,1], data[:,2]
         dq /= 100*np.sqrt(8*np.log(2))
-        probe = refl1d.probe.QProbe(q, q*dq, data=(r,dr), intensity=scale, background=bkg)
-        model = refl1d.experiment.Experiment(probe=probe, sample=sample)
+        probe = QProbe(q, q*dq, data=(r,dr), intensity=scale, background=bkg)
+        model = Experiment(probe=probe, sample=sample)
 
     return model, data
 
@@ -58,14 +61,14 @@ def run_experiment(sample, angle, points, time, scale, bkg, dq):
     # Get the bin centres and calculate model reflectivity.
     q_binned = np.asarray([(q_bin_edges[i] + q_bin_edges[i+1]) / 2 for i in range(points)])
     
-    if isinstance(sample, refnx.reflect.Structure):
-        model = refnx.reflect.ReflectModel(sample, scale=scale, bkg=bkg, dq=dq)
+    if isinstance(sample, Structure):
+        model = ReflectModel(sample, scale=scale, bkg=bkg, dq=dq)
         r_model = model(q_binned)
         
-    elif isinstance(sample, refl1d.model.Stack):
+    elif isinstance(sample, Stack):
         dq /= 100*np.sqrt(8*np.log(2))
-        probe = refl1d.probe.QProbe(q, q*dq, intensity=scale, background=bkg)
-        experiment = refl1d.experiment.Experiment(probe=probe, sample=sample)
+        probe = QProbe(q, q*dq, intensity=scale, background=bkg)
+        experiment = Experiment(probe=probe, sample=sample)
         _, r_model = experiment.reflectivity()
 
     # Calculate the number of incident neutrons for each bin.

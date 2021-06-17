@@ -46,7 +46,7 @@ class Sample(BaseSample):
     def __init__(self, structure):
         self.structure = structure
         self.name = structure.name
-        self.params = Sample.__vary_structure(structure)
+        self.parameters = Sample.__vary_structure(structure)
      
     @staticmethod
     def __vary_structure(structure, bound_size=0.2):
@@ -75,7 +75,7 @@ class Sample(BaseSample):
     
         return params
         
-    def angle_info(self, angle_times):
+    def angle_info(self, angle_times, contrasts=None):
         qs_init, counts_init, models_init = [], [], []
         if angle_times:
             model, data = simulate(self.structure, angle_times)
@@ -134,19 +134,19 @@ class BaseBilayer(BaseSample, VariableAngle, VariableContrast, VariableUnderlaye
         self._create_objectives()
     
     def angle_info(self, angle_times, contrasts):
-        return self.__conditions_info(self, angle_times, contrasts, None)
+        return self.__conditions_info(angle_times, contrasts, None)
     
     def contrast_info(self, angle_times, contrasts):
-        return self.__conditions_info(self, angle_times, contrasts, None)
+        return self.__conditions_info(angle_times, contrasts, None)
     
     def underlayer_info(self, angle_times, contrasts, underlayer):
-        return self.__conditions_info(self, angle_times, contrasts, underlayer)
+        return self.__conditions_info(angle_times, contrasts, underlayer)
     
     def __conditions_info(self, angle_times, contrasts, underlayer):
         qs, counts, models = [], [], []
         if angle_times:
             for contrast in contrasts:
-                model, data = simulate(self.__using_conditions(contrast, underlayer), angle_times)
+                model, data = simulate(self._using_conditions(contrast, underlayer), angle_times)
                 
                 qs.append(data[:,0])
                 counts.append(data[:,3])
@@ -362,7 +362,7 @@ class SymmetricBilayer(BaseBilayer):
         # Combine models and datasets into objectives that can be fitted.
         self.objectives = [Objective(model, data) for model, data in list(zip(self.models, self.datasets))]
 
-    def __using_conditions(self, contrast_sld, underlayer=None):
+    def _using_conditions(self, contrast_sld, underlayer=None):
         # Calculate the SLD of the headgroup with the given contrast SLD.
         hg_sld = contrast_sld*0.27 + 1.98*0.73
 
@@ -485,7 +485,7 @@ class AsymmetricBilayer(BaseBilayer):
         # Combine models and datasets into objectives corresponding to each contrast.
         self.objectives = [Objective(model, data) for model, data in list(zip(self.models, self.datasets))]
 
-    def __using_conditions(self, contrast_sld, underlayer=None):
+    def _using_conditions(self, contrast_sld, underlayer=None):
         """Creates a structure representing the bilayer measured using a
            contrast of given `contrast_sld`.
 
