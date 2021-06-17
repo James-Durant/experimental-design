@@ -5,7 +5,11 @@ import os
 from itertools import combinations
 from utils import fisher, save_plot
 
+from structures import VariableAngle, VariableContrast, VariableUnderlayer
+
 def angle_choice_single(sample, initial_angle_times, angle_range, points_new, time_new, save_path, filename, contrasts=[]):
+    assert isinstance(sample, VariableAngle)
+    
     xi = sample.parameters
     qs_init, counts_init, models_init = sample.angle_info(initial_angle_times, contrasts)
         
@@ -38,6 +42,8 @@ def angle_choice_single(sample, initial_angle_times, angle_range, points_new, ti
     return angle_range[np.argmax(min_eigs)]
 
 def angle_choice_double(sample, angle_range, points_new, time_new, save_path, contrasts=[]):
+    assert isinstance(sample, VariableAngle)
+    
     xi = sample.parameters
     angles = np.asarray(list(combinations(angle_range, 2)))
 
@@ -77,6 +83,8 @@ def angle_choice_double(sample, angle_range, points_new, time_new, save_path, co
     return x[maximum], y[maximum]
 
 def contrast_choice_single(sample, contrast_range, contrasts, angle_times, save_path, filename):
+    assert isinstance(sample, VariableContrast)
+    
     xi = sample.parameters
     qs_init, counts_init, models_init = sample.contrast_info(angle_times, contrasts)
     
@@ -109,6 +117,8 @@ def contrast_choice_single(sample, contrast_range, contrasts, angle_times, save_
     return contrast_range[np.argmax(min_eigs)]
 
 def contrast_choice_double(sample, contrast_range, angle_times, save_path):
+    assert isinstance(sample, VariableContrast)
+    
     xi = sample.parameters
     contrasts = np.asarray(list(combinations(contrast_range, 2)))
 
@@ -146,6 +156,8 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path):
     return x[maximum], y[maximum]
 
 def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times, save_path):
+    assert isinstance(sample, VariableUnderlayer)
+    
     xi = sample.parameters
     
     x, y, min_eigs = [], [], []
