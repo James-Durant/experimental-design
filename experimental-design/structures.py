@@ -469,7 +469,7 @@ class AsymmetricBilayer(BaseBilayer):
         """Creates objectives corresponding to each measured contrast."""
 
         # Define structures for each contrast.
-        self.structures = [self.__using_conditions(contrast_sld) for contrast_sld in self.contrast_slds]
+        self.structures = [self._using_conditions(contrast_sld) for contrast_sld in self.contrast_slds]
         
         for i, label in enumerate(self.labels):
             self.structures[i].name = label
@@ -640,8 +640,8 @@ def many_param_sample():
 
 BILAYERS = [SymmetricBilayer, SingleAsymmetricBilayer, DoubleAsymmetricBilayer]
 
-SAMPLES = [simple_sample, thin_layer_sample_1, thin_layer_sample_2,
-           similar_sld_sample_1, similar_sld_sample_2, many_param_sample]
+STRUCTURES = [simple_sample, thin_layer_sample_1, thin_layer_sample_2,
+              similar_sld_sample_1, similar_sld_sample_2, many_param_sample]
 
 def refnx_to_refl1d(sample):
     structure = Refl1DSLD(rho=0, name='Air')
@@ -657,7 +657,7 @@ def refnx_to_refl1d(sample):
 if __name__ == '__main__':
     save_path = './results'
     
-    for structure in SAMPLES+BILAYERS:
+    for structure in STRUCTURES+BILAYERS:
         sample = structure()
         sample.sld_profile(save_path)
         sample.reflectivity_profile(save_path)
