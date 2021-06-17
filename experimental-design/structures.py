@@ -25,16 +25,7 @@ class Bilayer:
         
         return qs, counts, models
 
-    def sample(self, contrasts, angle_times, save_path, filename, underlayer=None):
-        """Samples the bilayer model using nested sampling on simulated data.
-
-        Args:
-            contrasts (list): contrast SLDs to be sampled on.
-            angle_times (dict): number of points and times for each angle.
-            save_path (str): path to directory to save corner plots to.
-            filename (str): name of file to use when saving plots.
-
-        """
+    def sample(self, contrasts, angle_times, save_path, filename, underlayer=None, dynamic=False):
         # Create objectives for each contrast to sample with.
         objectives = []
         for contrast in contrasts:
@@ -49,7 +40,7 @@ class Bilayer:
 
         # Sample the objective using nested sampling.
         sampler = Sampler(global_objective)
-        fig = sampler.sample()
+        fig = sampler.sample(dynamic=dynamic)
 
         # Save the sampling corner plot.
         save_path = os.path.join(save_path, self.name)

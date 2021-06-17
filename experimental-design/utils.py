@@ -1,7 +1,7 @@
 import numpy as np
 import os
 
-from dynesty import NestedSampler
+from dynesty import NestedSampler, DynamicNestedSampler
 from dynesty import plotting as dyplot
 from dynesty import utils as dyfunc
 
@@ -27,7 +27,8 @@ class Sampler:
             raise RuntimeError('invalid objective/fitproblem given')
 
         self.ndim = len(self.params)
-        self.sampler_nested = NestedSampler(logl, prior_transform, self.ndim)
+        self.sampler_nested_static = NestedSampler(logl, prior_transform, self.ndim)
+        self.sampler_nested_dynamic = DynamicNestedSampler(logl, prior_transform, self.ndim)
 
     def logl_refl1d(self, x):
         self.objective.setp(x)
@@ -37,9 +38,14 @@ class Sampler:
         x = [param.bounds.put01(u[i]) for i, param in enumerate(self.params)]
         return np.asarray(x)
 
-    def sample(self, verbose=True):
-        self.sampler_nested.run_nested(print_progress=verbose)
-        results = self.sampler_nested.results
+    def sample(self, verbose=True, dynamic=False):
+        if dynamic:
+            # Weighting is entirely on the posterior (0 weight on evidence).
+            self.sampler_nested_dynamic.run_nested(print_progress=verbose, wt_kwargs={'pfrac': 1.0})
+            results = self.sampler_nested_dynamic.results
+        else:
+            self.sampler_nested_static.run_nested(print_progress=verbose)
+            results = self.sampler_nested_static.results
 
         # Calculate the parameter means.
         weights = np.exp(results.logwt - results.logz[-1])
@@ -167,4 +173,16 @@ def save_plot(fig, save_path, filename):
 
     file_path = os.path.join(save_path, filename+'.png')
     fig.savefig(file_path, dpi=600)
+
+def merge_figures(figs, labels=[]):
+    fig_merged = figs[0]
+    ax_merged = fig_merged.axes[0]
+    for fig in figs[1:]:
+        ax = fig.axes[0]
+        line = ax.lines[0]
+        ax_merged.plot(line.get_xdata(), line.get_ydata())
     
+    ax_merged.set_yscale('log')
+    ax_merged.legend(labels)
+    
+    return fig_merged
