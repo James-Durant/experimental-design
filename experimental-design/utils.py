@@ -74,31 +74,6 @@ class Sampler:
         axes[self.ndim-1, self.ndim-1].set_xlabel(self.params[-1].name)
         return fig
 
-def vary_structure(structure, bound_size=0.2):
-    params = []
-    for component in structure[1:-1]:
-        if isinstance(structure, refnx.reflect.Structure):
-            sld = component.sld.real
-            sld_bounds = (sld.value*(1-bound_size), sld.value*(1+bound_size))
-            sld.setp(vary=True, bounds=sld_bounds)
-            params.append(sld)
-            
-            thick = component.thick
-            thick_bounds = (thick.value*(1-bound_size), thick.value*(1+bound_size))
-            thick.setp(vary=True, bounds=thick_bounds)
-            params.append(thick)
-            
-        elif isinstance(structure, refl1d.model.Stack): 
-            sld = component.material.rho
-            sld.pmp(bound_size*100)
-            params.append(sld)
-            
-            thick = component.thickness
-            thick.pmp(bound_size*100)
-            params.append(thick)
-
-    return params
-
 def fisher(qs, xi, counts, models, step=0.005):
     """Calculates the FI matrix for multiple `models` containing parameters, `xi`.
 
@@ -173,16 +148,3 @@ def save_plot(fig, save_path, filename):
 
     file_path = os.path.join(save_path, filename+'.png')
     fig.savefig(file_path, dpi=600)
-
-def merge_figures(figs, labels=[]):
-    fig_merged = figs[0]
-    ax_merged = fig_merged.axes[0]
-    for fig in figs[1:]:
-        ax = fig.axes[0]
-        line = ax.lines[0]
-        ax_merged.plot(line.get_xdata(), line.get_ydata())
-    
-    ax_merged.set_yscale('log')
-    ax_merged.legend(labels)
-    
-    return fig_merged
