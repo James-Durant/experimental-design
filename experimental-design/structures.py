@@ -208,7 +208,7 @@ class BaseBilayer(BaseSample, VariableAngle, VariableContrast, VariableUnderlaye
         objectives = []
         for contrast in contrasts:
             # Simulate an experiment using the given contrast.
-            model, data = simulate(self.using_conditions(contrast, underlayer), angle_times)
+            model, data = simulate(self._using_conditions(contrast, underlayer), angle_times)
             dataset = ReflectDataset([data[:,0], data[:,1], data[:,2]])
             objectives.append(Objective(model, dataset))
 
