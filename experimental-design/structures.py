@@ -1,4 +1,7 @@
 import matplotlib.pyplot as plt
+plt.rcParams['figure.figsize'] = (9,7)
+plt.rcParams['figure.dpi'] = 600
+
 import numpy as np
 import os
 
@@ -87,7 +90,7 @@ class Sample(BaseSample):
         return qs_init, counts_init, models_init
 
     def sld_profile(self, save_path):
-        fig = plt.figure(figsize=[9,7], dpi=600)
+        fig = plt.figure()
         ax = fig.add_subplot(111)
 
         # Plot the SLD profile with or without a label.
@@ -105,7 +108,7 @@ class Sample(BaseSample):
         r = model(q) # Calculate the model reflectivity.
 
         # Plot the model reflectivity against Q.
-        fig = plt.figure(figsize=[9,7], dpi=600)
+        fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.plot(q, r, color='black')
 
@@ -159,7 +162,7 @@ class BaseBilayer(VariableAngle, VariableContrast, VariableUnderlayer): #, BaseS
         pass
 
     def sld_profile(self, save_path):
-        fig = plt.figure(figsize=[9,7], dpi=600)
+        fig = plt.figure()
         ax = fig.add_subplot(111)
 
         for structure in self.structures:
@@ -173,7 +176,7 @@ class BaseBilayer(VariableAngle, VariableContrast, VariableUnderlayer): #, BaseS
         save_plot(fig, save_path, 'sld_profile')
 
     def reflectivity_profile(self, save_path):
-        fig = plt.figure(figsize=[9,7], dpi=600)
+        fig = plt.figure()
         ax = fig.add_subplot(111)
 
         for i, objective in enumerate(self.objectives):

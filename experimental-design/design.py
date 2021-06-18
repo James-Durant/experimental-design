@@ -1,4 +1,7 @@
 import matplotlib.pyplot as plt
+plt.rcParams['figure.figsize'] = (9,7)
+plt.rcParams['figure.dpi'] = 600
+
 import numpy as np
 import os
 
@@ -28,7 +31,7 @@ def angle_choice_single(sample, initial_angle_times, angle_range, points_new, ti
         if i % 100 == 0:
             print('>>> {0}/{1}'.format(i, len(angle_range)))
 
-    fig = plt.figure(figsize=[9,7], dpi=600)
+    fig = plt.figure()
     ax = fig.add_subplot(111)
 
     ax.plot(angle_range, min_eigs)
@@ -41,7 +44,8 @@ def angle_choice_single(sample, initial_angle_times, angle_range, points_new, ti
 
     return angle_range[np.argmax(min_eigs)]
 
-def angle_choice_double(sample, angle_range, points_new, time_new, save_path, contrasts=[]):
+def angle_choice_double(sample, angle_range, points_new, time_new, save_path, contrasts=[],
+                        reverse_xaxis=True, reverse_yaxis=False):
     assert isinstance(sample, VariableAngle)
 
     xi = sample.parameters
@@ -70,7 +74,12 @@ def angle_choice_double(sample, angle_range, points_new, time_new, save_path, co
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_trisurf(x, y, min_eigs, cmap='Spectral')
 
-    ax.set_xlim(ax.get_xlim()[::-1])
+    if reverse_xaxis:
+        ax.set_xlim(ax.get_xlim()[::-1])
+    
+    if reverse_yaxis:
+        ax.set_ylim(ax.get_ylim()[::-1])
+        
     ax.set_xlabel("$\mathregular{Angle \ 1 \ (°)}$", fontsize=11, weight='bold')
     ax.set_ylabel("$\mathregular{Angle \ 2 \ (°)}$", fontsize=11, weight='bold')
     ax.set_zlabel('Minimum Eigenvalue', fontsize=11, weight='bold')
@@ -103,7 +112,7 @@ def contrast_choice_single(sample, contrast_range, contrasts, angle_times, save_
         if i % 100 == 0:
             print('>>> {0}/{1}'.format(i, len(contrast_range)))
 
-    fig = plt.figure(figsize=[9,7], dpi=600)
+    fig = plt.figure()
     ax = fig.add_subplot(111)
 
     ax.plot(contrast_range, min_eigs)
@@ -116,7 +125,8 @@ def contrast_choice_single(sample, contrast_range, contrasts, angle_times, save_
 
     return contrast_range[np.argmax(min_eigs)]
 
-def contrast_choice_double(sample, contrast_range, angle_times, save_path):
+def contrast_choice_double(sample, contrast_range, angle_times, save_path,
+                           reverse_xaxis=True, reverse_yaxis=True):
     assert isinstance(sample, VariableContrast)
 
     xi = sample.parameters
@@ -142,8 +152,12 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path):
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_trisurf(x, y, min_eigs, cmap='Spectral')
 
-    ax.set_xlim(ax.get_xlim()[::-1])
-    ax.set_ylim(ax.get_ylim()[::-1])
+    if reverse_xaxis:
+        ax.set_xlim(ax.get_xlim()[::-1])
+    
+    if reverse_yaxis:
+        ax.set_ylim(ax.get_ylim()[::-1])
+        
     ax.set_xlabel("$\mathregular{Contrast \ 1 \ SLD \ (10^{-6} \AA^{-2})}$", fontsize=11, weight='bold')
     ax.set_ylabel("$\mathregular{Contrast \ 2 \ SLD \ (10^{-6} \AA^{-2})}$", fontsize=11, weight='bold')
     ax.set_zlabel('Minimum Eigenvalue', fontsize=11, weight='bold')
@@ -155,7 +169,8 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path):
     maximum = np.argmax(min_eigs)
     return x[maximum], y[maximum]
 
-def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times, save_path):
+def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times, save_path,
+                      reverse_xaxis=False, reverse_yaxis=False):
     assert isinstance(sample, VariableUnderlayer)
 
     xi = sample.parameters
@@ -173,9 +188,15 @@ def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times
         if i % 5 == 0:
             print('>>> {0}/{1}'.format(i*len(sld_range), len(thickness_range)*len(sld_range)))
 
-    fig = plt.figure(figsize=[9,7])
+    fig = plt.figure(figsize=[10,8])
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_trisurf(x, y, min_eigs, cmap='Spectral')
+
+    if reverse_xaxis:
+        ax.set_xlim(ax.get_xlim()[::-1])
+    
+    if reverse_yaxis:
+        ax.set_ylim(ax.get_ylim()[::-1])
 
     ax.set_ylabel('$\mathregular{Underlayer\ Thickness\ (\AA)}$', fontsize=11, weight='bold')
     ax.set_xlabel('$\mathregular{Underlayer\ SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
