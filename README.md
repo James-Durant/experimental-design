@@ -1,6 +1,8 @@
 # experimental-design
 ## About the Project
-Experimental design in neutron reflectometry using the Fisher information. Please refer to [examples](/examples) for an introduction to the framework's usage. 
+Experimental design in neutron reflectometry using the Fisher information.
+
+Please refer to the [examples](/examples) directory for an introduction. 
 
 ## Installation
 1. To replicate the development environment with the [Anaconda](https://www.anaconda.com/products/individual) distribution, first create an empty conda environment by running: <br /> ```conda create --name experimental-design python=3.8.3```
