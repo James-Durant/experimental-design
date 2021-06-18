@@ -16,7 +16,7 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
         points, time = angle_times[angle]
         total_points += points
         simulated = run_experiment(sample, angle, points, time, scale, bkg, dq)
-        
+
         # Combine the data for the angle with the data from other angles.
         q.append(simulated[0])
         r.append(simulated[1])
@@ -34,7 +34,7 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
 
     if isinstance(sample, Structure):
         model = ReflectModel(sample, scale=scale, bkg=bkg, dq=dq)
-        
+
     elif isinstance(sample, Stack):
         q, r, dr = data[:,0], data[:,1], data[:,2]
         dq /= 100*np.sqrt(8*np.log(2))
@@ -60,11 +60,11 @@ def run_experiment(sample, angle, points, time, scale, bkg, dq):
 
     # Get the bin centres and calculate model reflectivity.
     q_binned = np.asarray([(q_bin_edges[i] + q_bin_edges[i+1]) / 2 for i in range(points)])
-    
+
     if isinstance(sample, Structure):
         model = ReflectModel(sample, scale=scale, bkg=bkg, dq=dq)
         r_model = model(q_binned)
-        
+
     elif isinstance(sample, Stack):
         dq /= 100*np.sqrt(8*np.log(2))
         probe = QProbe(q, q*dq, intensity=scale, background=bkg)

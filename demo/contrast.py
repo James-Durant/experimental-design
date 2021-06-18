@@ -6,15 +6,15 @@ sys.path.append('../experimental-design')
 from refnx.reflect import SLD, Slab
 from refnx.analysis import Parameter
 
-from structures import Bilayer
-from design import contrast_choice_single
+from structures import BaseBilayer
+from design import contrast_choice_single, contrast_choice_double
 
-class AsymmetricBilayer(Bilayer):
+class AsymmetricBilayer(BaseBilayer):
     """Defines a model describing an asymmetric bilayer."""
 
     def __init__(self):
         self.name = 'asymmetric_bilayer'
-        
+
         # Define known values.
         self.si_sld    =  2.07
         self.sio2_sld  =  3.41
@@ -39,7 +39,7 @@ class AsymmetricBilayer(Bilayer):
         self.core_solv      = Parameter(0.26,   'Core Hydration',            (0,1))
         self.asym_value     = Parameter(0.95,   'Asymmetry Value',           (0,1))
 
-        self.inner_tg_sld = SLD(self.asym_value*self.dPC_tg  + (1-self.asym_value)*self.hLPS_tg)
+        self.inner_tg_sld = SLD(self.asym_value*self.dPC_tg + (1-self.asym_value)*self.hLPS_tg)
         self.outer_tg_sld = SLD(self.asym_value*self.hLPS_tg + (1-self.asym_value)*self.dPC_tg)
 
         self.parameters = [self.si_rough,
@@ -60,7 +60,7 @@ class AsymmetricBilayer(Bilayer):
         for param in self.parameters:
             param.vary=True
 
-    def using_contrast(self, contrast_sld, underlayer=None):
+    def _using_conditions(self, contrast_sld, underlayer=None):
         """Creates a structure representing the bilayer measured using a
            contrast of given `contrast_sld`.
 
@@ -74,7 +74,7 @@ class AsymmetricBilayer(Bilayer):
         """
         # We do not need to consider underlayers for this example.
         assert underlayer is None
-        
+
         # Rescales the H2O to D2O scale from 0 to 1.
         contrast_point = (contrast_sld + 0.56) / (6.35 + 0.56)
         # Calculate core SLD with the given contrast SLD.
@@ -101,17 +101,18 @@ bilayer = AsymmetricBilayer()
 angle_times = {0.7: (70, 10),
                2.3: (70, 40)} # Angle: (Points, Time)
 
-# Contrast SLDs to calculate over.
-contrast_range = np.linspace(-0.55, 6.36, 200)
+# Single contrast SLDs to calculate over.
+contrast_range = np.linspace(-0.55, 6.36, 100)
 
-# Initial contrast choice.
-contrast_choice_single(bilayer, contrast_range, [], angle_times, save_path, 'initial')
-
-# Second contrast choice, assuming D2O was first measured.
+# Single contrast choice, assuming D2O was first measured.
 contrast_choice_single(bilayer, contrast_range, [6.36], angle_times, save_path, 'D2O')
 
-# Second contrast choice, assuming H2O was first measured.
+# Single contrast choice, assuming H2O was first measured.
 contrast_choice_single(bilayer, contrast_range, [-0.56], angle_times, save_path, 'H2O')
 
-# Third contrast choice, assuming D2O and H2O were measured.
+# Single contrast choice, assuming D2O and H2O were measured.
 contrast_choice_single(bilayer, contrast_range, [-0.56, 6.36], angle_times, save_path, 'H2O_D2O')
+
+# Choice of two contrasts simultaneously, assuming no prior measurement.
+contrast_range = np.linspace(-0.55, 6.36, 20)
+contrast_choice_double(bilayer, contrast_range, angle_times, save_path)

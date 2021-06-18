@@ -33,11 +33,11 @@ class BaseSample(VariableAngle):
     @abstractmethod
     def sld_profile(self, save_path):
         pass
-    
+
     @abstractmethod
     def reflectivity_profile(self, save_path):
         pass
-    
+
     @abstractmethod
     def nested_sampling(self, angle_times, save_path, filename, dynamic=False):
         pass
@@ -47,7 +47,7 @@ class Sample(BaseSample):
         self.structure = structure
         self.name = structure.name
         self.parameters = Sample.__vary_structure(structure)
-     
+
     @staticmethod
     def __vary_structure(structure, bound_size=0.2):
         params = []
@@ -57,62 +57,62 @@ class Sample(BaseSample):
                 sld_bounds = (sld.value*(1-bound_size), sld.value*(1+bound_size))
                 sld.setp(vary=True, bounds=sld_bounds)
                 params.append(sld)
-                
+
                 thick = component.thick
                 thick_bounds = (thick.value*(1-bound_size), thick.value*(1+bound_size))
                 thick.setp(vary=True, bounds=thick_bounds)
                 params.append(thick)
-                
-        elif isinstance(structure, Refl1DStack): 
+
+        elif isinstance(structure, Refl1DStack):
             for component in structure[1:-1]:
                 sld = component.material.rho
                 sld.pmp(bound_size*100)
                 params.append(sld)
-                
+
                 thick = component.thickness
                 thick.pmp(bound_size*100)
                 params.append(thick)
-    
+
         return params
-        
+
     def angle_info(self, angle_times, contrasts=None):
         qs_init, counts_init, models_init = [], [], []
         if angle_times:
             model, data = simulate(self.structure, angle_times)
-        
+
             qs_init.append(data[:,0])
             counts_init.append(data[:,3])
             models_init.append(model)
-            
+
         return qs_init, counts_init, models_init
 
     def sld_profile(self, save_path):
         fig = plt.figure(figsize=[9,7], dpi=600)
         ax = fig.add_subplot(111)
-        
+
         # Plot the SLD profile with or without a label.
         ax.plot(*self.structure.sld_profile(), color='black', label=self.name)
-        
+
         ax.set_xlabel('$\mathregular{Distance\ (\AA)}$', fontsize=11, weight='bold')
         ax.set_ylabel('$\mathregular{SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
-        
+
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'sld_profile')
-    
+
     def reflectivity_profile(self, save_path, q_min=0.005, q_max=0.3, points=500, scale=1, bkg=1e-7, dq=2):
         model = ReflectModel(self.structure, scale=scale, bkg=bkg, dq=dq)
         q = np.geomspace(q_min, q_max, points)
         r = model(q) # Calculate the model reflectivity.
-        
+
         # Plot the model reflectivity against Q.
         fig = plt.figure(figsize=[9,7], dpi=600)
         ax = fig.add_subplot(111)
         ax.plot(q, r, color='black')
-        
+
         ax.set_xlabel('$\mathregular{Q\ (Å^{-1})}$', fontsize=11, weight='bold')
         ax.set_ylabel('Reflectivity (arb.)', fontsize=11, weight='bold')
         ax.set_yscale('log')
-        
+
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'reflectivity_profile')
 
@@ -129,67 +129,67 @@ class Sample(BaseSample):
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, filename+'_nested_sampling')
 
-class BaseBilayer(BaseSample, VariableAngle, VariableContrast, VariableUnderlayer):
+class BaseBilayer(VariableAngle, VariableContrast, VariableUnderlayer): #, BaseSample):
     def __init__(self):
         self._create_objectives()
-    
+
     def angle_info(self, angle_times, contrasts):
         return self.__conditions_info(angle_times, contrasts, None)
-    
+
     def contrast_info(self, angle_times, contrasts):
         return self.__conditions_info(angle_times, contrasts, None)
-    
+
     def underlayer_info(self, angle_times, contrasts, underlayer):
         return self.__conditions_info(angle_times, contrasts, underlayer)
-    
+
     def __conditions_info(self, angle_times, contrasts, underlayer):
         qs, counts, models = [], [], []
         if angle_times:
             for contrast in contrasts:
                 model, data = simulate(self._using_conditions(contrast, underlayer), angle_times)
-                
+
                 qs.append(data[:,0])
                 counts.append(data[:,3])
                 models.append(model)
-        
+
         return qs, counts, models
 
-    @abstractmethod
+    #@abstractmethod
     def _create_objectives(self):
         pass
 
     def sld_profile(self, save_path):
         fig = plt.figure(figsize=[9,7], dpi=600)
         ax = fig.add_subplot(111)
-    
+
         for structure in self.structures:
             ax.plot(*structure.sld_profile(self.distances))
-    
+
         ax.set_xlabel('$\mathregular{Distance\ (\AA)}$', fontsize=11, weight='bold')
         ax.set_ylabel('$\mathregular{SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
         ax.legend(self.labels)
 
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'sld_profile')
-        
+
     def reflectivity_profile(self, save_path):
         fig = plt.figure(figsize=[9,7], dpi=600)
         ax = fig.add_subplot(111)
-        
+
         for i, objective in enumerate(self.objectives):
             q, r, dr = objective.data.x, objective.data.y, objective.data.y_err
             r_model = objective.model(q)
-            
+
             offset = 10**(-2*i)
-            
+
             label = self.labels[i]
             if offset != 1:
                 label += ' $\mathregular{(x10^{-'+str(2*i)+'})}$'
-            
+
             r *= offset
             dr *= offset
             r_model *= offset
-            
+
             ax.errorbar(q, r, dr, marker='o', ms=3, lw=0, elinewidth=1, capsize=1.5, label=label)
             ax.plot(q, r_model, color='red', zorder=20)
 
@@ -202,7 +202,7 @@ class BaseBilayer(BaseSample, VariableAngle, VariableContrast, VariableUnderlaye
 
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'reflectivity_profile')
-        
+
     def nested_sampling(self, contrasts, angle_times, save_path, filename, underlayer=None, dynamic=False):
         # Create objectives for each contrast to sample with.
         objectives = []
@@ -250,14 +250,14 @@ class SymmetricBilayer(BaseBilayer):
     """
     def __init__(self):
         self.name = 'symmetric_bilayer'
-        
+
         self.data_path = './data/symmetric_bilayer'
         self.scales = [0.677763, 0.645217, 0.667776]
         self.bkgs = [3.20559e-06, 2.05875e-06, 2.80358e-06]
         self.dq = 2
         self.labels = ['Si-D2O', 'Si-DMPC-D2O', 'Si-DMPC-H2O']
         self.distances = np.linspace(-20, 95, 500)
-        
+
         # Define known values.
         self.si_sld      = 2.073
         self.sio2_sld    = 3.41
@@ -292,9 +292,9 @@ class SymmetricBilayer(BaseBilayer):
         # Vary all of the parameters defined above.
         for param in self.parameters:
             param.vary=True
-            
+
         super().__init__()
-        
+
     def _create_objectives(self) -> None:
         """Creates objectives corresponding to each measured contrast."""
 
@@ -378,9 +378,9 @@ class SymmetricBilayer(BaseBilayer):
         inner_hg = Slab(hg_thick,        hg_sld,        self.sio2_rough,    vfsolv=self.bilayer_solv)
         outer_hg = Slab(hg_thick,        hg_sld,        self.bilayer_rough, vfsolv=self.bilayer_solv)
         tg       = Slab(tg_thick,        self.tg_sld,   self.bilayer_rough, vfsolv=self.bilayer_solv)
-        
+
         solution = SLD(contrast_sld)(rough=self.bilayer_rough)
-        
+
         if underlayer is None:
             return substrate | sio2 | inner_hg | tg | tg | outer_hg | solution
         else:
@@ -424,7 +424,7 @@ class AsymmetricBilayer(BaseBilayer):
         self.dq = 4
         self.labels = ['dPC-RaLPS-D2O', 'dPC-RaLPS-SMW', 'dPC-RaLPS-H2O']
         self.distances = np.linspace(-30, 110, 500)
-        
+
         # Define known values.
         self.si_sld    =  2.07
         self.sio2_sld  =  3.41
@@ -470,7 +470,7 @@ class AsymmetricBilayer(BaseBilayer):
 
         # Define structures for each contrast.
         self.structures = [self._using_conditions(contrast_sld) for contrast_sld in self.contrast_slds]
-        
+
         for i, label in enumerate(self.labels):
             self.structures[i].name = label
 
@@ -578,7 +578,7 @@ def simple_sample():
     layer1 = SLD(4, name='Layer 1')(thick=100, rough=2)
     layer2 = SLD(8, name='Layer 2')(thick=150, rough=2)
     substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
-    
+
     structure = air | layer1 | layer2 | substrate
     structure.name = 'simple_sample'
     return Sample(structure)
@@ -588,7 +588,7 @@ def thin_layer_sample_1():
     layer1 = SLD(4, name='Layer 1')(thick=200, rough=2)
     layer2 = SLD(6, name='Layer 2')(thick=6, rough=2)
     substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
-    
+
     structure = air | layer1 | layer2 | substrate
     structure.name = 'thin_layer_sample_1'
     return Sample(structure)
@@ -599,7 +599,7 @@ def thin_layer_sample_2():
     layer2 = SLD(5, name='Layer 2')(thick=30, rough=6)
     layer3 = SLD(6, name='Layer 3')(thick=6, rough=2)
     substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
-    
+
     structure = air | layer1 | layer2 | layer3 | substrate
     structure.name = 'thin_layer_sample_2'
     return Sample(structure)
@@ -609,7 +609,7 @@ def similar_sld_sample_1():
     layer1 = SLD(0.9, name='Layer 1')(thick=80, rough=2)
     layer2 = SLD(1.0, name='Layer 2')(thick=50, rough=6)
     substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
-    
+
     structure = air | layer1 | layer2 | substrate
     structure.name = 'similar_sld_sample_1'
     return Sample(structure)
@@ -620,7 +620,7 @@ def similar_sld_sample_2():
     layer2 = SLD(5.5, name='Layer 2')(thick=30, rough=6)
     layer3 = SLD(6.0, name='Layer 3')(thick=35, rough=2)
     substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
-    
+
     structure = air | layer1 | layer2 | layer3 | substrate
     structure.name = 'similar_sld_sample_2'
     return Sample(structure)
@@ -633,7 +633,7 @@ def many_param_sample():
     layer4 = SLD(3.2, name='Layer 4')(thick=40, rough=2)
     layer5 = SLD(4.0, name='Layer 5')(thick=18, rough=2)
     substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
-    
+
     structure = air | layer1 | layer2 | layer3 | layer4 | layer5 | substrate
     structure.name = 'many_param_sample'
     return Sample(structure)
@@ -648,17 +648,16 @@ def refnx_to_refl1d(sample):
     for component in sample[1:]:
         name, sld = component.name, component.sld.real.value,
         thick, rough = component.thick.value, component.rough.value
-        
+
         structure = Refl1DSLD(rho=sld, name=name)(thick, rough) | structure
-        
+
     structure.name = sample.name
     return structure
 
 if __name__ == '__main__':
     save_path = './results'
-    
+
     for structure in STRUCTURES+BILAYERS:
         sample = structure()
         sample.sld_profile(save_path)
         sample.reflectivity_profile(save_path)
-    

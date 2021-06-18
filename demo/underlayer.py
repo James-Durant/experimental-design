@@ -6,15 +6,15 @@ sys.path.append('../experimental-design')
 from refnx.reflect import SLD, Slab
 from refnx.analysis import Parameter
 
-from structures import Bilayer
+from structures import BaseBilayer
 from design import underlayer_choice
 
-class SymmetricBilayer(Bilayer):
+class SymmetricBilayer(BaseBilayer):
     """Defines a model describing a symmetric bilayer."""
 
     def __init__(self):
         self.name = 'symmetric_bilayer'
-        
+
         self.si_sld      = 2.073
         self.sio2_sld    = 3.41
         self.dmpc_hg_vol = 320.9
@@ -49,13 +49,13 @@ class SymmetricBilayer(Bilayer):
         for param in self.parameters:
             param.vary=True
 
-    def using_contrast(self, contrast_sld, underlayer=None):
+    def _using_conditions(self, contrast_sld, underlayer=None):
         """Creates a structure representing the bilayer measured using a
            contrast of given `contrast_sld`.
 
         Args:
             contrast_sld (float): SLD of contrast to simulate.
-            underlayer (tuple): SLD and thickness of underlayer.
+            underlayer (tuple): thickness and SLD of underlayer.
 
         Returns:
             refnx.reflect.Structure: structure in given contrast.
@@ -77,14 +77,14 @@ class SymmetricBilayer(Bilayer):
         tg       = Slab(tg_thick,        self.tg_sld,   self.bilayer_rough, vfsolv=self.bilayer_solv)
 
         solution  = SLD(contrast_sld)(rough=self.bilayer_rough)
-        
+
         if underlayer is None:
             return substrate | sio2 | inner_hg | tg | tg | outer_hg | solution
         else:
-            sld, thick = underlayer
+            thick, sld = underlayer
             underlayer = SLD(sld)(thick, self.sio2_rough, self.sio2_solv)
             return substrate | sio2 | underlayer | inner_hg | tg | tg | outer_hg | solution
-  
+
 # Path to directory to save results to.
 save_path = './results'
 
@@ -97,7 +97,7 @@ angle_times = {0.7: (70, 10),
                2.3: (70, 40)}
 
 # Underlayer thicknesses and SLDs to consider.
-thickness_range = np.linspace(5, 500, 25)
+thickness_range = np.linspace(5, 500, 40)
 sld_range = np.linspace(1, 9, 50)
 thick, sld = underlayer_choice(bilayer, thickness_range, sld_range, contrasts, angle_times, save_path)
 

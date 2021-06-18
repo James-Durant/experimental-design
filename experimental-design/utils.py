@@ -10,19 +10,19 @@ import refnx.reflect, refnx.analysis
 import bumps.fitproblem
 
 class Sampler:
-    def __init__(self, objective):  
+    def __init__(self, objective):
         self.objective = objective
-        
+
         if isinstance(objective, refnx.analysis.BaseObjective):
             self.params = objective.varying_parameters()
             logl = objective.logl
             prior_transform = objective.prior_transform
-            
-        elif isinstance(objective, bumps.fitproblem.BaseFitProblem): 
+
+        elif isinstance(objective, bumps.fitproblem.BaseFitProblem):
             self.params = self.objective._parameters
             logl = self.logl_refl1d
             prior_transform = self.prior_transform_refl1d
-            
+
         else:
             raise RuntimeError('invalid objective/fitproblem given')
 
@@ -50,7 +50,7 @@ class Sampler:
         # Calculate the parameter means.
         weights = np.exp(results.logwt - results.logz[-1])
         mean, _ = dyfunc.mean_and_cov(results.samples, weights)
-        
+
         for i, param in enumerate(self.params):
             param.value = mean[i]
 
@@ -116,7 +116,7 @@ def fisher(qs, xi, counts, models, step=0.005):
     # Calculate the FI matrix using the equations from the paper.
     M = np.diag(np.concatenate(counts) / r, k=0)
     g = np.dot(np.dot(J.T, M), J)
-    
+
     lb = np.array([param.bounds.lb for param in xi])
     ub = np.array([param.bounds.ub for param in xi])
     H = np.diag(1/(ub-lb))
@@ -125,11 +125,11 @@ def fisher(qs, xi, counts, models, step=0.005):
 def reflectivity(q, model):
     if isinstance(model, refnx.reflect.ReflectModel):
         return model(q)
-        
+
     if isinstance(model, refl1d.experiment.Experiment):
         scale, bkg, dq = model.probe.intensity, model.probe.background, model.probe.dQ
         probe = refl1d.probe.QProbe(q, dq, intensity=scale, background=bkg)
-        
+
         experiment = refl1d.experiment.Experiment(probe=probe, sample=model.sample)
         return experiment.reflectivity()[1]
 
