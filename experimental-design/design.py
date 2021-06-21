@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+plt.rcParams['figure.figsize'] = (6,4)
 plt.rcParams['figure.dpi'] = 600
 
 import numpy as np
