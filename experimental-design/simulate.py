@@ -11,9 +11,8 @@ DIRECTBEAM_PATH = '../experimental-design/data/directbeam/directbeam_wavelength.
 def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
     q, r, dr, counts = [], [], [], []
     total_points = 0
-    for angle in angle_times:
+    for angle, points, time in angle_times:
         # Simulate the experiment for the angle.
-        points, time = angle_times[angle]
         total_points += points
         simulated = run_experiment(sample, angle, points, time, scale, bkg, dq)
 

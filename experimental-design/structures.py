@@ -586,6 +586,19 @@ def simple_sample():
     structure.name = 'simple_sample'
     return Sample(structure)
 
+def many_param_sample():
+    air = SLD(0, name='Air')
+    layer1 = SLD(2.0, name='Layer 1')(thick=50, rough=6)
+    layer2 = SLD(1.7, name='Layer 2')(thick=15, rough=2)
+    layer3 = SLD(0.8, name='Layer 3')(thick=60, rough=2)
+    layer4 = SLD(3.2, name='Layer 4')(thick=40, rough=2)
+    layer5 = SLD(4.0, name='Layer 5')(thick=18, rough=2)
+    substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
+
+    structure = air | layer1 | layer2 | layer3 | layer4 | layer5 | substrate
+    structure.name = 'many_param_sample'
+    return Sample(structure)
+
 def thin_layer_sample_1():
     air = SLD(0, name='Air')
     layer1 = SLD(4, name='Layer 1')(thick=200, rough=2)
@@ -628,24 +641,6 @@ def similar_sld_sample_2():
     structure.name = 'similar_sld_sample_2'
     return Sample(structure)
 
-def many_param_sample():
-    air = SLD(0, name='Air')
-    layer1 = SLD(2.0, name='Layer 1')(thick=50, rough=6)
-    layer2 = SLD(1.7, name='Layer 2')(thick=15, rough=2)
-    layer3 = SLD(0.8, name='Layer 3')(thick=60, rough=2)
-    layer4 = SLD(3.2, name='Layer 4')(thick=40, rough=2)
-    layer5 = SLD(4.0, name='Layer 5')(thick=18, rough=2)
-    substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
-
-    structure = air | layer1 | layer2 | layer3 | layer4 | layer5 | substrate
-    structure.name = 'many_param_sample'
-    return Sample(structure)
-
-BILAYERS = [SymmetricBilayer, SingleAsymmetricBilayer, DoubleAsymmetricBilayer]
-
-STRUCTURES = [simple_sample, thin_layer_sample_1, thin_layer_sample_2,
-              similar_sld_sample_1, similar_sld_sample_2, many_param_sample]
-
 def refnx_to_refl1d(sample):
     structure = Refl1DSLD(rho=0, name='Air')
     for component in sample[1:]:
@@ -658,9 +653,16 @@ def refnx_to_refl1d(sample):
     return structure
 
 if __name__ == '__main__':
+    structures = [simple_sample, many_param_sample, 
+                  thin_layer_sample_1, thin_layer_sample_2,
+                  similar_sld_sample_1, similar_sld_sample_2,
+                  SymmetricBilayer,
+                  SingleAsymmetricBilayer, DoubleAsymmetricBilayer]
+    
     save_path = './results'
 
-    for structure in STRUCTURES+BILAYERS:
+    for structure in structures:
         sample = structure()
         sample.sld_profile(save_path)
         sample.reflectivity_profile(save_path)
+        plt.close()
