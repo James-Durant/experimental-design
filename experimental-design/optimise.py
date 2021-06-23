@@ -67,7 +67,7 @@ class Optimiser:
 if __name__ == '__main__':
     from structures import SymmetricBilayer, SingleAsymmetricBilayer
     
-    sample = SingleAsymmetricBilayer()
+    sample = SymmetricBilayer()
     optimiser = Optimiser(sample)
     
     num_angles = 2
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     print('\nAngles: {}'.format(angles))
     print('Times: {}'.format(times))
     
-    #num_contrasts = 3
-    #angle_times = [(0.7, 100, 20), (2.3, 100, 95)]
-    #contrasts = optimiser.optimise_contrasts(num_contrasts, angle_times)
-    #print('Contrasts: {}'.format(contrasts))
+    num_contrasts = 3
+    angle_times = [(0.7, 100, 55), (2.3, 100, 945)]
+    contrasts = optimiser.optimise_contrasts(num_contrasts, angle_times)
+    print('Contrasts: {}'.format(contrasts))

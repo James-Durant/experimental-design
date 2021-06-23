@@ -117,8 +117,8 @@ def contrast_choice_single(sample, contrast_range, contrasts, angle_times, save_
 
     ax.plot(contrast_range, min_eigs)
 
-    ax.set_xlabel("$\mathregular{Contrast\ SLD\ (10^{-6} \AA^{-2})}$", fontsize=11, weight='bold')
-    ax.set_ylabel("Minimum Eigenvalue", fontsize=11, weight='bold')
+    ax.set_xlabel('$\mathregular{Contrast\ SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
+    ax.set_ylabel('Minimum Eigenvalue (arb.)', fontsize=11, weight='bold')
 
     save_path = os.path.join(save_path, sample.name)
     save_plot(fig, save_path, 'contrast_choice_single_'+filename)
@@ -158,9 +158,9 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path,
     if reverse_yaxis:
         ax.set_ylim(ax.get_ylim()[::-1])
         
-    ax.set_xlabel("$\mathregular{Contrast \ 1 \ SLD \ (10^{-6} \AA^{-2})}$", fontsize=11, weight='bold')
-    ax.set_ylabel("$\mathregular{Contrast \ 2 \ SLD \ (10^{-6} \AA^{-2})}$", fontsize=11, weight='bold')
-    ax.set_zlabel('Minimum Eigenvalue', fontsize=11, weight='bold')
+    ax.set_xlabel('$\mathregular{Contrast \ 1 \ SLD \ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
+    ax.set_ylabel('$\mathregular{Contrast \ 2 \ SLD \ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
+    ax.set_zlabel('Minimum Eigenvalue (arb.)', fontsize=11, weight='bold')
     ax.ticklabel_format(axis='z', style='sci', scilimits=(0,0))
 
     save_path = os.path.join(save_path, sample.name)
@@ -220,7 +220,7 @@ def angle_results_normal(save_path):
 
     angle_range = np.linspace(0.2, 2.3, 500)
     initial_angle = angle_choice(sample, [], angle_range, points, time, save_path, 'initial')
-    print('Initial angle: {}'.format(initial_angle))
+    print('Initial angle: {}'.format(round(initial_angle, 2)))
 
     angle_range = np.linspace(0.2, 2.3, 50)
     time_range = np.linspace(0, time*10, 50)
@@ -238,7 +238,7 @@ def angle_results_bilayer(save_path):
     
     angle_range = np.linspace(0.2, 2.3, 500)
     initial_angle = angle_choice(sample, [], angle_range, points, time, save_path, 'initial', contrasts)
-    print('Initial angle: {}'.format(initial_angle))
+    print('Initial angle: {}'.format(round(initial_angle, 2)))
     
     angle_range = np.linspace(0.2, 2.3, 50)
     time_range = np.linspace(0, time*8, 50)
@@ -280,7 +280,7 @@ def underlayer_results(save_path):
 if __name__ == '__main__':
     save_path = './results'
 
-    #angle_results_normal(save_path)
+    angle_results_normal(save_path)
     angle_results_bilayer(save_path)
-    #contrast_results(save_path)
-    #underlayer_results(save_path)
+    contrast_results(save_path)
+    underlayer_results(save_path)
