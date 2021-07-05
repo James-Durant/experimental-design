@@ -5,9 +5,10 @@ from dynesty import NestedSampler, DynamicNestedSampler
 from dynesty import plotting as dyplot
 from dynesty import utils as dyfunc
 
-import refl1d.probe, refl1d.model, refl1d.experiment
 import refnx.reflect, refnx.analysis
 import bumps.fitproblem
+
+from simulate import reflectivity
 
 class Sampler:
     def __init__(self, objective):
@@ -121,17 +122,6 @@ def fisher(qs, xi, counts, models, step=0.005):
     ub = np.array([param.bounds.ub for param in xi])
     H = np.diag(1/(ub-lb))
     return np.dot(np.dot(H.T, g), H)
-
-def reflectivity(q, model):
-    if isinstance(model, refnx.reflect.ReflectModel):
-        return model(q)
-
-    if isinstance(model, refl1d.experiment.Experiment):
-        scale, bkg, dq = model.probe.intensity, model.probe.background, model.probe.dQ
-        probe = refl1d.probe.QProbe(q, dq, intensity=scale, background=bkg)
-
-        experiment = refl1d.experiment.Experiment(probe=probe, sample=model.sample)
-        return experiment.reflectivity()[1]
 
 def save_plot(fig, save_path, filename):
     """Saves a figure to a given directory.
