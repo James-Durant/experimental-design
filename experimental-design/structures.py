@@ -254,7 +254,7 @@ class SymmetricBilayer(BaseBilayer):
     def __init__(self):
         self.name = 'symmetric_bilayer'
 
-        self.data_path = './data/symmetric_bilayer'
+        self.data_path = '../experimental-design/data/symmetric_bilayer'
         self.scales = [0.677763, 0.645217, 0.667776]
         self.bkgs = [3.20559e-06, 2.05875e-06, 2.80358e-06]
         self.dq = 2
@@ -420,7 +420,7 @@ class AsymmetricBilayer(BaseBilayer):
 
     """
     def __init__(self):
-        self.data_path = './data/asymmetric_bilayer'
+        self.data_path = '../experimental-design/data/asymmetric_bilayer'
         self.contrast_slds = [6.14, 2.07, -0.56]
         self.scale = 0.8
         self.bkgs = [4.6e-6, 8.6e-6, 8.7e-6]
