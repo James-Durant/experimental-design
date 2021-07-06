@@ -208,45 +208,43 @@ def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times
     maximum = np.argmax(min_eigs)
     return x[maximum], y[maximum]
 
-def angle_results_normal(save_path):
+def _angle_results_normal(save_path):
     from structures import similar_sld_sample_1, similar_sld_sample_2
     from structures import thin_layer_sample_1, thin_layer_sample_2
     from structures import simple_sample, many_param_sample
 
-    sample = thin_layer_sample_1()
+    sample = simple_sample()
 
     points = 150
     time = 40
 
-    angle_range = np.linspace(0.2, 2.3, 500)
+    angle_range = np.linspace(0.2, 8, 500)
     initial_angle = angle_choice(sample, [], angle_range, points, time, save_path, 'initial')
     print('Initial angle: {}'.format(round(initial_angle, 2)))
 
-    angle_range = np.linspace(0.2, 2.3, 50)
+    angle_range = np.linspace(0.2, 8, 50)
     time_range = np.linspace(0, time*10, 50)
     angle_choice_with_time(sample, initial_angle, angle_range, time_range, points, time, save_path)
 
-def angle_results_bilayer(save_path):
-    from structures import SymmetricBilayer
-    from structures import SingleAsymmetricBilayer, DoubleAsymmetricBilayer
+def _angle_results_bilayer(save_path):
+    from structures import SymmetricBilayer, SingleAsymmetricBilayer
 
-    sample = SymmetricBilayer()
+    sample = DoubleAsymmetricBilayer()
 
     contrasts = [6.36]
     points = 150
     time = 200
     
-    angle_range = np.linspace(0.2, 2.3, 500)
+    angle_range = np.linspace(0.2, 8, 500)
     initial_angle = angle_choice(sample, [], angle_range, points, time, save_path, 'initial', contrasts)
     print('Initial angle: {}'.format(round(initial_angle, 2)))
     
-    angle_range = np.linspace(0.2, 2.3, 50)
+    angle_range = np.linspace(0.2, 8, 50)
     time_range = np.linspace(0, time*8, 50)
     angle_choice_with_time(sample, initial_angle, angle_range, time_range, points, time, save_path, contrasts)
 
-def contrast_results(save_path):
-    from structures import SymmetricBilayer
-    from structures import SingleAsymmetricBilayer, DoubleAsymmetricBilayer
+def _contrast_results(save_path):
+    from structures import SymmetricBilayer, SingleAsymmetricBilayer
 
     bilayer = SymmetricBilayer()
     angle_times = [(0.5, 70, 10), (2.3, 70, 40)]
@@ -263,9 +261,8 @@ def contrast_results(save_path):
     bilayer.nested_sampling([6.36, 6.36], angle_times, save_path, 'D2O_D2O', dynamic=True)
     bilayer.nested_sampling([-0.56, 6.36], angle_times, save_path, 'H2O_D2O', dynamic=True)
 
-def underlayer_results(save_path):
-    from structures import SymmetricBilayer
-    from structures import SingleAsymmetricBilayer, DoubleAsymmetricBilayer
+def _underlayer_results(save_path):
+    from structures import SymmetricBilayer, SingleAsymmetricBilayer
 
     bilayer = SymmetricBilayer()
     contrasts = [6.36]
@@ -280,7 +277,7 @@ def underlayer_results(save_path):
 if __name__ == '__main__':
     save_path = './results'
 
-    angle_results_normal(save_path)
-    angle_results_bilayer(save_path)
-    contrast_results(save_path)
-    underlayer_results(save_path)
+    #_angle_results_normal(save_path)
+    _angle_results_bilayer(save_path)
+    #_contrast_results(save_path)
+    #_underlayer_results(save_path)

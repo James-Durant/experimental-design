@@ -45,6 +45,9 @@ class BaseSample(VariableAngle):
     def nested_sampling(self, angle_times, save_path, filename, dynamic=False):
         pass
 
+    def __str__(self):
+        return self.name
+
 class Sample(BaseSample):
     def __init__(self, structure):
         self.structure = structure
