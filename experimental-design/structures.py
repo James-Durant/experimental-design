@@ -161,14 +161,8 @@ class Sample(BaseSample):
             numpy.ndarray: Fisher information matrix.
 
         """
-        qs, counts, models= [], [], []
-        # Check if any angles have been measured.
-        if angle_times:
-            model, data = simulate(self.structure, angle_times)
-            qs.append(data[:,0])
-            counts.append(data[:,3])
-            models.append(model)
-
+        model, data = simulate(self.structure, angle_times)
+        qs, counts, models = [data[:,0]], [data[:,3]], [model]
         return fisher(qs, self.params, counts, models)
 
     def sld_profile(self, save_path):
@@ -318,13 +312,12 @@ class BaseBilayer(VariableAngle, VariableContrast, VariableUnderlayer): #, BaseS
 
         """
         qs, counts, models = [], [], []
-        if angle_times:
-            for contrast in contrasts:
-                model, data = simulate(self._using_conditions(contrast, underlayer), angle_times)
+        for contrast in contrasts:
+            model, data = simulate(self._using_conditions(contrast, underlayer), angle_times)
 
-                qs.append(data[:,0])
-                counts.append(data[:,3])
-                models.append(model)
+            qs.append(data[:,0])
+            counts.append(data[:,3])
+            models.append(model)
 
         return fisher(qs, self.params, counts, models)
 

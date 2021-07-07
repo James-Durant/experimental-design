@@ -211,7 +211,7 @@ def _contrast_results(optimiser, angle_times, save_path='./results'):
 if __name__ == '__main__':
     from structures import SymmetricBilayer, SingleAsymmetricBilayer
 
-    sample = SingleAsymmetricBilayer()
+    sample = SymmetricBilayer()
     optimiser = Optimiser(sample)
 
     contrasts = [6.36]

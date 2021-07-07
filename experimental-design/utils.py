@@ -146,6 +146,10 @@ def fisher(qs, xi, counts, models, step=0.005):
     m = len(xi) # Number of parameters.
     J = np.zeros((n, m))
 
+    # There is no information is there is no data.
+    if n == 0:
+        return np.zeros((m, m))
+
     # Calculate the gradient of model reflectivity with every model
     # parameter for every model data point.
     for i in range(m):

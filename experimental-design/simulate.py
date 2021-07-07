@@ -23,6 +23,9 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
         tuple: model and simulated data for given `sample`.
 
     """
+    if not angle_times:
+        return None, np.zeros((0, 4))
+    
     q, r, dr, counts = [], [], [], []
     total_points = 0
     # Iterate over each angle to simulate.
@@ -139,6 +142,9 @@ def reflectivity(q, model):
         numpy.ndarray: reflectivity for each Q point.
 
     """
+    if len(q) == 0:
+        return []
+    
     # Calculate the reflectivity in either refnx or Refl1D.
     if isinstance(model, ReflectModel):
         return model(q)

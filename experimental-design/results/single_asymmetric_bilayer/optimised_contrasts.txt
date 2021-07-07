@@ -1,0 +1,20 @@
+----------- 1 Contrasts -----------
+Contrasts: [-0.56]
+Objective value: -0.0000003403
+Computation time: 16.4
+
+----------- 2 Contrasts -----------
+Contrasts: [-0.56, 6.36]
+Objective value: -0.004405
+Computation time: 62.8
+
+----------- 3 Contrasts -----------
+Contrasts: [6.36, -0.56, 3.36]
+Objective value: -0.007528
+Computation time: 236.1
+
+----------- 4 Contrasts -----------
+Contrasts: [6.36, -0.56, 3.2, 6.36]
+Objective value: -0.007769
+Computation time: 657.8
+

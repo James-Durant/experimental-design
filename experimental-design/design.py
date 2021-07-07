@@ -108,6 +108,7 @@ def angle_choice_with_time(sample, initial_angle, angle_range, time_range, point
             # Combine the information from the first and second angles.
             g_new = sample.angle_info([(new_angle, points, new_time)], contrasts)
             min_eigs.append(np.linalg.eigvalsh(g_init+g_new)[0])
+        
         # Update the data of the line.
         ax.set_ylim(min(min_eigs), max(min_eigs))
         line.set_data(angle_range, min_eigs)
@@ -324,7 +325,7 @@ def _angle_results(save_path='./results'):
 
     # Number of points and counting time for the initial angle choice.
     points = 150
-    time = 40
+    time = 100
 
     # Get the best angle to initially measure.
     angle_range = np.linspace(0.2, 8, 500)
@@ -349,10 +350,10 @@ def _contrast_results(save_path='./results'):
     bilayer = SymmetricBilayer()
 
     # Number of points and counting times for each angle to simulate.
-    angle_times = [(0.5, 100, 10), (2.3, 100, 40)]
+    angle_times = [(0.7, 150, 100), (2.3, 150, 400)]
 
     # Investigate single contrast choices assuming different initial measurements.
-    contrast_range = np.linspace(-0.55, 6.36, 500)
+    contrast_range = np.linspace(-0.56, 6.36, 500)
     contrast_choice_single(bilayer, contrast_range, [], angle_times, save_path, 'initial')
     contrast_choice_single(bilayer, contrast_range, [6.36], angle_times, save_path, 'D2O')
     contrast_choice_single(bilayer, contrast_range, [-0.56], angle_times, save_path, 'H2O')
@@ -376,12 +377,12 @@ def _underlayer_results(save_path='./results'):
     from structures import SymmetricBilayer, SingleAsymmetricBilayer
 
     # Choose sample here.
-    bilayer = SymmetricBilayer()
+    bilayer = SingleAsymmetricBilayer()
 
     # SLDs of contrasts being simulated.
     contrasts = [6.36]
     # Number of points and counting times for each angle to simulate.
-    angle_times = [(0.5, 70, 10), (2.3, 70, 40)]
+    angle_times = [(0.7, 150, 100), (2.3, 150, 400)]
 
     # Investigate underlayer choice assuming no prior measurement.
     thickness_range = np.linspace(5, 500, 50)
@@ -391,6 +392,6 @@ def _underlayer_results(save_path='./results'):
     print('SLD: {}'.format(round(sld, 2)))
 
 if __name__ == '__main__':
-    _angle_results()
-    _contrast_results()
+    #_angle_results()
+    #_contrast_results()
     _underlayer_results()

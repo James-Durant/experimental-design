@@ -1,0 +1,24 @@
+----------- 1 Angles -----------
+Angles: [2.3]
+Times: [1000.0]
+Objective value: -0.00001616
+Computation time: 18.4
+
+----------- 2 Angles -----------
+Angles: [0.49, 2.3]
+Times: [56.9, 943.1]
+Objective value: -0.00001732
+Computation time: 40.1
+
+----------- 3 Angles -----------
+Angles: [2.3, 2.3, 0.48]
+Times: [187.2, 757.0, 55.8]
+Objective value: -0.00001732
+Computation time: 122.2
+
+----------- 4 Angles -----------
+Angles: [2.3, 0.48, 0.39, 0.49]
+Times: [944.8, 0.3, 0.1, 54.9]
+Objective value: -0.00001732
+Computation time: 125.0
+
