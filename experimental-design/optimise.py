@@ -11,21 +11,11 @@ class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.
 
     Attributes:
-        __sample (structures.Sample): sample to optimise an experiment for.
+        sample (structures.Sample): sample to optimise an experiment for.
 
     """
     def __init__(self, sample):
-        self.__sample = sample
-
-    @property
-    def sample(self):
-        """Getter method for the `sample` attribute.
-
-        Returns:
-            structures.Sample: sample to optimise an experiment for.
-
-        """
-        return self.__sample
+        self.sample = sample
 
     def optimise_angle_times(self, num_angles, contrasts=[], total_time=1000, points=100,
                              angle_bounds=(0.2, 2.3), workers=-1, verbose=True):
@@ -46,16 +36,15 @@ class Optimiser:
 
         """
         # Check that the measurement angle of the sample can be varied.
-        assert isinstance(self.__sample, VariableAngle)
+        assert isinstance(self.sample, VariableAngle)
 
         # Define the bounds of each condition to optimise.
         bounds = [angle_bounds]*num_angles + [(0, total_time)]*num_angles
-
-        # Constrain the times to sum to the given fixed time budget.
-        constraints = [NonlinearConstraint(lambda x: sum(x[num_angles:]), total_time, total_time)]
-
         # Arguments for optimisation function
         args = [num_angles, contrasts, points]
+
+        # Constrain the times to sum to the fixed time budget.
+        constraints = [NonlinearConstraint(lambda x: sum(x[num_angles:]), total_time, total_time)]
 
         # Optimise angles and times, and return results.
         res, val = Optimiser.__optimise(self._angle_times_func, bounds, constraints, args, workers, verbose)
@@ -68,7 +57,7 @@ class Optimiser:
         Args:
             num_contrasts (int): number of contrasts to optimise.
             angle_times (list): number of points and counting times for each angle to simulate.
-            contrast_bounds (tuple): intervals containing contrast SLDs to consider.
+            contrast_bounds (tuple): interval containing contrast SLDs to consider.
             workers (int): number of CPU cores to use when optimising (-1 is all available).
             verbose (bool): whether to display progress or not.
 
@@ -77,7 +66,7 @@ class Optimiser:
 
         """
         # Check that the contrast SLD for the sample can be varied.
-        assert isinstance(self.__sample, VariableContrast)
+        assert isinstance(self.sample, VariableContrast)
 
         # Define the bounds of each condition to optimise.
         bounds = [contrast_bounds]*num_contrasts
@@ -92,7 +81,7 @@ class Optimiser:
            angles and associated counting times.
 
         Args:
-            x (list): conditions to calculate the optimisation function with.
+            x (list): conditions to calculate optimisation function with.
             num_angles (int): number of angles being optimised.
             contrasts (list): contrasts of the experiment, if applicable.
             points (int): number of data points to use for each angle.
@@ -101,21 +90,21 @@ class Optimiser:
             float: negative of minimum eigenvalue of Fisher information matrix using given conditions.
 
         """
-        # Extract the angles and counting times from the given parameter array.
+        # Extract the angles and counting times from given parameter array.
         angle_times = [(x[i], points, x[num_angles+i]) for i in range(num_angles)]
 
-        # Calculate the Fisher information.
-        qs, counts, models = sample.angle_info(angle_times, contrasts)
-        g = fisher(qs, sample.parameters, counts, models)
+        # Calculate the Fisher information matrix.
+        qs, counts, models = self.sample.angle_info(angle_times, contrasts)
+        g = fisher(qs, self.sample.parameters, counts, models)
 
-        # Negative of minimum eigenvalue as optimisation algorithm is minimising.
+        # Return negative of minimum eigenvalue as optimisation algorithm is minimising.
         return -np.linalg.eigvalsh(g)[0]
 
     def _contrasts_func(self, x, num_contrasts, angle_times):
         """Defines the optimisation function for optimising an experiment's contrasts.
 
         Args:
-            x (type): conditions to calculate the optimisation function with.
+            x (type): conditions to calculate optimisation function with.
             num_contrasts (type): number of contrasts being optimised.
             angle_times (type): number of points and counting times for each angle to simulate.
 
@@ -123,11 +112,11 @@ class Optimiser:
             float: negative of minimum eigenvalue of Fisher information matrix using given conditions.
 
         """
-        # Calculate the Fisher information.
-        qs, counts, models = sample.contrast_info(angle_times, x)
-        g = fisher(qs, sample.parameters, counts, models)
+        # Calculate the Fisher information matrix.
+        qs, counts, models = self.sample.contrast_info(angle_times, x)
+        g = fisher(qs, self.sample.parameters, counts, models)
 
-        # Negative of minimum eigenvalue as optimisation algorithm is minimising.
+        # Return negative of minimum eigenvalue as optimisation algorithm is minimising.
         return -np.linalg.eigvalsh(g)[0]
 
     @staticmethod
@@ -136,7 +125,7 @@ class Optimiser:
 
         Args:
             func (callable): function to optimise.
-            bounds (list): intervals of permissible values for conditions to optimise.
+            bounds (list): permissible values for the conditions to optimise.
             constraints (list): constraints on conditions to optimise.
             args (list): arguments for optimisation function.
             workers (int): number of CPU cores to use when optimising (-1 is all available).
@@ -152,12 +141,12 @@ class Optimiser:
             callback = lambda: pbar.update(1)
         else:
             callback = None
-
+        
+        # Run differential evolution on the given optimisation function.
         res = differential_evolution(func, bounds, constraints=constraints,
                                     args=args, polish=False, tol=0.001,
                                     updating='deferred', workers=workers,
                                     callback=callback)
-
         return res.x, res.fun
 
 def _angle_results(optimiser, contrasts, total_time, save_path='./results'):

@@ -36,7 +36,8 @@ class Sampler:
             self.params = self.objective._parameters
             logl = self.logl_refl1d
             prior_transform = self.prior_transform_refl1d
-
+        
+        # Otherwise the given objective must be invalid.
         else:
             raise RuntimeError('invalid objective/fitproblem given')
 
@@ -48,14 +49,14 @@ class Sampler:
         """Calculates the log-likelihood of given parameter values `x` for a Refl1D FitProblem.
 
         Args:
-            x (numpy.ndarray): parameter values to calculate the likelihood of.
+            x (numpy.ndarray): parameter values to calculate likelihood of.
 
         Returns:
             float: log-likelihood of parameter values `x`.
 
         """
         self.objective.setp(x) # Set the parameter values.
-        return -self.objective.model_nllf()
+        return -self.objective.model_nllf() # Calculate the log-likelihood.
 
     def prior_transform_refl1d(self, u):
         """Calculates the prior transform for a Refl1D FitProblem.
@@ -64,7 +65,7 @@ class Sampler:
             u (numpy.ndarray): values in interval [0,1] to be transformed.
 
         Returns:
-            numpy.ndarray: `u` array transformed to the parameter space of interest.
+            numpy.ndarray: `u` array transformed to parameter space of interest.
 
         """
         return np.asarray([param.bounds.put01(u[i]) for i, param in enumerate(self.params)])
@@ -77,7 +78,7 @@ class Sampler:
             dynamic (bool): whether to use static or dynamic nested sampling.
 
         Returns:
-            matplotlib.pyplot.Figure: resulting nested sampling corner plot.
+            matplotlib.pyplot.Figure: nested sampling corner plot.
 
         """
         if dynamic:
@@ -100,16 +101,16 @@ class Sampler:
         return self.__corner(results)
 
     def __corner(self, results):
-        """Calculates a corner plot from the nested sampling results.
+        """Calculates a corner plot from nested sampling results.
 
         Args:
-            results (dynesty.results.Results): contains full output of sampling run.
+            results (dynesty.results.Results): full output of sampling run.
 
         Returns:
-            matplotlib.pyplot.Figure: resulting nested sampling corner plot.
+            matplotlib.pyplot.Figure: nested sampling corner plot.
 
         """
-        # Get the corner plot from the dynesty package.
+        # Get corner plot from dynesty package.
         fig, _ = dyplot.cornerplot(results, color='blue', quantiles=None,
                                    show_titles=True, max_n_ticks=3,
                                    truths=np.zeros(self.ndim),
@@ -128,7 +129,7 @@ class Sampler:
         return fig
 
 def fisher(qs, xi, counts, models, step=0.005):
-    """Calculates the FI matrix for multiple `models` containing parameters, `xi`.
+    """Calculates the FI matrix for multiple `models` containing parameters `xi`.
 
     Args:
         qs (list): Q points for each model.

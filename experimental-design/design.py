@@ -20,7 +20,7 @@ def angle_choice(sample, initial_angle_times, angle_range, points_new, time_new,
     for i, angle_new in enumerate(angle_range):
         new_angle_times = initial_angle_times + [(angle_new, points_new, time_new)]
         qs, counts, models = sample.angle_info(new_angle_times, contrasts)
-        
+
         g = fisher(qs, xi, counts, models)
         min_eigs.append(np.linalg.eigvalsh(g)[0])
 
@@ -44,49 +44,49 @@ def angle_choice_with_time(sample, initial_angle, angle_range, time_range, point
     assert isinstance(sample, VariableAngle)
 
     xi = sample.parameters
-    
+
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    
+
     ax.set_xlim(angle_range[0], angle_range[-1])
     ax.set_ylim(0, 1)
     ax.set_xlabel('Angle (°)', fontsize=11, weight='bold')
     ax.set_ylabel('Minimum Eigenvalue (arb.)', fontsize=11, weight='bold')
-    
+
     line, = ax.plot([], [], lw=3)
-    
+
     def init():
         line.set_data([], [])
         return line,
-    
+
     def animate(i):
         min_eigs = []
         for new_angle in angle_range:
             angle_times = [(initial_angle, points, time_range[i]),
                            (new_angle, points, new_time)]
-            
+
             qs, counts, models = sample.angle_info(angle_times, contrasts)
-    
+
             g = fisher(qs, xi, counts, models)
             min_eigs.append(np.linalg.eigvalsh(g)[0])
 
         min_eigs = np.asarray(min_eigs)
         min_eigs = (min_eigs-min(min_eigs)) / (max(min_eigs)-min(min_eigs))
-        
+
         line.set_data(angle_range, min_eigs)
 
         if i % 5 == 0:
             print('>>> {0}/{1}'.format(i, len(time_range)))
-            
+
         return line,
 
     anim_length = 4000 # miliseconds
     frames = len(time_range)
     anim = FuncAnimation(fig, animate, init_func=init, blit=True,
                          frames=frames, interval=anim_length//frames)
-    
+
     plt.close()
-    writergif = PillowWriter() 
+    writergif = PillowWriter()
     save_path = os.path.join(save_path, sample.name, 'angle_choice_with_time.gif')
     anim.save(save_path, writer=writergif)
     return anim
@@ -154,10 +154,10 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path,
 
     if reverse_xaxis:
         ax.set_xlim(ax.get_xlim()[::-1])
-    
+
     if reverse_yaxis:
         ax.set_ylim(ax.get_ylim()[::-1])
-        
+
     ax.set_xlabel('$\mathregular{Contrast \ 1 \ SLD \ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
     ax.set_ylabel('$\mathregular{Contrast \ 2 \ SLD \ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
     ax.set_zlabel('Minimum Eigenvalue (arb.)', fontsize=11, weight='bold')
@@ -193,7 +193,7 @@ def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times
 
     if reverse_xaxis:
         ax.set_xlim(ax.get_xlim()[::-1])
-    
+
     if reverse_yaxis:
         ax.set_ylim(ax.get_ylim()[::-1])
 
@@ -234,11 +234,11 @@ def _angle_results_bilayer(save_path):
     contrasts = [6.36]
     points = 150
     time = 200
-    
+
     angle_range = np.linspace(0.2, 8, 500)
     initial_angle = angle_choice(sample, [], angle_range, points, time, save_path, 'initial', contrasts)
     print('Initial angle: {}'.format(round(initial_angle, 2)))
-    
+
     angle_range = np.linspace(0.2, 8, 50)
     time_range = np.linspace(0, time*8, 50)
     angle_choice_with_time(sample, initial_angle, angle_range, time_range, points, time, save_path, contrasts)

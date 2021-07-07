@@ -13,14 +13,14 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
     """Simulates an experiment of a given `sample` measured over a number of angles.
 
     Args:
-        sample (structures.Sample): sample to simulate an experiment for.
+        sample (refnx.reflect.Stucture or refld1d.model.Stack): sample to simulate an experiment for.
         angle_times (list): number of points and counting times for each angle to simulate.
         scale (float): experimental scale factor.
         bkg (float): level of instrument background noise.
         dq (float): instrument resolution.
 
     Returns:
-        tuple: model and simulated data for the given `sample`.
+        tuple: model and simulated data for given `sample`.
 
     """
     q, r, dr, counts = [], [], [], []
@@ -47,18 +47,18 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
     data = data[(data != 0).all(1)] # Remove points of zero reflectivity.
     data = data[data[:,0].argsort()] # Sort by Q.
 
-    # If a refnx sample was given, create a ReflectModel object.
+    # If a refnx sample was given, create a ReflectModel.
     if isinstance(sample, Structure):
         model = ReflectModel(sample, scale=scale, bkg=bkg, dq=dq)
 
-    # If a Refl1D sample was given, create a Refl1D Experiment object.
+    # If a Refl1D sample was given, create a Refl1D Experiment.
     elif isinstance(sample, Stack):
         q, r, dr = data[:,0], data[:,1], data[:,2]
         model = _refl1d_experiment(sample, q, scale, bkg, dq)
         model.data = (r, dr)
         model.dq = dq
 
-    # Otherwise, the given sample must be invalid.
+    # Otherwise, the sample must be invalid.
     else:
         raise RuntimeError('invalid sample given')
 
@@ -68,16 +68,16 @@ def run_experiment(sample, angle, points, time, scale, bkg, dq):
     """Simulates a single angle measurement of a given `sample`.
 
     Args:
-        sample (structures.Sample): sample to simulate the experiment on.
+        sample (refnx.reflect.Stucture or refld1d.model.Stack): sample to simulate the experiment on.
         angle (float): measurement angle to simulate.
-        points (int): number of data points to use in the simulated data.
-        time (float): counting time for the simulation.
+        points (int): number of data points to use in simulated data.
+        time (float): counting time for simulation.
         scale (float): experimental scale factor.
         bkg (float): level of instrument background noise.
         dq (float): instrument resolution.
 
     Returns:
-        tuple: simulated Q, R, dR data with incident neutron counts for each point.
+        tuple: simulated Q, R, dR data and incident neutron counts for each point.
 
     """
     # Load the directbeam_wavelength.dat file.
@@ -129,11 +129,11 @@ def run_experiment(sample, angle, points, time, scale, bkg, dq):
     return q_binned, r_noisy, r_error, counts_incident
 
 def reflectivity(q, model):
-    """Calculates the model reflectivity of a given `model` at a given `q` values.
+    """Calculates the model reflectivity of a given `model` at `q`.
 
     Args:
         q (numpy.ndarray): Q values to calculate reflectivity at.
-        model (refnx.reflect.ReflectModel or refl1d.experiment.Experiment): model to calculate reflectivity of.
+        model (refnx.reflect.ReflectModel or refl1d.experiment.Experiment): model to calculate the reflectivity of.
 
     Returns:
         numpy.ndarray: reflectivity for each Q point.
@@ -166,7 +166,7 @@ def _refl1d_experiment(sample, q_array, scale, bkg, dq):
     dq /= 100*np.sqrt(8*np.log(2))
 
     # Calculate the dq array and use it to define a Q probe.
-    dq_array = q_array*dq
+    dq_array = q_array * dq
     probe = QProbe(q_array, dq_array, intensity=scale, background=bkg)
 
     # Adjust probe calculation for constant resolution.
