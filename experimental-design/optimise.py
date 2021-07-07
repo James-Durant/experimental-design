@@ -1,11 +1,9 @@
 import numpy as np
-import os, sys, time, tqdm
+import os, sys, time
 sys.path.append('./')
 
 from scipy.optimize import differential_evolution, NonlinearConstraint
-
 from structures import VariableAngle, VariableContrast
-from utils import fisher
 
 class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.
@@ -94,8 +92,7 @@ class Optimiser:
         angle_times = [(x[i], points, x[num_angles+i]) for i in range(num_angles)]
 
         # Calculate the Fisher information matrix.
-        qs, counts, models = self.sample.angle_info(angle_times, contrasts)
-        g = fisher(qs, self.sample.parameters, counts, models)
+        g = self.sample.angle_info(angle_times, contrasts)
 
         # Return negative of minimum eigenvalue as optimisation algorithm is minimising.
         return -np.linalg.eigvalsh(g)[0]
@@ -113,8 +110,7 @@ class Optimiser:
 
         """
         # Calculate the Fisher information matrix.
-        qs, counts, models = self.sample.contrast_info(angle_times, x)
-        g = fisher(qs, self.sample.parameters, counts, models)
+        g = self.sample.contrast_info(angle_times, x)
 
         # Return negative of minimum eigenvalue as optimisation algorithm is minimising.
         return -np.linalg.eigvalsh(g)[0]
@@ -135,18 +131,11 @@ class Optimiser:
             tuple: optimised experimental conditions and optimisation function value.
 
         """
-        # Use tdqm if progress is being displayed.
-        if verbose:
-            pbar = tqdm.tqdm()
-            callback = lambda: pbar.update(1)
-        else:
-            callback = None
-        
         # Run differential evolution on the given optimisation function.
         res = differential_evolution(func, bounds, constraints=constraints,
                                     args=args, polish=False, tol=0.001,
                                     updating='deferred', workers=workers,
-                                    callback=callback)
+                                    disp=verbose)
         return res.x, res.fun
 
 def _angle_results(optimiser, contrasts, total_time, save_path='./results'):
@@ -222,12 +211,12 @@ def _contrast_results(optimiser, angle_times, save_path='./results'):
 if __name__ == '__main__':
     from structures import SymmetricBilayer, SingleAsymmetricBilayer
 
-    sample = SymmetricBilayer()
+    sample = SingleAsymmetricBilayer()
     optimiser = Optimiser(sample)
 
     contrasts = [6.36]
     total_time = 1000
     _angle_results(optimiser, contrasts, total_time)
 
-    angle_times = [(0.5, 100, 55), (2.3, 100, 945)]
+    angle_times = [(0.5, 150, 55), (2.3, 150, 945)]
     _contrast_results(optimiser, angle_times)

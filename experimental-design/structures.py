@@ -944,6 +944,9 @@ if __name__ == '__main__':
     # Plot the SLD and reflectivity profiles of all structures in this file.
     for structure in structures:
         sample = structure()
+        
         sample.sld_profile(save_path)
+        plt.close()
+        
         sample.reflectivity_profile(save_path)
         plt.close()
