@@ -7,51 +7,91 @@ plt.rcParams['figure.dpi'] = 600
 from matplotlib.animation import FuncAnimation, PillowWriter
 
 from itertools import combinations
-from utils import fisher, save_plot
+from utils import save_plot
 
 from structures import VariableAngle, VariableContrast, VariableUnderlayer
 
 def angle_choice(sample, initial_angle_times, angle_range, points_new, time_new,
                  save_path, filename, contrasts=[]):
+    """Plots the change in minimum eigenvalue of the Fisher information matrix
+       as a function of angle choice.
+
+    Args:
+        sample (structures.Sample): sample to investigate the angle choice for.
+        initial_angle_times (list): points and counting times for each angle already measured.
+        angle_range (numpy.ndarray): range of angles to investigate.
+        points_new (int): number of points to use for the new data.
+        time_new (type): counting time to use for the new data.
+        save_path (str): path to directory to save plot to.
+        filename (str): filename to use when saving the plot.
+        contrasts (list): SLDs of constrasts to simulate, if applicable.
+
+    Returns:
+        float: angle with the largest minimum eigenvalue of its Fisher information matrix.
+
+    """
+    # Check that the angle can be varied for the sample.
     assert isinstance(sample, VariableAngle)
 
-    xi = sample.parameters
+    # Calculate the information from measurements taken so far.
+    g_init = sample.angle_info(initial_angle_times, contrasts)
+
     min_eigs = []
+    # Iterate over each angle to consider.
     for i, angle_new in enumerate(angle_range):
-        new_angle_times = initial_angle_times + [(angle_new, points_new, time_new)]
-        qs, counts, models = sample.angle_info(new_angle_times, contrasts)
+        # Get the information from the new angle.
+        new_angle_times = [(angle_new, points_new, time_new)]
+        g_new = sample.angle_info(new_angle_times, contrasts)
 
-        g = fisher(qs, xi, counts, models)
-        min_eigs.append(np.linalg.eigvalsh(g)[0])
+        # Combine the new information with the existing information.
+        min_eigs.append(np.linalg.eigvalsh(g_init+g_new)[0])
 
+        # Display progress.
         if i % 100 == 0:
             print('>>> {0}/{1}'.format(i, len(angle_range)))
 
+    # Plot the minimum eigenvalues vs. angle.
     fig = plt.figure()
     ax = fig.add_subplot(111)
-
     ax.plot(angle_range, min_eigs)
-
     ax.set_xlabel('Angle (°)', fontsize=11, weight='bold')
     ax.set_ylabel('Minimum Eigenvalue (arb.)', fontsize=11, weight='bold')
 
+    # Save the plot.
     save_path = os.path.join(save_path, sample.name)
     save_plot(fig, save_path, 'angle_choice_'+filename)
 
+    # Return the angle with largest minimum eigenvalue.
     return angle_range[np.argmax(min_eigs)]
 
 def angle_choice_with_time(sample, initial_angle, angle_range, time_range, points, new_time, save_path, contrasts=[]):
+    """Plots how the choice of angle for a `sample` changes as the counting time
+       of an initial measurment angle is increased.
+
+    Args:
+        sample (type): Description of parameter `sample`.
+        initial_angle (type): Description of parameter `initial_angle`.
+        angle_range (type): Description of parameter `angle_range`.
+        time_range (type): Description of parameter `time_range`.
+        points (type): Description of parameter `points`.
+        new_time (type): Description of parameter `new_time`.
+        save_path (type): Description of parameter `save_path`.
+        contrasts (type): Description of parameter `contrasts`.
+
+    Returns:
+        type: Description of returned object.
+
+    """
     assert isinstance(sample, VariableAngle)
 
     xi = sample.parameters
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-
-    ax.set_xlim(angle_range[0], angle_range[-1])
-    ax.set_ylim(0, 1)
     ax.set_xlabel('Angle (°)', fontsize=11, weight='bold')
     ax.set_ylabel('Minimum Eigenvalue (arb.)', fontsize=11, weight='bold')
+    ax.set_xlim(angle_range[0], angle_range[-1])
+    ax.set_ylim(0, 1)
 
     line, = ax.plot([], [], lw=3)
 

@@ -1,9 +1,8 @@
 import matplotlib.pyplot as plt
-plt.rcParams['figure.figsize'] = (9,7)
-plt.rcParams['figure.dpi'] = 600
-
 import numpy as np
 import os
+plt.rcParams['figure.figsize'] = (9,7)
+plt.rcParams['figure.dpi'] = 600
 
 from abc import ABC, abstractmethod
 
@@ -15,49 +14,114 @@ from refl1d.material import SLD as Refl1DSLD
 from refl1d.model import Stack as Refl1DStack
 
 from simulate import simulate
-from utils import Sampler, save_plot
+from utils import fisher, Sampler, save_plot
 
 class VariableAngle(ABC):
+    """Abstract class representing whether the measurement angle of a sample can be varied."""
     @abstractmethod
     def angle_info(self, angle_times):
+        """Calculates the Fisher information matrix for a sample measured over a number of angles.
+
+        Args:
+            angle_times (list): points and counting times for each measurement angle to simulate.
+
+        """
         pass
 
 class VariableContrast(ABC):
+    """Abstract class representing whether the contrast of a sample can be varied."""
     @abstractmethod
     def contrast_info(self, angle_times, contrasts):
+        """Calculates the Fisher information matrix for a sample with contrasts
+           measured over a number of angles.
+
+        Args:
+            angle_times (list): points and counting times for each measurement angle to simulate.
+            contrasts (list): SLDs of contrasts to simulate.
+
+        """
         pass
 
 class VariableUnderlayer(ABC):
+    """Abstract class representing whether the underlayer(s) of a sample can be varied."""
     @abstractmethod
     def underlayer_info(self, angle_times, contrasts, underlayer):
+        """Calculates the Fisher information matrix for a sample with an `underlayer`,
+           and with contrasts measured over a number of angles.
+
+        Args:
+            angle_times (list): points and counting times for each measurement angle to simulate.
+            contrasts (list): SLDs of contrasts to simulate.
+            underlayer (tuple): thickness and SLD of underlayer.
+
+        """
         pass
 
 class BaseSample(VariableAngle):
+    """Abstract class representing a typical neutron reflectometry sample."""
     @abstractmethod
     def sld_profile(self, save_path):
+        """Plots the SLD profile of the sample.
+
+        Args:
+            save_path (str): path to directory to save SLD profile to.
+
+        """
         pass
 
     @abstractmethod
     def reflectivity_profile(self, save_path):
+        """Plots the reflectivity profile of the sample.
+
+        Args:
+            save_path (str): path to directory to save reflectivity profile to.
+
+        """
         pass
 
     @abstractmethod
     def nested_sampling(self, angle_times, save_path, filename, dynamic=False):
+        """Runs nested sampling on simulated data of the sample.
+
+        Args:
+            angle_times (list): points and counting times for each measurement angle to simulate.
+            save_path (str): path to directory to save corner plot to.
+            filename (str): name of file to save corner plot to.
+            dynamic (bool): whether to use static or dynamic nested sampling.
+
+        """
         pass
 
-    def __str__(self):
-        return self.name
-
 class Sample(BaseSample):
+    """Wrapper class for a standard refnx or Refl1D reflectometry sample.
+
+    Attributes:
+        structure (refnx.reflect.Structure or refl1d.model.Stack): refnx or Refl1D sample.
+        name (str): name of the sample.
+        params (list): varying parameters of sample.
+
+    """
     def __init__(self, structure):
         self.structure = structure
         self.name = structure.name
-        self.parameters = Sample.__vary_structure(structure)
+        self.params = Sample.__vary_structure(structure)
 
     @staticmethod
     def __vary_structure(structure, bound_size=0.2):
+        """Varies the SLD and thickness of each layer of a given `structure`.
+
+        Args:
+            structure (refnx.reflect.Structure or refl1d.model.Stack): structure to vary.
+            bound_size (float): size of bounds to place on varying parameters.
+
+        Returns:
+            list: varying parameters of sample.
+
+        """
         params = []
+        # The structure was defined in refnx.
         if isinstance(structure, Structure):
+            # Vary the SLD and thickness of each component (layer).
             for component in structure[1:-1]:
                 sld = component.sld.real
                 sld_bounds = (sld.value*(1-bound_size), sld.value*(1+bound_size))
@@ -69,7 +133,9 @@ class Sample(BaseSample):
                 thick.setp(vary=True, bounds=thick_bounds)
                 params.append(thick)
 
+        # The structure was defined in Refl1D.
         elif isinstance(structure, Refl1DStack):
+            # Vary the SLD and thickness of each component (layer).
             for component in structure[1:-1]:
                 sld = component.material.rho
                 sld.pmp(bound_size*100)
@@ -79,33 +145,72 @@ class Sample(BaseSample):
                 thick.pmp(bound_size*100)
                 params.append(thick)
 
+        # Otherwise the structure is invalid.
+        else:
+            raise RuntimeError('invalid structure given')
+
         return params
 
     def angle_info(self, angle_times, contrasts=None):
-        qs_init, counts_init, models_init = [], [], []
+        """Calculates the Fisher information matrix for a sample measured over a number of angles.
+
+        Args:
+            angle_times (list): points and counting times for each measurement angle to simulate.
+
+        Returns:
+            numpy.ndarray: Fisher information matrix.
+
+        """
+        qs, counts, models= [], [], []
+        # Check if any angles have been measured.
         if angle_times:
             model, data = simulate(self.structure, angle_times)
+            qs.append(data[:,0])
+            counts.append(data[:,3])
+            models.append(model)
 
-            qs_init.append(data[:,0])
-            counts_init.append(data[:,3])
-            models_init.append(model)
-
-        return qs_init, counts_init, models_init
+        return fisher(qs, self.params, counts, models)
 
     def sld_profile(self, save_path):
+        """Plots the SLD profile of the sample.
+
+        Args:
+            save_path (str): path to directory to save SLD profile to.
+
+        """
+        # Currently not defined for Refl1D samples.
+        assert isinstance(self.structure, Structure)
+
         fig = plt.figure()
         ax = fig.add_subplot(111)
 
-        # Plot the SLD profile with or without a label.
+        # Plot the SLD profile.
         ax.plot(*self.structure.sld_profile(), color='black', label=self.name)
 
         ax.set_xlabel('$\mathregular{Distance\ (\AA)}$', fontsize=11, weight='bold')
         ax.set_ylabel('$\mathregular{SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
 
+        # Save the plot.
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'sld_profile')
 
     def reflectivity_profile(self, save_path, q_min=0.005, q_max=0.3, points=500, scale=1, bkg=1e-7, dq=2):
+        """Plots the reflectivity profile of the sample.
+
+        Args:
+            save_path (str): path to directory to save reflectivity profile to.
+            q_min (float): minimum Q value to plot.
+            q_max (float): maximum Q value to plot.
+            points (int): number of points to plot.
+            scale (float): experimental scale factor.
+            bkg (float): level of instrument background noise.
+            dq (float): instrument resolution.
+
+        """
+        # Currently not defined for Refl1D samples.
+        assert isinstance(self.structure, Structure)
+
+        # Define the model in refnx.
         model = ReflectModel(self.structure, scale=scale, bkg=bkg, dq=dq)
         q = np.geomspace(q_min, q_max, points)
         r = model(q) # Calculate the model reflectivity.
@@ -119,10 +224,23 @@ class Sample(BaseSample):
         ax.set_ylabel('Reflectivity (arb.)', fontsize=11, weight='bold')
         ax.set_yscale('log')
 
+        # Save the plot.
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'reflectivity_profile')
 
     def nested_sampling(self, angle_times, save_path, filename, dynamic=False):
+        """Runs nested sampling on simulated data of the sample.
+
+        Args:
+            angle_times (list): points and counting times for each measurement angle to simulate.
+            save_path (str): path to directory to save corner plot to.
+            filename (str): name of file to save corner plot to.
+            dynamic (bool): whether to use static or dynamic nested sampling.
+
+        """
+        # Currently not defined for Refl1D samples.
+        assert isinstance(self.structure, Structure)
+
         model, data = simulate(self.structure, angle_times)
         dataset = ReflectDataset([data[:,0], data[:,1], data[:,2]])
         objective = Objective(model, dataset)
@@ -136,19 +254,69 @@ class Sample(BaseSample):
         save_plot(fig, save_path, filename+'_nested_sampling')
 
 class BaseBilayer(VariableAngle, VariableContrast, VariableUnderlayer): #, BaseSample):
+    """Abstract class representing the base class for a bilayer model."""
     def __init__(self):
         self._create_objectives()
 
+    #@abstractmethod
+    def _create_objectives(self):
+        """Loads the measured data for the bilayer sample."""
+        pass
+
     def angle_info(self, angle_times, contrasts):
+        """Calculates the Fisher information matrix for a bilayer sample measured over a number of angles.
+
+        Args:
+            angle_times (list): points and counting times for each measurement angle to simulate.
+            contrasts (list): SLDs of contrasts to simulate.
+
+        Returns:
+            numpy.ndarray: Fisher information matrix.
+
+        """
         return self.__conditions_info(angle_times, contrasts, None)
 
     def contrast_info(self, angle_times, contrasts):
+        """Calculates the Fisher information matrix for a bilayer sample with contrasts
+           measured over a number of angles.
+
+        Args:
+            angle_times (list): points and counting times for each measurement angle to simulate.
+            contrasts (list): SLDs of contrasts to simulate.
+
+        Returns:
+            numpy.ndarray: Fisher information matrix.
+
+        """
         return self.__conditions_info(angle_times, contrasts, None)
 
     def underlayer_info(self, angle_times, contrasts, underlayer):
+        """Calculates the Fisher information matrix for a bilayer sample with an `underlayer`,
+           and with contrasts measured over a number of angles.
+
+        Args:
+            angle_times (list): points and counting times for each measurement angle to simulate.
+            contrasts (list): SLDs of contrasts to simulate.
+            underlayer (tuple): thickness and SLD of underlayer.
+
+        Returns:
+            numpy.ndarray: Fisher information matrix.
+
+        """
         return self.__conditions_info(angle_times, contrasts, underlayer)
 
     def __conditions_info(self, angle_times, contrasts, underlayer):
+        """Calculates the Fisher information matrix for a bilayer sample with given conditions.
+
+        Args:
+            angle_times (list): points and counting times for each measurement angle to simulate.
+            contrasts (list): SLDs of contrasts to simulate.
+            underlayer (tuple): thickness and SLD of underlayer.
+
+        Returns:
+            numpy.ndarray: Fisher information matrix.
+
+        """
         qs, counts, models = [], [], []
         if angle_times:
             for contrast in contrasts:
@@ -158,16 +326,33 @@ class BaseBilayer(VariableAngle, VariableContrast, VariableUnderlayer): #, BaseS
                 counts.append(data[:,3])
                 models.append(model)
 
-        return qs, counts, models
+        return fisher(qs, self.params, counts, models)
 
-    #@abstractmethod
-    def _create_objectives(self):
+    @abstractmethod
+    def _using_conditions(self, contrast, underlayer):
+        """Creates a refnx structure describing the given measurement conditions.
+
+        Args:
+            contrasts (list): SLDs of contrasts to simulate.
+            underlayer (tuple): thickness and SLD of underlayer.
+
+        Returns:
+            refnx.reflect.Structure: structure describing measurement conditions.
+
+        """
         pass
 
     def sld_profile(self, save_path):
+        """Plots the SLD profile of the bilayer sample.
+
+        Args:
+            save_path (str): path to directory to save SLD profile to.
+
+        """
         fig = plt.figure()
         ax = fig.add_subplot(111)
 
+        # Plot the SLD profile for each measured contrast.
         for structure in self.structures:
             ax.plot(*structure.sld_profile(self.distances))
 
@@ -175,27 +360,37 @@ class BaseBilayer(VariableAngle, VariableContrast, VariableUnderlayer): #, BaseS
         ax.set_ylabel('$\mathregular{SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
         ax.legend(self.labels)
 
+        # Save the plot.
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'sld_profile')
 
     def reflectivity_profile(self, save_path):
+        """Plots the reflectivity profile of the bilayer sample.
+
+        Args:
+            save_path (str): path to directory to save reflectivity profile to.
+
+        """
         fig = plt.figure()
         ax = fig.add_subplot(111)
 
+        # Iterate over each measured contrast.
         for i, objective in enumerate(self.objectives):
+            # Get the measured data and calculate the model reflectivity at each point.
             q, r, dr = objective.data.x, objective.data.y, objective.data.y_err
             r_model = objective.model(q)
 
+            # Offset the data (for clarity).
             offset = 10**(-2*i)
+            r *= offset
+            dr *= offset
+            r_model *= offset
 
             label = self.labels[i]
             if offset != 1:
                 label += ' $\mathregular{(x10^{-'+str(2*i)+'})}$'
 
-            r *= offset
-            dr *= offset
-            r_model *= offset
-
+            # Plot the measured data and the model reflectivity.
             ax.errorbar(q, r, dr, marker='o', ms=3, lw=0, elinewidth=1, capsize=1.5, label=label)
             ax.plot(q, r_model, color='red', zorder=20)
 
@@ -206,10 +401,22 @@ class BaseBilayer(VariableAngle, VariableContrast, VariableUnderlayer): #, BaseS
         ax.set_ylim(1e-10, 2)
         ax.legend()
 
+        # Save the plot.
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'reflectivity_profile')
 
     def nested_sampling(self, contrasts, angle_times, save_path, filename, underlayer=None, dynamic=False):
+        """Runs nested sampling on simulated data of the bilayer sample.
+
+        Args:
+            contrasts (list): SLDs of contrasts to simulate.
+            angle_times (list): points and counting times for each measurement angle to simulate.
+            save_path (str): path to directory to save corner plot to.
+            filename (str): name of file to save corner plot to.
+            underlayer (tuple): thickness and SLD of underlayer.
+            dynamic (bool): whether to use static or dynamic nested sampling.
+
+        """
         # Create objectives for each contrast to sample with.
         objectives = []
         for contrast in contrasts:
@@ -220,7 +427,7 @@ class BaseBilayer(VariableAngle, VariableContrast, VariableUnderlayer): #, BaseS
 
         # Combine objectives into a single global objective.
         global_objective = GlobalObjective(objectives)
-        global_objective.varying_parameters = lambda: self.parameters
+        global_objective.varying_parameters = lambda: self.params
 
         # Sample the objective using nested sampling.
         sampler = Sampler(global_objective)
@@ -231,10 +438,16 @@ class BaseBilayer(VariableAngle, VariableContrast, VariableUnderlayer): #, BaseS
         save_plot(fig, save_path, filename+'_nested_sampling')
 
 class SymmetricBilayer(BaseBilayer):
-    """Defines a model describing a symmetric bilayer.
+    """Defines a model describing a symmetric DMPC bilayer.
 
     Attributes:
-        name
+        name (str): name of the sample.
+        data_path (str): path to directory containing measured data.
+        scales (list): experimental scale factor for each measured contrast.
+        bkgs (list): level of instrument background noise for each measured contrast.
+        dq (float): instrument resolution.
+        labels (list): label for each measured contrast.
+        distances (numpy.ndarray): SLD profile x-axis range.
         si_sld (float): SLD of silicon substrate.
         sio2_sld (float): SLD of silicon oxide.
         dmpc_hg_vol (float): headgroup volume of DMPC bilayer.
@@ -251,12 +464,11 @@ class SymmetricBilayer(BaseBilayer):
         bilayer_rough (refnx.analysis.Parameter): bilayer roughness.
         bilayer_solv (refnx.analysis.Parameter): bilayer hydration.
         hg_waters (refnx.analysis.Parameter): headgroup bound waters.
-        parameters (list): varying model parameters.
+        params (list): varying model parameters.
 
     """
     def __init__(self):
         self.name = 'symmetric_bilayer'
-
         self.data_path = '../experimental-design/data/symmetric_bilayer'
         self.scales = [0.677763, 0.645217, 0.667776]
         self.bkgs = [3.20559e-06, 2.05875e-06, 2.80358e-06]
@@ -286,24 +498,24 @@ class SymmetricBilayer(BaseBilayer):
         self.bilayer_solv  = Parameter(0.074, 'Bilayer Hydration',      (0,1))
         self.hg_waters     = Parameter(3.59,  'Headgroup Bound Waters', (0,20))
 
-        self.parameters = [self.si_rough,
-                           self.sio2_thick,
-                           self.sio2_rough,
-                           self.sio2_solv,
-                           self.dmpc_apm,
-                           self.bilayer_rough,
-                           self.bilayer_solv,
-                           self.hg_waters]
+        self.params = [self.si_rough,
+                       self.sio2_thick,
+                       self.sio2_rough,
+                       self.sio2_solv,
+                       self.dmpc_apm,
+                       self.bilayer_rough,
+                       self.bilayer_solv,
+                       self.hg_waters]
 
         # Vary all of the parameters defined above.
-        for param in self.parameters:
+        for param in self.params:
             param.vary=True
 
+        # Call the base bilayer class' constructor.
         super().__init__()
 
-    def _create_objectives(self) -> None:
+    def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
-
         # Define scattering lengths and densities of D2O and H2O.
         d2o_sl  = 2e-4
         d2o_sld = 6.19
@@ -369,6 +581,16 @@ class SymmetricBilayer(BaseBilayer):
         self.objectives = [Objective(model, data) for model, data in list(zip(self.models, self.datasets))]
 
     def _using_conditions(self, contrast_sld, underlayer=None):
+        """Creates a structure representing the bilayer measured using given measurement conditions.
+
+        Args:
+            contrast_sld (float): SLD of contrast to simulate.
+            underlayer (tuple): thickness and SLD of underlayer.
+
+        Returns:
+            refnx.reflect.Structure: structure describing measurement conditions.
+
+        """
         # Calculate the SLD of the headgroup with the given contrast SLD.
         hg_sld = contrast_sld*0.27 + 1.98*0.73
 
@@ -385,8 +607,7 @@ class SymmetricBilayer(BaseBilayer):
         outer_hg = Slab(hg_thick,        hg_sld,        self.bilayer_rough, vfsolv=self.bilayer_solv)
         tg       = Slab(tg_thick,        self.tg_sld,   self.bilayer_rough, vfsolv=self.bilayer_solv)
 
-        solution = SLD(contrast_sld)(rough=self.bilayer_rough)
-
+        # Add the underlayer if specified.
         if underlayer is None:
             return substrate | sio2 | inner_hg | tg | tg | outer_hg | solution
         else:
@@ -400,6 +621,13 @@ class AsymmetricBilayer(BaseBilayer):
        which is provided in the classes that inherit from this parent class.
 
     Attributes:
+        data_path (str): path to directory containing measured data.
+        contrast_slds (list): SLD of each measured contrast.
+        scale (float): experimental scale factor for measured contrasts.
+        bkgs (list): level of instrument background noise for each measured contrast.
+        dq (float): instrument resolution.
+        labels (list): label for each measured contrast.
+        distances (numpy.ndarray): SLD profile x-axis range.
         si_sld (float): SLD of silicon substrate.
         sio2_sld (float): SLD of silicon oxide.
         pc_hg_sld (float):
@@ -419,7 +647,7 @@ class AsymmetricBilayer(BaseBilayer):
         tg_solv (refnx.analysis.Parameter): tailgroup hydration.
         core_thick (refnx.analysis.Parameter): core thickness.
         core_solv (refnx.analysis.Parameter): core hydration.
-        parameters (list): varying model parameters.
+        params (list): varying model parameters.
 
     """
     def __init__(self):
@@ -454,29 +682,29 @@ class AsymmetricBilayer(BaseBilayer):
         self.core_thick     = Parameter(28.7,   'Core Thickness',            (0,50))
         self.core_solv      = Parameter(0.26,   'Core Hydration',            (0,1))
 
-        self.parameters = [self.si_rough,
-                           self.sio2_thick,
-                           self.sio2_rough,
-                           self.sio2_solv,
-                           self.inner_hg_thick,
-                           self.inner_hg_solv,
-                           self.bilayer_rough,
-                           self.inner_tg_thick,
-                           self.outer_tg_thick,
-                           self.tg_solv,
-                           self.core_thick,
-                           self.core_solv]
+        self.params = [self.si_rough,
+                       self.sio2_thick,
+                       self.sio2_rough,
+                       self.sio2_solv,
+                       self.inner_hg_thick,
+                       self.inner_hg_solv,
+                       self.bilayer_rough,
+                       self.inner_tg_thick,
+                       self.outer_tg_thick,
+                       self.tg_solv,
+                       self.core_thick,
+                       self.core_solv]
 
         # Vary all of the parameters defined above.
-        for param in self.parameters:
+        for param in self.params:
             param.vary=True
 
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
-
         # Define structures for each contrast.
         self.structures = [self._using_conditions(contrast_sld) for contrast_sld in self.contrast_slds]
 
+        # Label each structure.
         for i, label in enumerate(self.labels):
             self.structures[i].name = label
 
@@ -492,15 +720,14 @@ class AsymmetricBilayer(BaseBilayer):
         self.objectives = [Objective(model, data) for model, data in list(zip(self.models, self.datasets))]
 
     def _using_conditions(self, contrast_sld, underlayer=None):
-        """Creates a structure representing the bilayer measured using a
-           contrast of given `contrast_sld`.
+        """Creates a structure representing the bilayer measured using given measurement conditions.
 
         Args:
             contrast_sld (float): SLD of contrast to simulate.
-            name (str): label for structure.
+            underlayer (tuple): thickness and SLD of underlayer.
 
         Returns:
-            (refnx.reflect.Structure): structure in given contrast.
+            refnx.reflect.Structure: structure describing measurement conditions.
 
         """
         # Calculate core SLD with the given contrast SLD.
@@ -520,6 +747,7 @@ class AsymmetricBilayer(BaseBilayer):
         outer_tg = Slab(self.outer_tg_thick, self.outer_tg_sld, self.bilayer_rough, vfsolv=self.tg_solv)
         core     = Slab(self.core_thick,     core_sld,          self.bilayer_rough, vfsolv=self.core_solv)
 
+        # Add the underlayer if specified.
         if underlayer is None:
             return substrate | sio2 | inner_hg | inner_tg | outer_tg | core | solution
         else:
@@ -532,24 +760,25 @@ class SingleAsymmetricBilayer(AsymmetricBilayer):
        asymmetry value. Inherits all of the attributes of the parent class.
 
     Attributes:
-        name
+        name (str): name of the sample.
         asym_value (refnx.analysis.Parameter): bilayer asymmetry.
         inner_tg_sld (refnx.reflect.SLD): inner tailgroup SLD.
         outer_tg_sld (refnx.reflect.SLD): outer tailgroup SLD.
 
     """
     def __init__(self):
-        super().__init__() # Call parent class constructor.
+        super().__init__() # Call parent class' constructor.
         self.name = 'single_asymmetric_bilayer'
 
         # Define the single asymmetry parameter.
         self.asym_value = Parameter(0.95, 'Asymmetry Value', (0,1), True)
-        self.parameters.append(self.asym_value)
+        self.params.append(self.asym_value)
 
         # Use asymmetry to define inner and outer tailgroup SLDs.
         self.inner_tg_sld = SLD(self.asym_value*self.dPC_tg + (1-self.asym_value)*self.hLPS_tg)
         self.outer_tg_sld = SLD(self.asym_value*self.hLPS_tg + (1-self.asym_value)*self.dPC_tg)
 
+        # Load the measured data for the sample.
         self._create_objectives()
 
 class DoubleAsymmetricBilayer(AsymmetricBilayer):
@@ -557,6 +786,7 @@ class DoubleAsymmetricBilayer(AsymmetricBilayer):
        asymmetry values. Inherits all of the attributes of the parent class.
 
     Attributes:
+        name (str): name of the sample.
         inner_tg_pc (refnx.analysis.Parameter): 1st bilayer asymmetry.
         outer_tg_pc (refnx.analysis.Parameter): 2nd bilayer asymmetry.
         inner_tg_sld (refnx.reflect.SLD): inner tailgroup SLD.
@@ -570,16 +800,23 @@ class DoubleAsymmetricBilayer(AsymmetricBilayer):
         # Define the two asymmetry parameters.
         self.inner_tg_pc = Parameter(0.95, 'Inner Tailgroup PC', (0,1), True)
         self.outer_tg_pc = Parameter(0.063, 'Outer Tailgroup PC', (0,1), True)
-        self.parameters.append(self.inner_tg_pc)
-        self.parameters.append(self.outer_tg_pc)
+        self.params.append(self.inner_tg_pc)
+        self.params.append(self.outer_tg_pc)
 
         # Use the asymmetry parameters to define inner and outer tailgroup SLDs.
         self.inner_tg_sld = SLD(self.inner_tg_pc*self.dPC_tg + (1-self.inner_tg_pc)*self.hLPS_tg)
         self.outer_tg_sld = SLD(self.outer_tg_pc*self.dPC_tg + (1-self.outer_tg_pc)*self.hLPS_tg)
 
+        # Load the measured data for the sample.
         self._create_objectives()
 
 def simple_sample():
+    """Defines a simple sample.
+
+    Returns:
+        structures.Sample: structure in format for information calculation.
+
+    """
     air = SLD(0, name='Air')
     layer1 = SLD(4, name='Layer 1')(thick=100, rough=2)
     layer2 = SLD(8, name='Layer 2')(thick=150, rough=2)
@@ -590,6 +827,12 @@ def simple_sample():
     return Sample(structure)
 
 def many_param_sample():
+    """Defines a sample with many parameters.
+
+    Returns:
+        structures.Sample: structure in format for information calculation.
+
+    """
     air = SLD(0, name='Air')
     layer1 = SLD(2.0, name='Layer 1')(thick=50, rough=6)
     layer2 = SLD(1.7, name='Layer 2')(thick=15, rough=2)
@@ -603,6 +846,12 @@ def many_param_sample():
     return Sample(structure)
 
 def thin_layer_sample_1():
+    """Defines a 2-layer sample with thin layers.
+
+    Returns:
+        structures.Sample: structure in format for information calculation.
+
+    """
     air = SLD(0, name='Air')
     layer1 = SLD(4, name='Layer 1')(thick=200, rough=2)
     layer2 = SLD(6, name='Layer 2')(thick=6, rough=2)
@@ -613,6 +862,12 @@ def thin_layer_sample_1():
     return Sample(structure)
 
 def thin_layer_sample_2():
+    """Defines a 3-layer sample with thin layers.
+
+    Returns:
+        structures.Sample: structure in format for information calculation.
+
+    """
     air = SLD(0, name='Air')
     layer1 = SLD(4, name='Layer 1')(thick=200, rough=2)
     layer2 = SLD(5, name='Layer 2')(thick=30, rough=6)
@@ -624,6 +879,12 @@ def thin_layer_sample_2():
     return Sample(structure)
 
 def similar_sld_sample_1():
+    """Defines a 2-layer sample with layers of similar SLD.
+
+    Returns:
+        structures.Sample: structure in format for information calculation.
+
+    """
     air = SLD(0, name='Air')
     layer1 = SLD(0.9, name='Layer 1')(thick=80, rough=2)
     layer2 = SLD(1.0, name='Layer 2')(thick=50, rough=6)
@@ -634,6 +895,12 @@ def similar_sld_sample_1():
     return Sample(structure)
 
 def similar_sld_sample_2():
+    """Defines a 3-layer sample with layers of similar SLD.
+
+    Returns:
+        structures.Sample: structure in format for information calculation.
+
+    """
     air = SLD(0, name='Air')
     layer1 = SLD(3.0, name='Layer 1')(thick=50, rough=2)
     layer2 = SLD(5.5, name='Layer 2')(thick=30, rough=6)
@@ -645,25 +912,36 @@ def similar_sld_sample_2():
     return Sample(structure)
 
 def refnx_to_refl1d(sample):
+    """Converts a standard refnx structure to an equivalent Refl1D structure.
+
+    Args:
+        sample (refnx.reflect.Structure): refnx structure to convert.
+
+    Returns:
+        refl1d.model.Stack: equivalent structure defined in Refl1D.
+
+    """
+    # Iterate over each component.
     structure = Refl1DSLD(rho=0, name='Air')
     for component in sample[1:]:
         name, sld = component.name, component.sld.real.value,
         thick, rough = component.thick.value, component.rough.value
 
+        # Add the component in the opposite direction to the refnx definition.
         structure = Refl1DSLD(rho=sld, name=name)(thick, rough) | structure
 
     structure.name = sample.name
     return structure
 
 if __name__ == '__main__':
-    structures = [simple_sample, many_param_sample, 
+    structures = [simple_sample, many_param_sample,
                   thin_layer_sample_1, thin_layer_sample_2,
                   similar_sld_sample_1, similar_sld_sample_2,
-                  SymmetricBilayer,
-                  SingleAsymmetricBilayer, DoubleAsymmetricBilayer]
-    
+                  SymmetricBilayer, SingleAsymmetricBilayer]
+
     save_path = './results'
 
+    # Plot the SLD and reflectivity profiles of all structures in this file.
     for structure in structures:
         sample = structure()
         sample.sld_profile(save_path)
