@@ -15,8 +15,8 @@ class Optimiser:
     def __init__(self, sample):
         self.sample = sample
 
-    def optimise_angle_times(self, num_angles, contrasts=[], total_time=1000, points=100,
-                             angle_bounds=(0.2, 2.3), workers=-1, verbose=True):
+    def optimise_angle_times(self, num_angles, contrasts=[], total_time=1000,
+                             angle_bounds=(0.2, 2.3), points=150, workers=-1, verbose=True):
         """Optimises the measurement angles and associated counting times for an experiment,
            given a fixed time budget.
 
@@ -24,8 +24,8 @@ class Optimiser:
             num_angles (int): number of angles to optimise.
             contrasts (list): contrasts of the experiment, if applicable.
             total_time (float): time budget for experiment.
-            points (int): number of data points to use for each angle.
             angle_bounds (tuple): interval containing angles to consider.
+            points (int): number of data points to use for each angle.
             workers (int): number of CPU cores to use when optimising (-1 is all available).
             verbose (bool): whether to display progress or not.
 
@@ -216,7 +216,9 @@ if __name__ == '__main__':
 
     contrasts = [6.36]
     total_time = 1000
-    _angle_results(optimiser, contrasts, total_time)
+    angle_bounds = (0.2, 2.3)
+    _angle_results(optimiser, contrasts, total_time, angle_bounds)
 
     angle_times = [(0.5, 150, 55), (2.3, 150, 945)]
-    _contrast_results(optimiser, angle_times)
+    contrast_bounds = (-0.56, 6.36)
+    #_contrast_results(optimiser, angle_times, contrast_bounds)
