@@ -247,12 +247,12 @@ class Sample(BaseSample):
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, filename+'_nested_sampling')
 
-class BaseBilayer(VariableAngle, VariableContrast, VariableUnderlayer): #, BaseSample):
+class BaseBilayer(BaseSample, VariableContrast, VariableUnderlayer):
     """Abstract class representing the base class for a bilayer model."""
     def __init__(self):
         self._create_objectives()
 
-    #@abstractmethod
+    @abstractmethod
     def _create_objectives(self):
         """Loads the measured data for the bilayer sample."""
         pass

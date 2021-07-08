@@ -1,20 +1,24 @@
 ----------- 1 Contrasts -----------
 Contrasts: [6.36]
-Objective value: -0.00001734
-Computation time: 12.3
+Splits (%): [100.0]
+Objective value: -0.00001732
+Computation time: 24.0
 
 ----------- 2 Contrasts -----------
 Contrasts: [6.36, -0.56]
-Objective value: -0.005899
-Computation time: 55.5
+Splits (%): [21.3, 78.7]
+Objective value: -0.006517
+Computation time: 111.2
 
 ----------- 3 Contrasts -----------
-Contrasts: [1.3, -0.56, 6.36]
-Objective value: -0.007546
-Computation time: 130.6
+Contrasts: [1.2, 6.36, -0.56]
+Splits (%): [31.5, 25.5, 43.0]
+Objective value: -0.007627
+Computation time: 254.1
 
 ----------- 4 Contrasts -----------
-Contrasts: [1.3, -0.56, 6.36, -0.56]
-Objective value: -0.007602
-Computation time: 515.4
+Contrasts: [6.36, 1.23, -0.56, 1.24]
+Splits (%): [25.2, 27.7, 43.7, 3.4]
+Objective value: -0.007626
+Computation time: 562.1
 

@@ -16,7 +16,7 @@ class Optimiser:
         self.sample = sample
 
     def optimise_angle_times(self, num_angles, contrasts=[], total_time=1000,
-                             angle_bounds=(0.2, 2.3), points=150, workers=-1, verbose=True):
+                             angle_bounds=(0.2, 2.3), points=100, workers=-1, verbose=True):
         """Optimises the measurement angles and associated counting times for an experiment,
            given a fixed time budget.
 
@@ -36,45 +36,52 @@ class Optimiser:
         # Check that the measurement angle of the sample can be varied.
         assert isinstance(self.sample, VariableAngle)
 
-        # Define the bounds of each condition to optimise.
-        bounds = [angle_bounds]*num_angles + [(0, total_time)]*num_angles
-        # Arguments for optimisation function
-        args = [num_angles, contrasts, points]
+        # Define the bounds of each condition to optimise (angles and time splits).
+        bounds = [angle_bounds]*num_angles + [(0, 1)]*num_angles
 
-        # Constrain the times to sum to the fixed time budget.
-        constraints = [NonlinearConstraint(lambda x: sum(x[num_angles:]), total_time, total_time)]
+        # Arguments for optimisation function
+        args = [num_angles, contrasts, total_time, points]
+
+        # Constrain the counting times to sum to the fixed time budget.
+        constraints = [NonlinearConstraint(lambda x: sum(x[num_angles:]), 1, 1)]
 
         # Optimise angles and times, and return results.
         res, val = Optimiser.__optimise(self._angle_times_func, bounds, constraints, args, workers, verbose)
         return res[:num_angles], res[num_angles:], val
 
-    def optimise_contrasts(self, num_contrasts, angle_times, contrast_bounds=(-0.56, 6.36),
-                           workers=-1, verbose=True):
-        """Finds the optimal contrast SLDs for an experiment.
+    def optimise_contrasts(self, num_contrasts, angle_splits, total_time=1000,
+                           contrast_bounds=(-0.56, 6.36), workers=-1, verbose=True):
+        """Finds the optimal contrast SLDs for an experiment, given a fixed time budget.
 
         Args:
             num_contrasts (int): number of contrasts to optimise.
-            angle_times (list): number of points and counting times for each angle to simulate.
+            angle_splits (list): points and proportion of total counting time for each angle.
+            total_time (float): time budget for experiment.
             contrast_bounds (tuple): interval containing contrast SLDs to consider.
             workers (int): number of CPU cores to use when optimising (-1 is all available).
             verbose (bool): whether to display progress or not.
 
         Returns:
-            tuple: optimised contrast SLDs and optimisation function value.
+            tuple: optimised contrast SLDs, counting time proportions and optimisation function value.
 
         """
         # Check that the contrast SLD for the sample can be varied.
         assert isinstance(self.sample, VariableContrast)
 
-        # Define the bounds of each condition to optimise.
-        bounds = [contrast_bounds]*num_contrasts
-        # Arguments for optimisation function
-        args = [num_contrasts, angle_times]
+        # Define the bounds of each condition to optimise (contrast SLDs and time splits).
+        bounds = [contrast_bounds]*num_contrasts + [(0, 1)]*num_contrasts
 
-        # Optimise contrasts and return results.
-        return Optimiser.__optimise(self._contrasts_func, bounds, [], args, workers, verbose)
+        # Constrain the counting times of each contrast to sum to the fixed time budget.
+        constraints = [NonlinearConstraint(lambda x: sum(x[num_contrasts:]), 1, 1)]
 
-    def _angle_times_func(self, x, num_angles, contrasts, points):
+        # Arguments for optimisation function.
+        args = [num_contrasts, angle_splits, total_time]
+
+        # Optimise contrasts, counting time splits and return the results.
+        res, val = Optimiser.__optimise(self._contrasts_func, bounds, constraints, args, workers, verbose)
+        return res[:num_contrasts], res[num_contrasts:], val
+
+    def _angle_times_func(self, x, num_angles, contrasts, total_time, points):
         """Defines the optimisation function for optimising an experiment's measurement
            angles and associated counting times.
 
@@ -82,6 +89,7 @@ class Optimiser:
             x (list): conditions to calculate optimisation function with.
             num_angles (int): number of angles being optimised.
             contrasts (list): contrasts of the experiment, if applicable.
+            total_time (float): time budget for experiment.
             points (int): number of data points to use for each angle.
 
         Returns:
@@ -89,7 +97,7 @@ class Optimiser:
 
         """
         # Extract the angles and counting times from given parameter array.
-        angle_times = [(x[i], points, x[num_angles+i]) for i in range(num_angles)]
+        angle_times = [(x[i], points, total_time*x[num_angles+i]) for i in range(num_angles)]
 
         # Calculate the Fisher information matrix.
         g = self.sample.angle_info(angle_times, contrasts)
@@ -97,20 +105,27 @@ class Optimiser:
         # Return negative of minimum eigenvalue as optimisation algorithm is minimising.
         return -np.linalg.eigvalsh(g)[0]
 
-    def _contrasts_func(self, x, num_contrasts, angle_times):
+    def _contrasts_func(self, x, num_contrasts, angle_splits, total_time):
         """Defines the optimisation function for optimising an experiment's contrasts.
 
         Args:
             x (type): conditions to calculate optimisation function with.
-            num_contrasts (type): number of contrasts being optimised.
-            angle_times (type): number of points and counting times for each angle to simulate.
+            num_contrasts (int): number of contrasts to optimise.
+            angle_splits (type): points and proportion of total counting time for each angle.
+            total_time (float): time budget for experiment.
 
         Returns:
             float: negative of minimum eigenvalue of Fisher information matrix using given conditions.
 
         """
         # Calculate the Fisher information matrix.
-        g = self.sample.contrast_info(angle_times, x)
+        m = len(self.sample.params)
+        g = np.zeros((m, m))
+        # Iterate over each contrast.
+        for i in range(num_contrasts):
+            # Calculate the proportion of the total counting time for each angle.
+            angle_times = [(angle, points, total_time*x[num_contrasts+i]*split) for angle, points, split in angle_splits]
+            g += self.sample.contrast_info(angle_times, [x[i]])
 
         # Return negative of minimum eigenvalue as optimisation algorithm is minimising.
         return -np.linalg.eigvalsh(g)[0]
@@ -138,47 +153,57 @@ class Optimiser:
                                     disp=verbose)
         return res.x, res.fun
 
-def _angle_results(optimiser, contrasts, total_time, save_path='./results'):
+def _angle_results(optimiser, total_time, angle_bounds, save_path='./results'):
     """Optimises the measurement angles and associated counting times for an experiment
        using different numbers of angles.
 
     Args:
         optimiser (optimise.Optimiser): optimiser for the experiment.
-        contrasts (list): contrasts of the experiment, if applicable.
         total_time (float): total time budget for the experiment.
+        angle_bounds (tuple): interval containing angles to consider.
         save_path (str): path to directory to save results to.
 
     """
     save_path = os.path.join(save_path, optimiser.sample.name)
 
-    # Create a new text file for the results.
-    with open(os.path.join(save_path, 'optimised_angles.txt'), 'w') as file:
-        # Optimise the experiment using 1-4 angles.
-        for i, num_angles in enumerate([1, 2, 3, 4]):
-            # Display progress.
-            print('>>> {0}/{1}'.format(i, 4))
+    for contrast, filename in [(6.36, 'D2O'), (2.07, 'SMW'), (-0.56, 'H2O')]:
+        print(filename)
+        # Create a new text file for the results.
+        with open(os.path.join(save_path, 'optimised_angles_{}.txt'.format(filename)), 'w') as file:
+            # Optimise the experiment using 1-4 angles.
+            for i, num_angles in enumerate([1, 2, 3, 4]):
+                # Display progress.
+                print('>>> {0}/{1}'.format(i, 4))
 
-            # Time how long the optimisation takes.
-            start = time.time()
-            angles, times, val = optimiser.optimise_angle_times(num_angles, contrasts, total_time, verbose=False)
-            end = time.time()
+                # Time how long the optimisation takes.
+                start = time.time()
+                angles, splits, val = optimiser.optimise_angle_times(num_angles, [contrast], total_time, angle_bounds, verbose=False)
+                end = time.time()
 
-            # Round the optimisation function value to 4 significant figures.
-            val = np.format_float_positional(val, precision=4, unique=False, fractional=False, trim='k')
+                # Convert to percentages.
+                splits = np.array(splits)*100
 
-            # Write the optimised conditions, objective value and computation time to the results file.
-            file.write('----------- {} Angles -----------\n'.format(num_angles))
-            file.write('Angles: {}\n'.format(list(np.round(angles, 2))))
-            file.write('Times: {}\n'.format(list(np.round(times, 1))))
-            file.write('Objective value: {}\n'.format(val))
-            file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
+                # Round the optimisation function value to 4 significant figures.
+                val = np.format_float_positional(val, precision=4, unique=False, fractional=False, trim='k')
 
-def _contrast_results(optimiser, angle_times, save_path='./results'):
-    """Optimises the contrasts for an experiment using different numbers of contrasts.
+                # Write the optimised conditions, objective value and computation time to the results file.
+                file.write('----------- {} Angles -----------\n'.format(num_angles))
+                file.write('Angles: {}\n'.format(list(np.round(angles, 2))))
+                file.write('Splits (%): {}\n'.format(list(np.round(splits, 1))))
+                file.write('Objective value: {}\n'.format(val))
+                file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
+
+        print()
+
+def _contrast_results(optimiser, total_time, angle_splits, contrast_bounds, save_path='./results'):
+    """Optimises the contrasts of an experiment using different numbers of contrasts.
 
     Args:
         optimiser (optimise.Optimiser): optimiser for the experiment.
-        angle_times (list): number of points and counting times for each angle to simulate.
+        total_time (float): time budget for experiment.
+        angle_splits (list): points and proportion of total counting time for each angle.
+        contrast_bounds (tuple): interval containing contrast SLDs to consider.
+
         save_path (str): path to directory to save results to.
 
     """
@@ -191,13 +216,13 @@ def _contrast_results(optimiser, angle_times, save_path='./results'):
             # Display progress.
             print('>>> {0}/{1}'.format(i, 4))
 
-            # Split the measurement times equally over each contrast.
-            new_angle_times = [(angle, points, time/num_contrasts) for angle, points, time in angle_times]
-
             # Time how long the optimisation takes.
             start = time.time()
-            contrasts, val = optimiser.optimise_contrasts(num_contrasts, new_angle_times, verbose=False)
+            contrasts, splits, val = optimiser.optimise_contrasts(num_contrasts, angle_splits, total_time, contrast_bounds, verbose=False)
             end = time.time()
+            
+            # Convert to percentages.
+            splits = np.array(splits)*100
 
             # Round the optimisation function value to 4 significant figures.
             val = np.format_float_positional(val, precision=4, unique=False, fractional=False, trim='k')
@@ -205,20 +230,20 @@ def _contrast_results(optimiser, angle_times, save_path='./results'):
             # Write the optimised conditions, objective value and computation time to the results file.
             file.write('----------- {} Contrasts -----------\n'.format(num_contrasts))
             file.write('Contrasts: {}\n'.format(list(np.round(contrasts, 2))))
+            file.write('Splits (%): {}\n'.format(list(np.round(splits, 1))))
             file.write('Objective value: {}\n'.format(val))
             file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
 
 if __name__ == '__main__':
     from structures import SymmetricBilayer, SingleAsymmetricBilayer
 
-    sample = SymmetricBilayer()
+    sample = SingleAsymmetricBilayer()
     optimiser = Optimiser(sample)
 
-    contrasts = [6.36]
     total_time = 1000
     angle_bounds = (0.2, 2.3)
-    _angle_results(optimiser, contrasts, total_time, angle_bounds)
+    _angle_results(optimiser, total_time, angle_bounds)
 
-    angle_times = [(0.5, 150, 55), (2.3, 150, 945)]
+    angle_splits = [(0.5, 150, 0.06), (2.3, 150, 0.94)]
     contrast_bounds = (-0.56, 6.36)
-    #_contrast_results(optimiser, angle_times, contrast_bounds)
+    #_contrast_results(optimiser, total_time, angle_splits, contrast_bounds)
