@@ -3,7 +3,7 @@ import os, sys, time
 sys.path.append('./')
 
 from scipy.optimize import differential_evolution, NonlinearConstraint
-from structures import VariableAngle, VariableContrast
+from structures import VariableAngle, VariableContrast, VariableUnderlayer
 
 class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.
@@ -81,6 +81,23 @@ class Optimiser:
         res, val = Optimiser.__optimise(self._contrasts_func, bounds, constraints, args, workers, verbose)
         return res[:num_contrasts], res[num_contrasts:], val
 
+    def optimise_underlayers(self, num_underlayers, angle_times, contrasts, 
+                             thick_bounds=(0, 500), sld_bounds=(1, 9),
+                             workers=-1, verbose=True):
+
+        # Check that the underlayers of the sample can be varied.
+        assert isinstance(self.sample, VariableUnderlayer)
+
+        # Define the bounds of each condition to optimise (underlayer thicknesses and SLDs).
+        bounds = [thick_bounds]*num_underlayers + [sld_bounds]*num_underlayers
+
+        # Arguments for optimisation function.
+        args = [num_underlayers, angle_times, contrasts]
+
+        # Optimise contrasts, counting time splits and return the results.
+        res, val = Optimiser.__optimise(self._underlayers_func, bounds, [], args, workers, verbose)
+        return res[:num_underlayers], res[num_underlayers:], val
+
     def _angle_times_func(self, x, num_angles, contrasts, total_time, points):
         """Defines the optimisation function for optimising an experiment's measurement
            angles and associated counting times.
@@ -129,7 +146,12 @@ class Optimiser:
 
         # Return negative of minimum eigenvalue as optimisation algorithm is minimising.
         return -np.linalg.eigvalsh(g)[0]
-
+    
+    def _underlayers_func(self, x, num_underlayers, angle_times, contrasts):
+        underlayers = [(x[i], x[num_underlayers+i]) for i in range(num_underlayers)]
+        g = self.sample.underlayer_info(angle_times, contrasts, underlayers)
+        return -np.linalg.eigvalsh(g)[0]
+    
     @staticmethod
     def __optimise(func, bounds, constraints, args, workers, verbose):
         """Optimises a given `func` using the differential evolution global optimisation algorithm.
@@ -234,6 +256,32 @@ def _contrast_results(optimiser, total_time, angle_splits, contrast_bounds, save
             file.write('Objective value: {}\n'.format(val))
             file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
 
+def _underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bounds, save_path='./results'):
+    save_path = os.path.join(save_path, optimiser.sample.name)
+
+    # Create a new text file for the results.
+    with open(os.path.join(save_path, 'optimised_underlayers.txt'), 'w') as file:
+        # Optimise the experiment using 1-4 contrasts.
+        for i, num_underlayers in enumerate([1, 2, 3]):
+            # Display progress.
+            print('>>> {0}/{1}'.format(i, 3))
+
+            # Time how long the optimisation takes.
+            start = time.time()
+            thicknesses, slds, val = optimiser.optimise_underlayers(num_underlayers, angle_times, contrasts, 
+                                                                    thick_bounds, sld_bounds, verbose=False)
+            end = time.time()
+
+            # Round the optimisation function value to 4 significant figures.
+            val = np.format_float_positional(val, precision=4, unique=False, fractional=False, trim='k')
+
+            # Write the optimised conditions, objective value and computation time to the results file.
+            file.write('----------- {} Underlayers -----------\n'.format(num_underlayers))
+            file.write('Thicknesses: {}\n'.format(list(np.round(thicknesses, 1))))
+            file.write('SLDs (%): {}\n'.format(list(np.round(slds, 2))))
+            file.write('Objective value: {}\n'.format(val))
+            file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
+
 if __name__ == '__main__':
     from structures import SymmetricBilayer, SingleAsymmetricBilayer
 
@@ -242,8 +290,14 @@ if __name__ == '__main__':
 
     total_time = 1000
     angle_bounds = (0.2, 2.3)
-    _angle_results(optimiser, total_time, angle_bounds)
+    #_angle_results(optimiser, total_time, angle_bounds)
 
-    angle_splits = [(0.5, 150, 0.06), (2.3, 150, 0.94)]
+    angle_splits = [(0.5, 100, 0.06), (2.3, 100, 0.94)]
     contrast_bounds = (-0.56, 6.36)
     #_contrast_results(optimiser, total_time, angle_splits, contrast_bounds)
+    
+    angle_times = [(0.5, 100, 5), (2.3, 100, 95)]
+    contrasts = [6.36]
+    thick_bounds = (0, 500)
+    sld_bounds = (1, 9)
+    _underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bounds)

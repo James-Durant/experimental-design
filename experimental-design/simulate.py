@@ -1,15 +1,38 @@
 import numpy as np
 
-from refnx.reflect import Structure, ReflectModel
-
-from refl1d.model import Stack
-from refl1d.probe import QProbe
-from refl1d.experiment import Experiment
+import refnx.reflect
+import refl1d.model, refl1d.probe, refl1d.experiment
 
 # Path to directbeam to use for simulation.
 DIRECTBEAM_PATH = '../experimental-design/data/directbeam/directbeam_wavelength.dat'
 
-def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
+def simulate_magnetic(sample, angle_times, scale=1, bkg=1e-6, dq=2,
+                      pp=True, pm=True, mp=True, mm=True):
+    models, datasets = [], []
+
+    if pp:
+        model, data = simulate(sample, angle_times, spin_state=0)
+        models.append(model)
+        datasets.append(data)
+        
+    if pm:
+        model, data = simulate(sample, angle_times, spin_state=1)
+        models.append(model)
+        datasets.append(data)
+        
+    if mp:
+        model, data = simulate(sample, angle_times, spin_state=2)
+        models.append(model)
+        datasets.append(data)
+        
+    if mm:
+        model, data = simulate(sample, angle_times, spin_state=3)
+        models.append(model)
+        datasets.append(data)
+        
+    return models, datasets
+
+def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2, spin_state=None):
     """Simulates an experiment of a given `sample` measured over a number of angles.
 
     Args:
@@ -18,6 +41,7 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
         scale (float): experimental scale factor.
         bkg (float): level of instrument background noise.
         dq (float): instrument resolution.
+        spin_state
 
     Returns:
         tuple: model and simulated data for given `sample`.
@@ -32,7 +56,7 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
     for angle, points, time in angle_times:
         # Simulate the experiment.
         total_points += points
-        simulated = run_experiment(sample, angle, points, time, scale, bkg, dq)
+        simulated = _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state)
 
         # Combine the data for the angle with the data from previous angles.
         q.append(simulated[0])
@@ -51,15 +75,16 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
     data = data[data[:,0].argsort()] # Sort by Q.
 
     # If a refnx sample was given, create a ReflectModel.
-    if isinstance(sample, Structure):
-        model = ReflectModel(sample, scale=scale, bkg=bkg, dq=dq)
+    if isinstance(sample, refnx.reflect.Structure):
+        model = refnx.reflect.ReflectModel(sample, scale=scale, bkg=bkg, dq=dq)
 
     # If a Refl1D sample was given, create a Refl1D Experiment.
-    elif isinstance(sample, Stack):
+    elif isinstance(sample, refl1d.model.Stack):
         q, r, dr = data[:,0], data[:,1], data[:,2]
-        model = _refl1d_experiment(sample, q, scale, bkg, dq)
+        model = refl1d_experiment(sample, q, scale, bkg, dq, spin_state)
         model.data = (r, dr)
-        model.dq = dq
+        model.probe.dq = dq
+        model.probe.spin_state = spin_state
 
     # Otherwise, the sample must be invalid.
     else:
@@ -67,7 +92,7 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2):
 
     return model, data
 
-def run_experiment(sample, angle, points, time, scale, bkg, dq):
+def _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state):
     """Simulates a single angle measurement of a given `sample`.
 
     Args:
@@ -78,6 +103,7 @@ def run_experiment(sample, angle, points, time, scale, bkg, dq):
         scale (float): experimental scale factor.
         bkg (float): level of instrument background noise.
         dq (float): instrument resolution.
+        spin_state
 
     Returns:
         tuple: simulated Q, R, dR data and incident neutron counts for each point.
@@ -101,15 +127,15 @@ def run_experiment(sample, angle, points, time, scale, bkg, dq):
     q_binned = np.asarray([(q_bin_edges[i] + q_bin_edges[i+1]) / 2 for i in range(points)])
 
     # Calculate the model reflectivity at each Q point.
-    if isinstance(sample, Structure):
+    if isinstance(sample, refnx.reflect.Structure):
         # Create a refnx ReflectModel if the sample was defined in refnx.
-        model = ReflectModel(sample, scale=scale, bkg=bkg, dq=dq)
+        model = refnx.reflect.ReflectModel(sample, scale=scale, bkg=bkg, dq=dq)
         r_model = model(q_binned)
 
-    elif isinstance(sample, Stack):
+    elif isinstance(sample, refl1d.model.Stack):
         # Create a Refl1D experiment if the sample was defined in Refl1D.
-        experiment = _refl1d_experiment(sample, q_binned, scale, bkg, dq)
-        r_model = experiment.reflectivity()[1]
+        experiment = refl1d_experiment(sample, q_binned, scale, bkg, dq, spin_state)
+        r_model = reflectivity(q_binned, experiment)
 
     # Otherwise the given sample must be invalid.
     else:
@@ -146,15 +172,22 @@ def reflectivity(q, model):
         return []
     
     # Calculate the reflectivity in either refnx or Refl1D.
-    if isinstance(model, ReflectModel):
+    if isinstance(model, refnx.reflect.ReflectModel):
         return model(q)
 
-    if isinstance(model, Experiment):
-        scale, bkg, dq = model.probe.intensity, model.probe.background, model.dq
-        experiment = _refl1d_experiment(model.sample, q, scale, bkg, dq)
-        return experiment.reflectivity()[1]
+    if isinstance(model, refl1d.experiment.Experiment):
+        if model.sample.ismagnetic:
+            probe = model.probe.xs[model.probe.spin_state]
+            scale, bkg, dq = probe.intensity, probe.background, probe.dq
+            experiment = refl1d_experiment(model.sample, q, scale, bkg, dq, model.probe.spin_state)
+            return experiment.reflectivity()[model.probe.spin_state][1]
+        
+        else:
+            scale, bkg, dq = model.probe.intensity, model.probe.background, model.probe.dq
+            experiment = refl1d_experiment(model.sample, q, scale, bkg, dq, spin_state)
+            return experiment.reflectivity()[1]
 
-def _refl1d_experiment(sample, q_array, scale, bkg, dq):
+def refl1d_experiment(sample, q_array, scale, bkg, dq, spin_state=None):
     """Creates a Refl1D experiment for a given `sample` and `q_array`.
 
     Args:
@@ -163,6 +196,7 @@ def _refl1d_experiment(sample, q_array, scale, bkg, dq):
         scale (float): experimental scale factor.
         bkg (float): level of instrument background noise.
         dq (float): instrument resolution.
+        spin_state
 
     Returns:
         refl1d.experiment.Experiment: experiment for given `sample`.
@@ -173,12 +207,19 @@ def _refl1d_experiment(sample, q_array, scale, bkg, dq):
 
     # Calculate the dq array and use it to define a Q probe.
     dq_array = q_array * dq
-    probe = QProbe(q_array, dq_array, intensity=scale, background=bkg)
+    probe = refl1d.probe.QProbe(q_array, dq_array, intensity=scale, background=bkg)
+    probe.dq = dq
 
     # Adjust probe calculation for constant resolution.
     argmin, argmax = np.argmin(q_array), np.argmax(q_array)
     probe.calc_Qo = np.linspace(q_array[argmin] - 3.5*dq_array[argmin],
                                 q_array[argmax] + 3.5*dq_array[argmax],
                                 21*len(q_array))
+    
+    if sample.ismagnetic:
+        probes = [None]*4
+        probes[spin_state] = probe
+        probe = refl1d.probe.PolarizedQProbe(xs=probes, name='')
+        probe.spin_state = spin_state
 
-    return Experiment(probe=probe, sample=sample)
+    return refl1d.experiment.Experiment(probe=probe, sample=sample)

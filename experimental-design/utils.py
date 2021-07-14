@@ -6,7 +6,7 @@ from dynesty import plotting as dyplot
 from dynesty import utils as dyfunc
 
 import refnx.reflect, refnx.analysis
-import bumps.fitproblem
+import bumps.parameter, bumps.fitproblem
 
 from simulate import reflectivity
 
@@ -176,8 +176,14 @@ def fisher(qs, xi, counts, models, step=0.005):
     g = np.dot(np.dot(J.T, M), J)
 
     # Scale each parameter's information by its "importance".
-    lb = np.array([param.bounds.lb for param in xi])
-    ub = np.array([param.bounds.ub for param in xi])
+    if isinstance(xi[0], refnx.analysis.Parameter):
+        lb = np.array([param.bounds.lb for param in xi])
+        ub = np.array([param.bounds.ub for param in xi])
+        
+    elif isinstance(xi[0], bumps.parameter.Parameter):
+        lb = np.array([param.bounds.limits[0] for param in xi])
+        ub = np.array([param.bounds.limits[1] for param in xi])
+        
     H = np.diag(1/(ub-lb))
     return np.dot(np.dot(H.T, g), H)
 
