@@ -316,10 +316,11 @@ def _angle_results(save_path='./results'):
     from structures import similar_sld_sample_1, similar_sld_sample_2
     from structures import thin_layer_sample_1, thin_layer_sample_2
     from structures import simple_sample, many_param_sample
+    from structures import YIG_Sample, Monolayer
     from structures import SymmetricBilayer, SingleAsymmetricBilayer
 
     # Choose sample here.
-    sample = simple_sample()
+    sample = YIG_Sample()
     contrasts = []
     #contrasts = [6.36]
 
@@ -328,14 +329,14 @@ def _angle_results(save_path='./results'):
     time = 100
 
     # Get the best angle to initially measure.
-    angle_range = np.linspace(0.2, 8, 500)
+    angle_range = np.linspace(0.2, 2.3, 500)
     initial_angle = angle_choice(sample, [], angle_range, points, time, save_path, 'initial', contrasts)
     print('Initial angle: {}'.format(round(initial_angle, 2)))
 
     # Investigate how the choice of next angle changes as the counting time of the initial angle is increased.
-    angle_range = np.linspace(0.2, 8, 50)
+    angle_range = np.linspace(0.2, 2.3, 50)
     time_range = np.linspace(0, time*8, 50)
-    angle_choice_with_time(sample, initial_angle, angle_range, time_range, points, time, save_path, contrasts)
+    #angle_choice_with_time(sample, initial_angle, angle_range, time_range, points, time, save_path, contrasts)
 
 def _contrast_results(save_path='./results'):
     """Investigates the choice of contrasts for a bilayer sample.
@@ -392,6 +393,6 @@ def _underlayer_results(save_path='./results'):
     print('SLD: {}'.format(round(sld, 2)))
 
 if __name__ == '__main__':
-    #_angle_results()
+    _angle_results()
     #_contrast_results()
-    _underlayer_results()
+    #_underlayer_results()

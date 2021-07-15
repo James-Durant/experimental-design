@@ -10,23 +10,23 @@ def simulate_magnetic(sample, angle_times, scale=1, bkg=1e-6, dq=2,
                       pp=True, pm=True, mp=True, mm=True):
     models, datasets = [], []
 
-    if pp:
-        model, data = simulate(sample, angle_times, spin_state=0)
-        models.append(model)
-        datasets.append(data)
-        
-    if pm:
-        model, data = simulate(sample, angle_times, spin_state=1)
+    if mm:
+        model, data = simulate(sample, angle_times, scale, bkg, dq, spin_state=0)
         models.append(model)
         datasets.append(data)
         
     if mp:
-        model, data = simulate(sample, angle_times, spin_state=2)
+        model, data = simulate(sample, angle_times, scale, bkg, dq, spin_state=1)
         models.append(model)
         datasets.append(data)
         
-    if mm:
-        model, data = simulate(sample, angle_times, spin_state=3)
+    if pm:
+        model, data = simulate(sample, angle_times, scale, bkg, dq, spin_state=2)
+        models.append(model)
+        datasets.append(data)
+        
+    if pp:
+        model, data = simulate(sample, angle_times, scale, bkg, dq, spin_state=3)
         models.append(model)
         datasets.append(data)
         
@@ -82,7 +82,8 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2, spin_state=None):
     elif isinstance(sample, refl1d.model.Stack):
         q, r, dr = data[:,0], data[:,1], data[:,2]
         model = refl1d_experiment(sample, q, scale, bkg, dq, spin_state)
-        model.data = (r, dr)
+        model.probe.xs[spin_state].R = r
+        model.probe.xs[spin_state].dR = dr
         model.probe.dq = dq
         model.probe.spin_state = spin_state
 
@@ -92,7 +93,7 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2, spin_state=None):
 
     return model, data
 
-def _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state):
+def _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state, q_min=0.005, q_max=0.3):
     """Simulates a single angle measurement of a given `sample`.
 
     Args:
@@ -120,7 +121,7 @@ def _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state):
     q = 4*np.pi*np.sin(np.radians(angle)) / wavelengths
 
     # Bin Q values in equally geometrically-spaced bins using flux as weighting.
-    q_bin_edges = np.geomspace(np.min(q), np.max(q), points+1)
+    q_bin_edges = np.geomspace(q_min, q_max, points+1)
     flux_binned, _ = np.histogram(q, q_bin_edges, weights=direct_flux)
 
     # Get the bin centres.
@@ -184,7 +185,7 @@ def reflectivity(q, model):
         
         else:
             scale, bkg, dq = model.probe.intensity, model.probe.background, model.probe.dq
-            experiment = refl1d_experiment(model.sample, q, scale, bkg, dq, spin_state)
+            experiment = refl1d_experiment(model.sample, q, scale, bkg, dq)
             return experiment.reflectivity()[1]
 
 def refl1d_experiment(sample, q_array, scale, bkg, dq, spin_state=None):
@@ -203,10 +204,10 @@ def refl1d_experiment(sample, q_array, scale, bkg, dq, spin_state=None):
 
     """
     # Transform the resolution from refnx to Refl1D format.
-    dq /= 100*np.sqrt(8*np.log(2))
+    refl1d_dq = dq / (100*np.sqrt(8*np.log(2)))
 
     # Calculate the dq array and use it to define a Q probe.
-    dq_array = q_array * dq
+    dq_array = q_array * refl1d_dq
     probe = refl1d.probe.QProbe(q_array, dq_array, intensity=scale, background=bkg)
     probe.dq = dq
 

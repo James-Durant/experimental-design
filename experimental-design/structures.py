@@ -195,7 +195,7 @@ class Sample(BaseSample):
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'sld_profile')
 
-    def reflectivity_profile(self, save_path, q_min=0.005, q_max=0.3, points=500, scale=1, bkg=1e-7, dq=2):
+    def reflectivity_profile(self, save_path, q_min=0.005, q_max=0.3, points=500, scale=1, bkg=0, dq=2):
         """Plots the reflectivity profile of the sample.
 
         Args:
@@ -263,6 +263,40 @@ class Sample(BaseSample):
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, filename+'_nested_sampling')
 
+    def to_refl1d(self):
+        """Converts a standard refnx structure to an equivalent Refl1D structure.
+    
+        Args:
+            sample (refnx.reflect.Structure): refnx structure to convert.
+    
+        Returns:
+            refl1d.model.Stack: equivalent structure defined in Refl1D.
+    
+        """
+        # Iterate over each component.
+        structure = refl1d.material.SLD(rho=0, name='Air')
+        for component in self.structure[1:]:
+            name, sld = component.name, component.sld.real.value,
+            thick, rough = component.thick.value, component.rough.value
+    
+            # Add the component in the opposite direction to the refnx definition.
+            structure = refl1d.material.SLD(rho=sld, name=name)(thick, rough) | structure
+    
+        structure.name = self.structure.name
+        self.structure = structure
+    
+    def to_refnx(self):
+        # Iterate over each component.
+        structure = refnx.reflect.SLD(0, name='Air')
+        for component in list(reversed(self.structure))[1:]:
+            name, sld = component.name, component.material.rho.value,
+            thick, rough = component.thickness.value, component.interface.value
+            
+            structure |= refnx.reflect.SLD(sld, name=name)(thick, rough)
+    
+        structure.name = self.structure.name
+        self.structure = structure
+
 class MagneticSample(BaseSample):
     def _set_dq(self, probe):
         # Transform the resolution from refnx to Refl1D format.
@@ -311,15 +345,12 @@ class MagneticSample(BaseSample):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         
-        labels = ['++', '+-', '-+', '--']
         colours = plt.rcParams['axes.prop_cycle'].by_key()['color']
-        probes = self.experiment.probe.xs
         count = 0
-        for i, qr in enumerate(self.experiment.reflectivity()):
+        for probe, qr in zip(self.experiment.probe.xs, self.experiment.reflectivity()):
             if qr is not None:
-                probe = probes[i]
-                ax.errorbar(probe.Q, probe.R, probe.dR, marker='o', ms=2, lw=0, elinewidth=0.5, capsize=0.5, label=labels[i]+' Data', color=colours[count])
-                ax.plot(probe.Q, qr[1], color=colours[count], zorder=20, label=labels[i]+' Fitted')
+                ax.errorbar(probe.Q, probe.R, probe.dR, marker='o', ms=2, lw=0, elinewidth=0.5, capsize=0.5, label=self.labels[count]+' Data', color=colours[count])
+                ax.plot(probe.Q, qr[1], color=colours[count], zorder=20, label=self.labels[count]+' Fitted')
                 count += 1
     
         ax.set_xlabel('$\mathregular{Q\ (Å^{-1})}$', fontsize=11, weight='bold')
@@ -330,55 +361,36 @@ class MagneticSample(BaseSample):
         # Save the plot.
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'reflectivity_profile')     
-
-    def nested_sampling(self, angle_times, save_path, filename, dynamic=False):
-        """Runs nested sampling on simulated data of the sample.
-
-        Args:
-            angle_times (list): points and counting times for each measurement angle to simulate.
-            save_path (str): path to directory to save corner plot to.
-            filename (str): name of file to save corner plot to.
-            dynamic (bool): whether to use static or dynamic nested sampling.
-
-        """
-        models, _ = simulate_magnetic(self.structure, angle_times)
-        objective = bumps.fitproblem.FitProblem(models)
-  
-        # Sample the objective using nested sampling.
-        sampler = Sampler(objective)
-        fig = sampler.sample(dynamic=dynamic)
-
-        # Save the sampling corner plot.
-        save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, filename+'_nested_sampling')
 
-class YIG(MagneticSample, VariableUnderlayer):
+class YIG_Sample(MagneticSample, VariableUnderlayer):
     def __init__(self):
         self.name = 'YIG_sample'
         
         self.data_path = '../experimental-design/data/YIG_sample'
+        self.labels = ['Up', 'Down']
         self.scale = 1.025
         self.bkg = 4e-7
         self.dq = 2.8
         self.mag_angle = 90
 
-        self.Pt_sld   = bumps.parameter.Parameter(5.590, name='Pt SLD')
-        self.Pt_thick = bumps.parameter.Parameter(22.1,  name='Pt Thickness')
-        self.Pt_rough = bumps.parameter.Parameter(8.11,  name='Pt/Air Roughness')
-        self.Pt_mag   = bumps.parameter.Parameter(0.019, name='Pt Magnetic SLD')
+        self.Pt_sld = bumps.parameter.Parameter(5.646, name='Pt SLD')
+        self.Pt_thick = bumps.parameter.Parameter(21.08, name='Pt Thickness')
+        self.Pt_rough = bumps.parameter.Parameter(8.211, name='Air|Pt Roughness')
+        self.Pt_mag = bumps.parameter.Parameter(0.0128, name='Pt Magnetic SLD')
         
-        self.FePt_sld   = bumps.parameter.Parameter(4.717, name='FePt SLD')
-        self.FePt_thick = bumps.parameter.Parameter(18.1,  name='FePt Thickness')
-        self.FePt_rough = bumps.parameter.Parameter(0.02,  name='FePt\Pt Roughness')
+        self.FePt_sld = bumps.parameter.Parameter(4.678, name='FePt SLD')
+        self.FePt_thick = bumps.parameter.Parameter(19.67, name='FePt Thickness')
+        self.FePt_rough = bumps.parameter.Parameter(2, name='Pt|FePt Roughness')
         
-        self.YIG_sld   = bumps.parameter.Parameter(5.810, name='YIG SLD')
-        self.YIG_thick = bumps.parameter.Parameter(706.5, name='YIG Thickness')
-        self.YIG_rough = bumps.parameter.Parameter(11.8,  name='YIG\FePt Roughness')
-        self.YIG_mag   = bumps.parameter.Parameter(0.373, name='YIG Magnetic SLD')
+        self.YIG_sld = bumps.parameter.Parameter(5.836, name='YIG SLD')
+        self.YIG_thick = bumps.parameter.Parameter(713.8, name='YIG Thickness')
+        self.YIG_rough = bumps.parameter.Parameter(13.55, name='FePt|YIG Roughness')
+        self.YIG_mag = bumps.parameter.Parameter(0.349, name='YIG Magnetic SLD')
         
-        self.sub_sld   = bumps.parameter.Parameter(4.994, name='Substrate SLD')
-        self.sub_rough = bumps.parameter.Parameter(88.5,  name='Substrate\YIG Roughness')
-        
+        self.sub_sld = bumps.parameter.Parameter(5.304, name='Substrate SLD')
+        self.sub_rough = bumps.parameter.Parameter(30, name='YIG|Substrate Roughness')
+                
         self.params = [self.Pt_sld,
                        self.Pt_thick,
                        self.Pt_rough,
@@ -393,8 +405,22 @@ class YIG(MagneticSample, VariableUnderlayer):
                        self.sub_sld,
                        self.sub_rough]
         
-        for param in self.params:
-            param.pmp(20)
+        self.Pt_sld.range(5, 6)
+        self.Pt_thick.range(2, 30)
+        self.Pt_rough.range(0, 9)
+        self.Pt_mag.range(0, 0.2)
+        
+        self.FePt_sld.range(4.5, 5.5)
+        self.FePt_thick.range(0, 25)
+        self.FePt_rough.range(2, 10)
+        
+        self.YIG_sld.range(5, 6)
+        self.YIG_thick.range(100, 900)
+        self.YIG_rough.range(0, 70)
+        self.YIG_mag.range(0, 0.6)
+        
+        self.sub_sld.range(4.5, 5.5)
+        self.sub_rough.range(20, 30)
         
         air = refl1d.material.SLD(rho=0, name='Air')
         Pt = refl1d.material.SLD(rho=self.Pt_sld, name='Pt')(self.Pt_thick, self.Pt_rough, magnetism=refl1d.magnetism.Magnetism(rhoM=self.Pt_mag, thetaM=self.mag_angle))
@@ -418,8 +444,9 @@ class YIG(MagneticSample, VariableUnderlayer):
         probe = refl1d.probe.PolarizedQProbe(xs=(pp, pm, mp, mm), name='Probe')
         self.experiment = refl1d.experiment.Experiment(sample=self.structure, probe=probe)
     
-    def angle_info(self, angle_times):
-        models, datasets = simulate_magnetic(sample, angle_times, pp=True, pm=False, mp=False, mm=True)
+    def angle_info(self, angle_times, contrasts=None):
+        models, datasets = simulate_magnetic(self.structure, angle_times, bkg=self.bkg, dq=self.dq,
+                                             pp=True, pm=False, mp=False, mm=True)
 
         qs = [data[:,0] for data in datasets]
         counts = [data[:,3] for data in datasets]
@@ -428,19 +455,43 @@ class YIG(MagneticSample, VariableUnderlayer):
     
     def underlayer_info(self):
         pass
+    
+    def nested_sampling(self, angle_times, save_path, filename, dynamic=False):
+        """Runs nested sampling on simulated data of the sample.
 
-class BaseBilayer(BaseSample, VariableContrast, VariableUnderlayer):
-    """Abstract class representing the base class for a bilayer model."""
+        Args:
+            angle_times (list): points and counting times for each measurement angle to simulate.
+            save_path (str): path to directory to save corner plot to.
+            filename (str): name of file to save corner plot to.
+            dynamic (bool): whether to use static or dynamic nested sampling.
+
+        """
+        #models, _ = simulate_magnetic(self.structure, angle_times, bkg=self.bkg, dq=self.dq,
+        #                              pp=True, pm=False, mp=False, mm=True)
+        #xs = [models[0].probe.xs[0], None, None, models[1].probe.xs[3]]
+        
+        #experiment = refl1d.experiment.Experiment(sample=self.structure, probe=refl1d.probe.PolarizedQProbe(xs=xs, name=''))
+        objective = bumps.fitproblem.FitProblem(self.experiment)
+  
+        # Sample the objective using nested sampling.
+        sampler = Sampler(objective)
+        fig = sampler.sample(dynamic=dynamic)
+
+        # Save the sampling corner plot.
+        save_path = os.path.join(save_path, self.name)
+
+class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
+    """Abstract class representing the base class for a lipid model."""
     def __init__(self):
         self._create_objectives()
 
     @abstractmethod
     def _create_objectives(self):
-        """Loads the measured data for the bilayer sample."""
+        """Loads the measured data for the lipid sample."""
         pass
 
     def angle_info(self, angle_times, contrasts):
-        """Calculates the Fisher information matrix for a bilayer sample measured over a number of angles.
+        """Calculates the Fisher information matrix for a lipid sample measured over a number of angles.
 
         Args:
             angle_times (list): points and counting times for each measurement angle to simulate.
@@ -453,7 +504,7 @@ class BaseBilayer(BaseSample, VariableContrast, VariableUnderlayer):
         return self.__conditions_info(angle_times, contrasts, None)
 
     def contrast_info(self, angle_times, contrasts):
-        """Calculates the Fisher information matrix for a bilayer sample with contrasts
+        """Calculates the Fisher information matrix for a lipid sample with contrasts
            measured over a number of angles.
 
         Args:
@@ -467,7 +518,7 @@ class BaseBilayer(BaseSample, VariableContrast, VariableUnderlayer):
         return self.__conditions_info(angle_times, contrasts, None)
 
     def underlayer_info(self, angle_times, contrasts, underlayers):
-        """Calculates the Fisher information matrix for a bilayer sample with `underlayers`,
+        """Calculates the Fisher information matrix for a lipid sample with `underlayers`,
            and with contrasts measured over a number of angles.
 
         Args:
@@ -482,7 +533,7 @@ class BaseBilayer(BaseSample, VariableContrast, VariableUnderlayer):
         return self.__conditions_info(angle_times, contrasts, underlayers)
 
     def __conditions_info(self, angle_times, contrasts, underlayers):
-        """Calculates the Fisher information matrix for a bilayer sample with given conditions.
+        """Calculates the Fisher information matrix for a lipid sample with given conditions.
 
         Args:
             angle_times (list): points and counting times for each measurement angle to simulate.
@@ -517,11 +568,12 @@ class BaseBilayer(BaseSample, VariableContrast, VariableUnderlayer):
         """
         pass
 
-    def sld_profile(self, save_path):
-        """Plots the SLD profile of the bilayer sample.
+    def sld_profile(self, save_path, filename='sld_profile'):
+        """Plots the SLD profile of the lipid sample.
 
         Args:
             save_path (str): path to directory to save SLD profile to.
+            filename
 
         """
         fig = plt.figure()
@@ -537,19 +589,21 @@ class BaseBilayer(BaseSample, VariableContrast, VariableUnderlayer):
 
         # Save the plot.
         save_path = os.path.join(save_path, self.name)
-        save_plot(fig, save_path, 'sld_profile')
+        save_plot(fig, save_path, filename)
 
-    def reflectivity_profile(self, save_path):
-        """Plots the reflectivity profile of the bilayer sample.
+    def reflectivity_profile(self, save_path, filename='reflectivity_profile'):
+        """Plots the reflectivity profile of the lipid sample.
 
         Args:
             save_path (str): path to directory to save reflectivity profile to.
+            filename
 
         """
         fig = plt.figure()
         ax = fig.add_subplot(111)
 
         # Iterate over each measured contrast.
+        colours = plt.rcParams['axes.prop_cycle'].by_key()['color']
         for i, objective in enumerate(self.objectives):
             # Get the measured data and calculate the model reflectivity at each point.
             q, r, dr = objective.data.x, objective.data.y, objective.data.y_err
@@ -566,22 +620,24 @@ class BaseBilayer(BaseSample, VariableContrast, VariableUnderlayer):
                 label += ' $\mathregular{(x10^{-'+str(2*i)+'})}$'
 
             # Plot the measured data and the model reflectivity.
-            ax.errorbar(q, r, dr, marker='o', ms=3, lw=0, elinewidth=1, capsize=1.5, label=label)
-            ax.plot(q, r_model, color='red', zorder=20)
+            ax.errorbar(q, r, dr, marker='o', ms=3, lw=0, elinewidth=1, capsize=1.5,
+                        color=colours[i], label=label)
+            ax.plot(q, r_model, color=colours[i], zorder=20)
 
         ax.set_xlabel('$\mathregular{Q\ (Å^{-1})}$', fontsize=11, weight='bold')
         ax.set_ylabel('Reflectivity (arb.)', fontsize=11, weight='bold')
-        ax.set_xscale('log')
+        #ax.set_xscale('log')
         ax.set_yscale('log')
-        ax.set_ylim(1e-10, 2)
+        ax.set_xlim(0.005, 0.3)
+        ax.set_ylim(1e-10, 3)
         ax.legend()
 
         # Save the plot.
         save_path = os.path.join(save_path, self.name)
-        save_plot(fig, save_path, 'reflectivity_profile')
+        save_plot(fig, save_path, filename)
 
     def nested_sampling(self, contrasts, angle_times, save_path, filename, underlayers=None, dynamic=False):
-        """Runs nested sampling on simulated data of the bilayer sample.
+        """Runs nested sampling on simulated data of the lipid sample.
 
         Args:
             contrasts (list): SLDs of contrasts to simulate.
@@ -612,7 +668,173 @@ class BaseBilayer(BaseSample, VariableContrast, VariableUnderlayer):
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, filename+'_nested_sampling')
 
-class SymmetricBilayer(BaseBilayer):
+class Monolayer(BaseLipid):
+    def __init__(self):
+        self.name = 'monolayer'
+        self.data_path = '../experimental-design/data/monolayer'
+        self.labels = ['Hydrogenated-D2O', 'Deuterated-NRW', 'Hydrogenated-NRW']
+        self.distances = np.linspace(-25, 90, 500)
+
+        self.scales = [1.8899, 1.8832, 1.8574]
+        self.bkgs = [3.565e-6, 5.348e-6, 6.542e-6]
+        self.dq = 3
+
+        self.air_tg_rough    = refnx.analysis.Parameter( 5.0000, 'Air|Tailgroup Roughness',   ( 5, 8))
+        self.lipid_apm       = refnx.analysis.Parameter(54.1039, 'Lipid Area Per Molecule',   (30, 80))
+        self.hg_waters       = refnx.analysis.Parameter( 6.6874, 'Headgroup Bound Waters',    ( 0, 20))
+        self.monolayer_rough = refnx.analysis.Parameter( 2.0233, 'Monolayer Roughness',       ( 0, 10))
+        self.not_lipid_vf    = refnx.analysis.Parameter( 0.0954, 'Not Lipid Volume Fraction', ( 0, 1))
+        self.protein_tg      = refnx.analysis.Parameter( 0.9999, 'Protein Tails',             ( 0, 1))
+        self.protein_hg      = refnx.analysis.Parameter( 1.0000, 'Protein Headgroup',         ( 0, 1))
+        self.protein_thick   = refnx.analysis.Parameter(32.6858, 'Protein Thickness',         ( 0, 80))
+        self.protein_vfsolv  = refnx.analysis.Parameter( 0.5501, 'Protein Hydration',         ( 0, 100))
+        self.water_rough     = refnx.analysis.Parameter( 3.4590, 'Protein|Water Roughness',   ( 0, 15))
+        
+        # Exclude protein parameters
+        self.params = [self.air_tg_rough,
+                       self.lipid_apm,
+                       self.hg_waters,
+                       self.monolayer_rough,
+                       self.water_rough]
+        
+        # Vary all of the parameters defined above.
+        for param in self.params:
+            param.vary=True
+        
+        super().__init__()
+        
+    def _using_conditions(self, contrast_sld, underlayers=None, deuterated=False, protein=False):
+        assert underlayers is None
+        
+        contrast_sld *= 1e-6
+        
+        # Define known SLDs of D2O and H2O
+        d2o_sld =  6.35e-6
+        h2o_sld = -0.56e-6
+        
+        # Define known protein SLDs for D2O and H2O.
+        protein_d2o_sld = 3.4e-6
+        protein_h2o_sld = 1.9e-6
+        
+        # Define neutron scattering lengths.
+        carbon_sl     =  0.6646e-4
+        oxygen_sl     =  0.5843e-4
+        hydrogen_sl   = -0.3739e-4
+        phosphorus_sl =  0.5130e-4
+        deuterium_sl  =  0.6671e-4
+        
+        # Calculate the total scattering length in each fragment.
+        COO  = 1*carbon_sl     + 2*oxygen_sl
+        GLYC = 3*carbon_sl     + 5*hydrogen_sl
+        CH3  = 1*carbon_sl     + 3*hydrogen_sl        
+        PO4  = 1*phosphorus_sl + 4*oxygen_sl
+        CH2  = 1*carbon_sl     + 2*hydrogen_sl
+        H2O  = 2*hydrogen_sl   + 1*oxygen_sl
+        D2O  = 2*deuterium_sl  + 1*oxygen_sl
+        CD3  = 1*carbon_sl     + 3*deuterium_sl       
+        CD2  = 1*carbon_sl     + 2*deuterium_sl
+        
+        # Volumes of each fragment.
+        vCH3  = 52.7/2
+        vCH2  = 28.1
+        vCOO  = 39.0
+        vGLYC = 68.8
+        vPO4  = 53.7
+        vWAT  = 30.4
+        
+        # Calculate volumes from components.
+        hg_vol = vPO4 + 2*vGLYC + 2* vCOO
+        tg_vol = 28*vCH2 + 2*vCH3
+        
+        # Calculate mole fraction of D2O from the bulk SLD.
+        d2o_molfr = (contrast_sld - h2o_sld) / (d2o_sld - h2o_sld)
+        
+        # Calculate 'average' scattering length sum per water molecule in bulk.
+        sl_sum_water = d2o_molfr*D2O + (1-d2o_molfr)*H2O
+        
+        # Calculate scattering length sums for the other fragments.
+        sl_sum_hg = PO4 + 2*GLYC + 2*COO
+        sl_sum_tg_h = 28*CH2 + 2*CH3
+        sl_sum_tg_d = 28*CD2 + 2*CD3
+        
+        # Need to include the number of hydrating water molecules in headgroup
+        # scattering length sum and headgroup volume.
+        
+        lipid_total_sl_sum = sl_sum_water * self.hg_waters
+        lipid_total_vol = vWAT * self.hg_waters
+        
+        hg_vol = hg_vol + lipid_total_vol
+        sl_sum_hg = sl_sum_hg + lipid_total_sl_sum
+        
+        hg_sld = sl_sum_hg / hg_vol
+        
+        # Calculate the SLD of the hydrogenated and deuterated tailgroups.
+        tg_h_sld = sl_sum_tg_h / tg_vol
+        tg_d_sld = sl_sum_tg_d / tg_vol
+        
+        if protein:
+            # Contrast_point calculation.
+            contrast_point = (contrast_sld - h2o_sld) / (d2o_sld - h2o_sld)
+            
+            # Calculated SLD of protein and hydration
+            protein_sld = (contrast_point * protein_d2o_sld) + ((1-contrast_point) * protein_h2o_sld)
+            
+            # Bulk in is 0 SLD so no extra terms.
+            protein_tg_sld = self.protein_tg * protein_sld
+            protein_hg_sld = self.protein_hg * protein_sld
+            
+            hg_sld = (1-self.not_lipid_vf)*hg_sld + self.not_lipid_vf*protein_hg_sld
+            
+            tg_h_sld = (1-self.not_lipid_vf)*tg_h_sld + self.not_lipid_vf*protein_tg_sld
+            tg_d_sld = (1-self.not_lipid_vf)*tg_d_sld + self.not_lipid_vf*protein_tg_sld
+        
+            protein = refnx.reflect.SLD(protein_sld*1e6, name='Protein')(self.protein_thick, self.monolayer_rough, self.protein_vfsolv)
+        
+        # Tailgroup and headgroup thicknesses.
+        tg_thick = tg_vol / self.lipid_apm
+        hg_thick = hg_vol / self.lipid_apm
+        
+        # Define the structure.
+        air = refnx.reflect.SLD(0, name='Air')
+        tg_h = refnx.reflect.SLD(tg_h_sld*1e6, name='Hydrogenated Tailgroup')(tg_thick, self.air_tg_rough)
+        tg_d = refnx.reflect.SLD(tg_d_sld*1e6, name='Deuterated Tailgroup')(tg_thick, self.air_tg_rough)
+        hg = refnx.reflect.SLD(hg_sld*1e6, name='Headgroup')(hg_thick, self.monolayer_rough)
+        water = refnx.reflect.SLD(contrast_sld*1e6, name='Water')(0, self.water_rough)
+        
+        structure = air
+        if deuterated:
+            structure |= tg_d
+        else:
+            structure |= tg_h
+            
+        if protein:
+            return structure | hg | protein | water
+        else:
+            return structure | hg | water
+
+    def _create_objectives(self, protein=True):
+        nrw, d2o = 0.1, 6.35
+    
+        self.structures = [self._using_conditions(d2o, deuterated=False, protein=protein),
+                           self._using_conditions(nrw, deuterated=True,  protein=protein),
+                           self._using_conditions(nrw, deuterated=False, protein=protein)]
+        
+        models = [refnx.reflect.ReflectModel(structure, scale=scale, bkg=bkg*scale, dq=self.dq)
+                  for structure, scale, bkg in zip(self.structures, self.scales, self.bkgs)]
+        
+        datasets = [refnx.dataset.ReflectDataset(os.path.join(self.data_path, '{}.dat'.format(label)))
+                    for label in self.labels]
+    
+        self.objectives = [refnx.analysis.Objective(model, data)
+                           for model, data in zip(models, datasets)]
+
+    def sld_profile(self, save_path):
+        self._create_objectives(protein=False)
+        super().sld_profile(save_path, 'sld_profile_no_protein')
+        self._create_objectives(protein=True)
+        super().sld_profile(save_path, 'sld_profile_protein')
+
+class SymmetricBilayer(BaseLipid):
     """Defines a model describing a symmetric DMPC bilayer.
 
     Attributes:
@@ -640,16 +862,19 @@ class SymmetricBilayer(BaseBilayer):
         bilayer_solv (refnx.analysis.Parameter): bilayer hydration.
         hg_waters (refnx.analysis.Parameter): headgroup bound waters.
         params (list): varying model parameters.
+        structures
+        objectives
 
     """
     def __init__(self):
         self.name = 'symmetric_bilayer'
         self.data_path = '../experimental-design/data/symmetric_bilayer'
+        self.labels = ['Si-D2O', 'Si-DMPC-D2O', 'Si-DMPC-H2O']
+        self.distances = np.linspace(-20, 95, 500)
+        
         self.scales = [0.677763, 0.645217, 0.667776]
         self.bkgs = [3.20559e-06, 2.05875e-06, 2.80358e-06]
         self.dq = 2
-        self.labels = ['Si-D2O', 'Si-DMPC-D2O', 'Si-DMPC-H2O']
-        self.distances = np.linspace(-20, 95, 500)
 
         # Define known values.
         self.si_sld      = 2.073
@@ -745,15 +970,16 @@ class SymmetricBilayer(BaseBilayer):
             structure.name = self.labels[i]
 
         # Define models using structures above.
-        self.models = [refnx.reflect.ReflectModel(structure, scale=scale, bkg=bkg, dq=self.dq)
-                       for structure, scale, bkg in list(zip(self.structures, self.scales, self.bkgs))]
+        models = [refnx.reflect.ReflectModel(structure, scale=scale, bkg=bkg, dq=self.dq)
+                  for structure, scale, bkg in zip(self.structures, self.scales, self.bkgs)]
 
         # Load the measured datasets.
-        self.datasets = [refnx.dataset.ReflectDataset(os.path.join(self.data_path, '{}.dat'.format(label)))
-                         for label in self.labels]
+        datasets = [refnx.dataset.ReflectDataset(os.path.join(self.data_path, '{}.dat'.format(label)))
+                    for label in self.labels]
 
         # Combine models and datasets into objectives that can be fitted.
-        self.objectives = [refnx.analysis.Objective(model, data) for model, data in list(zip(self.models, self.datasets))]
+        self.objectives = [refnx.analysis.Objective(model, data)
+                           for model, data in zip(models, datasets)]
 
     def _using_conditions(self, contrast_sld, underlayers=None):
         """Creates a structure representing the bilayer measured using given measurement conditions.
@@ -793,7 +1019,7 @@ class SymmetricBilayer(BaseBilayer):
                 structure |= underlayer
             return structure | inner_hg | tg | tg | outer_hg | solution
 
-class AsymmetricBilayer(BaseBilayer):
+class AsymmetricBilayer(BaseLipid):
     """Defines a model describing an asymmetric bilayer. This model can either
        be defined using single or double asymmetry: the implementation for
        which is provided in the classes that inherit from this parent class.
@@ -1092,34 +1318,17 @@ def similar_sld_sample_2():
     structure.name = 'similar_sld_sample_2'
     return Sample(structure)
 
-def refnx_to_refl1d(sample):
-    """Converts a standard refnx structure to an equivalent Refl1D structure.
-
-    Args:
-        sample (refnx.reflect.Structure): refnx structure to convert.
-
-    Returns:
-        refl1d.model.Stack: equivalent structure defined in Refl1D.
-
-    """
-    # Iterate over each component.
-    structure = refl1d.material.SLD(rho=0, name='Air')
-    for component in sample[1:]:
-        name, sld = component.name, component.sld.real.value,
-        thick, rough = component.thick.value, component.rough.value
-
-        # Add the component in the opposite direction to the refnx definition.
-        structure = refl1d.material.SLD(rho=sld, name=name)(thick, rough) | structure
-
-    structure.name = sample.name
-    return structure
-
 if __name__ == '__main__':
-
+    sample = Monolayer()
+    sample.sld_profile('./results')
+    sample.reflectivity_profile('./results')
+    
+    """
     structures = [simple_sample, many_param_sample,
                   thin_layer_sample_1, thin_layer_sample_2,
                   similar_sld_sample_1, similar_sld_sample_2,
-                  YIG, SymmetricBilayer, SingleAsymmetricBilayer]
+                  YIG_Sample, Monolayer,
+                  SymmetricBilayer, SingleAsymmetricBilayer]
 
     save_path = './results'
 
@@ -1132,3 +1341,4 @@ if __name__ == '__main__':
         
         sample.reflectivity_profile(save_path)
         plt.close()
+    """
