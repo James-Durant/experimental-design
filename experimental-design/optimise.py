@@ -16,7 +16,7 @@ class Optimiser:
         self.sample = sample
 
     def optimise_angle_times(self, num_angles, contrasts=[], total_time=1000,
-                             angle_bounds=(0.2, 2.3), points=100, workers=-1, verbose=True):
+                             angle_bounds=(0.2, 4), points=100, workers=-1, verbose=True):
         """Optimises the measurement angles and associated counting times for an experiment,
            given a fixed time budget.
 
@@ -285,11 +285,11 @@ def _underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bou
 if __name__ == '__main__':
     from structures import SymmetricBilayer, SingleAsymmetricBilayer
 
-    sample = SingleAsymmetricBilayer()
+    sample = SymmetricBilayer()
     optimiser = Optimiser(sample)
 
     total_time = 1000
-    angle_bounds = (0.2, 2.3)
+    angle_bounds = (0.2, 4)
     #_angle_results(optimiser, total_time, angle_bounds)
 
     angle_splits = [(0.5, 100, 0.06), (2.3, 100, 0.94)]

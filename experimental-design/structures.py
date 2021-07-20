@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+#plt.rcParams['figure.figsize'] = (4.5,7)
 plt.rcParams['figure.figsize'] = (9,7)
 plt.rcParams['figure.dpi'] = 600
 
@@ -360,8 +361,7 @@ class MagneticSample(BaseSample):
 
         # Save the plot.
         save_path = os.path.join(save_path, self.name)
-        save_plot(fig, save_path, 'reflectivity_profile')     
-        save_plot(fig, save_path, filename+'_nested_sampling')
+        save_plot(fig, save_path, 'reflectivity_profile')
 
 class YIG_Sample(MagneticSample, VariableUnderlayer):
     def __init__(self):
@@ -586,6 +586,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         ax.set_xlabel('$\mathregular{Distance\ (\AA)}$', fontsize=11, weight='bold')
         ax.set_ylabel('$\mathregular{SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
         ax.legend(self.labels)
+        #ax.set_ylim(-0.6, 7.5)
 
         # Save the plot.
         save_path = os.path.join(save_path, self.name)
@@ -669,12 +670,14 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         save_plot(fig, save_path, filename+'_nested_sampling')
 
 class Monolayer(BaseLipid):
-    def __init__(self):
+    def __init__(self, deuterated=False):
         self.name = 'monolayer'
         self.data_path = '../experimental-design/data/monolayer'
         self.labels = ['Hydrogenated-D2O', 'Deuterated-NRW', 'Hydrogenated-NRW']
         self.distances = np.linspace(-25, 90, 500)
-
+        
+        self.deuterated = deuterated
+        
         self.scales = [1.8899, 1.8832, 1.8574]
         self.bkgs = [3.565e-6, 5.348e-6, 6.542e-6]
         self.dq = 3
@@ -691,11 +694,7 @@ class Monolayer(BaseLipid):
         self.water_rough     = refnx.analysis.Parameter( 3.4590, 'Protein|Water Roughness',   ( 0, 15))
         
         # Exclude protein parameters
-        self.params = [self.air_tg_rough,
-                       self.lipid_apm,
-                       self.hg_waters,
-                       self.monolayer_rough,
-                       self.water_rough]
+        self.params = [self.lipid_apm]
         
         # Vary all of the parameters defined above.
         for param in self.params:
@@ -703,8 +702,11 @@ class Monolayer(BaseLipid):
         
         super().__init__()
         
-    def _using_conditions(self, contrast_sld, underlayers=None, deuterated=False, protein=False):
+    def _using_conditions(self, contrast_sld, underlayers=None, deuterated=None, protein=False):
         assert underlayers is None
+        
+        if deuterated is None:
+            deuterated = self.deuterated
         
         contrast_sld *= 1e-6
         
@@ -1013,11 +1015,37 @@ class SymmetricBilayer(BaseLipid):
             return substrate | sio2 | inner_hg | tg | tg | outer_hg | solution
         else:
             # Add each underlayer with given thickness and SLD.
+            sio2.vfsolv.value = 0
             structure = substrate | sio2
             for thick, sld in underlayers:
-                underlayer = refnx.reflect.SLD(sld)(thick, self.sio2_rough, self.sio2_solv)
+                underlayer = refnx.reflect.SLD(sld)(thick, 2)
                 structure |= underlayer
             return structure | inner_hg | tg | tg | outer_hg | solution
+
+    def underlayer_info(self, angle_times, contrasts, underlayers):
+        """Calculates the Fisher information matrix for a lipid sample with `underlayers`,
+           and with contrasts measured over a number of angles.
+
+        Args:
+            angle_times (list): points and counting times for each measurement angle to simulate.
+            contrasts (list): SLDs of contrasts to simulate.
+            underlayers (list): thickness and SLD of each underlayer to add.
+
+        Returns:
+            numpy.ndarray: Fisher information matrix.
+
+        """
+        params_all = self.params
+        self.params = [self.si_rough,
+                       self.sio2_thick,
+                       self.dmpc_apm,
+                       self.bilayer_rough,
+                       self.bilayer_solv,
+                       self.hg_waters]
+        
+        g = super().underlayer_info(angle_times, contrasts, underlayers)
+        self.params = params_all
+        return g
 
 class AsymmetricBilayer(BaseLipid):
     """Defines a model describing an asymmetric bilayer. This model can either
@@ -1319,16 +1347,13 @@ def similar_sld_sample_2():
     return Sample(structure)
 
 if __name__ == '__main__':
-    sample = Monolayer()
-    sample.sld_profile('./results')
-    sample.reflectivity_profile('./results')
-    
-    """
-    structures = [simple_sample, many_param_sample,
-                  thin_layer_sample_1, thin_layer_sample_2,
-                  similar_sld_sample_1, similar_sld_sample_2,
-                  YIG_Sample, Monolayer,
-                  SymmetricBilayer, SingleAsymmetricBilayer]
+    #structures = [simple_sample, many_param_sample,
+    #              thin_layer_sample_1, thin_layer_sample_2,
+    #              similar_sld_sample_1, similar_sld_sample_2,
+    #              YIG_Sample, Monolayer,
+    #              SymmetricBilayer, SingleAsymmetricBilayer]
+
+    structures = [Monolayer]
 
     save_path = './results'
 
@@ -1336,9 +1361,7 @@ if __name__ == '__main__':
     for structure in structures:
         sample = structure()
         
-        sample.sld_profile(save_path)
-        plt.close()
-        
+        sample.sld_profile(save_path)    
         sample.reflectivity_profile(save_path)
-        plt.close()
-    """
+        
+        plt.close('all')

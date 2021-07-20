@@ -3,36 +3,39 @@ import numpy as np
 import refnx.reflect
 import refl1d.model, refl1d.probe, refl1d.experiment
 
-# Path to directbeam to use for simulation.
-DIRECTBEAM_PATH = '../experimental-design/data/directbeam/directbeam_wavelength.dat'
-
 def simulate_magnetic(sample, angle_times, scale=1, bkg=1e-6, dq=2,
-                      pp=True, pm=True, mp=True, mm=True):
+                      pp=True, pm=True, mp=True, mm=True,
+                      directbeam_path='../experimental-design/data/directbeams/OFFSPEC_Polarised.dat'):
     models, datasets = [], []
 
     if mm:
-        model, data = simulate(sample, angle_times, scale, bkg, dq, spin_state=0)
+        model, data = simulate(sample, angle_times, scale, bkg, dq,
+                               spin_state=0, directbeam_path=directbeam_path)
         models.append(model)
         datasets.append(data)
         
     if mp:
-        model, data = simulate(sample, angle_times, scale, bkg, dq, spin_state=1)
+        model, data = simulate(sample, angle_times, scale, bkg, dq,
+                               spin_state=1, directbeam_path=directbeam_path)
         models.append(model)
         datasets.append(data)
         
     if pm:
-        model, data = simulate(sample, angle_times, scale, bkg, dq, spin_state=2)
+        model, data = simulate(sample, angle_times, scale, bkg, dq,
+                               spin_state=2, directbeam_path=directbeam_path)
         models.append(model)
         datasets.append(data)
         
     if pp:
-        model, data = simulate(sample, angle_times, scale, bkg, dq, spin_state=3)
+        model, data = simulate(sample, angle_times, scale, bkg, dq,
+                               spin_state=3, directbeam_path=directbeam_path)
         models.append(model)
         datasets.append(data)
         
     return models, datasets
 
-def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2, spin_state=None):
+def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2, spin_state=None,
+             directbeam_path='../experimental-design/data/directbeams/OFFSPEC.dat'):
     """Simulates an experiment of a given `sample` measured over a number of angles.
 
     Args:
@@ -56,7 +59,7 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2, spin_state=None):
     for angle, points, time in angle_times:
         # Simulate the experiment.
         total_points += points
-        simulated = _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state)
+        simulated = _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state, directbeam_path)
 
         # Combine the data for the angle with the data from previous angles.
         q.append(simulated[0])
@@ -93,7 +96,7 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2, spin_state=None):
 
     return model, data
 
-def _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state, q_min=0.005, q_max=0.3):
+def _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state, directbeam_path):
     """Simulates a single angle measurement of a given `sample`.
 
     Args:
@@ -111,7 +114,7 @@ def _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state, q_m
 
     """
     # Load the directbeam_wavelength.dat file.
-    direct_beam = np.loadtxt(DIRECTBEAM_PATH, delimiter=',')
+    direct_beam = np.loadtxt(directbeam_path, delimiter=',')
     wavelengths = direct_beam[:,0] # 1st column is wavelength, 2nd is flux.
 
     # Adjust flux by measurement angle.
@@ -121,7 +124,7 @@ def _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state, q_m
     q = 4*np.pi*np.sin(np.radians(angle)) / wavelengths
 
     # Bin Q values in equally geometrically-spaced bins using flux as weighting.
-    q_bin_edges = np.geomspace(q_min, q_max, points+1)
+    q_bin_edges = np.geomspace(min(q), max(q), points+1)
     flux_binned, _ = np.histogram(q, q_bin_edges, weights=direct_flux)
 
     # Get the bin centres.

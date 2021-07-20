@@ -272,7 +272,7 @@ def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times
         # Iterate over each underlayer SLD to investigate.
         for sld in sld_range:
             # Calculate the minimum eigenvalue of the Fisher information matrix.
-            g = sample.underlayer_info(angle_times, contrasts, (thick, sld))
+            g = sample.underlayer_info(angle_times, contrasts, [(thick, sld)])
             min_eigs.append(np.linalg.eigvalsh(g)[0])
             x.append(thick)
             y.append(sld)
@@ -292,8 +292,8 @@ def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times
     if reverse_yaxis:
         ax.set_ylim(ax.get_ylim()[::-1])
 
-    ax.set_ylabel('$\mathregular{Underlayer\ Thickness\ (\AA)}$', fontsize=11, weight='bold')
-    ax.set_xlabel('$\mathregular{Underlayer\ SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
+    ax.set_xlabel('$\mathregular{Underlayer\ Thickness\ (\AA)}$', fontsize=11, weight='bold')
+    ax.set_ylabel('$\mathregular{Underlayer\ SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
     ax.set_zlabel('Minimum Eigenvalue', fontsize=11, weight='bold')
     ax.ticklabel_format(axis='z', style='sci', scilimits=(0,0))
 
@@ -320,7 +320,7 @@ def _angle_results(save_path='./results'):
     from structures import SymmetricBilayer, SingleAsymmetricBilayer
 
     # Choose sample here.
-    sample = YIG_Sample()
+    sample = simple_sample()
     contrasts = []
     #contrasts = [6.36]
 
@@ -329,14 +329,14 @@ def _angle_results(save_path='./results'):
     time = 100
 
     # Get the best angle to initially measure.
-    angle_range = np.linspace(0.2, 2.3, 500)
+    angle_range = np.linspace(0.2, 4, 500)
     initial_angle = angle_choice(sample, [], angle_range, points, time, save_path, 'initial', contrasts)
     print('Initial angle: {}'.format(round(initial_angle, 2)))
 
     # Investigate how the choice of next angle changes as the counting time of the initial angle is increased.
-    angle_range = np.linspace(0.2, 2.3, 50)
+    angle_range = np.linspace(0.2, 4, 50)
     time_range = np.linspace(0, time*8, 50)
-    #angle_choice_with_time(sample, initial_angle, angle_range, time_range, points, time, save_path, contrasts)
+    angle_choice_with_time(sample, initial_angle, angle_range, time_range, points, time, save_path, contrasts)
 
 def _contrast_results(save_path='./results'):
     """Investigates the choice of contrasts for a bilayer sample.
@@ -378,21 +378,21 @@ def _underlayer_results(save_path='./results'):
     from structures import SymmetricBilayer, SingleAsymmetricBilayer
 
     # Choose sample here.
-    bilayer = SingleAsymmetricBilayer()
+    bilayer = SymmetricBilayer()
 
     # SLDs of contrasts being simulated.
     contrasts = [6.36]
     # Number of points and counting times for each angle to simulate.
-    angle_times = [(0.7, 150, 100), (2.3, 150, 400)]
+    angle_times = [(0.7, 100, 100), (2.3, 100, 400)]
 
     # Investigate underlayer choice assuming no prior measurement.
-    thickness_range = np.linspace(5, 500, 50)
-    sld_range = np.linspace(1, 9, 100)
+    thickness_range = np.linspace(5, 500, 25)
+    sld_range = np.linspace(1, 9, 50)
     thick, sld = underlayer_choice(bilayer, thickness_range, sld_range, contrasts, angle_times, save_path)
     print('Thickness: {}'.format(round(thick)))
     print('SLD: {}'.format(round(sld, 2)))
 
 if __name__ == '__main__':
-    _angle_results()
+    #_angle_results()
     #_contrast_results()
-    #_underlayer_results()
+    _underlayer_results()
