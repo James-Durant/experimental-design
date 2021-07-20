@@ -301,12 +301,13 @@ if __name__ == '__main__':
     angle_bounds = (0.2, 4)
     _angle_results(optimiser, total_time, angle_bounds)
 
-    angle_splits = [(0.5, 100, 0.06), (2.3, 100, 0.94)]
+    angle_splits = [(0.75, 100, 0.08), (4.0, 100, 0.92)]
+    #angle_splits = [(4.0, 100, 1)]
     contrast_bounds = (-0.56, 6.36)
-    #_contrast_results(optimiser, total_time, angle_splits, contrast_bounds)
+    _contrast_results(optimiser, total_time, angle_splits, contrast_bounds)
     
-    angle_times = [(0.5, 100, 5), (2.3, 100, 95)]
+    angle_times = [(0.7, 100, 10), (2.3, 100, 40)]
     contrasts = [6.36]
     thick_bounds = (0, 500)
     sld_bounds = (1, 9)
-    #_underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bounds)
+    _underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bounds)

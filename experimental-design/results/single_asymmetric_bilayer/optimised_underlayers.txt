@@ -1,0 +1,16 @@
+----------- No Underlayers -----------
+Thicknesses: []
+SLDs: []
+Objective value: -0.00000000005336
+----------- 1 Underlayers -----------
+Thicknesses: [50.1]
+SLDs: [9.0]
+Objective value: -0.0002356
+Computation time: 161.5
+
+----------- 2 Underlayers -----------
+Thicknesses: [70.8, 72.0]
+SLDs: [1.0, 8.97]
+Objective value: -0.0002626
+Computation time: 386.2
+
