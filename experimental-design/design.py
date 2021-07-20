@@ -180,7 +180,7 @@ def contrast_choice_single(sample, contrast_range, initial_contrasts, angle_time
     return contrast_range[np.argmax(min_eigs)]
 
 def contrast_choice_double(sample, contrast_range, angle_times, save_path,
-                           reverse_xaxis=True, reverse_yaxis=True):
+                           reverse_xaxis=True, reverse_yaxis=False):
     """Plots the change in minimum eigenvalue of the Fisher information matrix
        as a function of two contrast SLDs, assuming no prior measurement.
 
@@ -233,7 +233,7 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path,
 
     ax.set_xlabel('$\mathregular{Contrast \ 1 \ SLD \ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
     ax.set_ylabel('$\mathregular{Contrast \ 2 \ SLD \ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
-    ax.set_zlabel('Minimum Eigenvalue (arb.)', fontsize=11, weight='bold')
+    ax.set_zlabel('Minimum Eigenvalue', fontsize=11, weight='bold')
     ax.ticklabel_format(axis='z', style='sci', scilimits=(0,0))
 
     # Save the plot.
@@ -316,8 +316,7 @@ def _angle_results(save_path='./results'):
     from structures import similar_sld_sample_1, similar_sld_sample_2
     from structures import thin_layer_sample_1, thin_layer_sample_2
     from structures import simple_sample, many_param_sample
-    from structures import YIG_Sample, Monolayer
-    from structures import SymmetricBilayer, SingleAsymmetricBilayer
+    from structures import YIG_Sample, SymmetricBilayer, SingleAsymmetricBilayer
 
     # Choose sample here.
     sample = simple_sample()
@@ -325,7 +324,7 @@ def _angle_results(save_path='./results'):
     #contrasts = [6.36]
 
     # Number of points and counting time for the initial angle choice.
-    points = 150
+    points = 100
     time = 100
 
     # Get the best angle to initially measure.
@@ -351,7 +350,7 @@ def _contrast_results(save_path='./results'):
     bilayer = SymmetricBilayer()
 
     # Number of points and counting times for each angle to simulate.
-    angle_times = [(0.7, 150, 100), (2.3, 150, 400)]
+    angle_times = [(0.7, 100, 100), (2.3, 100, 400)]
 
     # Investigate single contrast choices assuming different initial measurements.
     contrast_range = np.linspace(-0.56, 6.36, 500)
@@ -366,7 +365,7 @@ def _contrast_results(save_path='./results'):
 
     # Run nested sampling on simulated data to validate the improvements using the suggested designs.
     bilayer.nested_sampling([6.36, 6.36], angle_times, save_path, 'D2O_D2O', dynamic=True)
-    bilayer.nested_sampling([-0.56, 6.36], angle_times, save_path, 'H2O_D2O', dynamic=True)
+    bilayer.nested_sampling([6.36, -0.56], angle_times, save_path, 'D2O_H2O', dynamic=True)
 
 def _underlayer_results(save_path='./results'):
     """Investigates the choice of underlayer thickness and SLD for a bilayer sample.
@@ -386,13 +385,13 @@ def _underlayer_results(save_path='./results'):
     angle_times = [(0.7, 100, 100), (2.3, 100, 400)]
 
     # Investigate underlayer choice assuming no prior measurement.
-    thickness_range = np.linspace(5, 500, 25)
-    sld_range = np.linspace(1, 9, 50)
+    thickness_range = np.linspace(5, 500, 50)
+    sld_range = np.linspace(1, 9, 100)
     thick, sld = underlayer_choice(bilayer, thickness_range, sld_range, contrasts, angle_times, save_path)
     print('Thickness: {}'.format(round(thick)))
     print('SLD: {}'.format(round(sld, 2)))
 
 if __name__ == '__main__':
-    #_angle_results()
-    #_contrast_results()
+    _angle_results()
+    _contrast_results()
     _underlayer_results()

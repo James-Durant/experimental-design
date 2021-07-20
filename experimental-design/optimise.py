@@ -261,10 +261,19 @@ def _underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bou
 
     # Create a new text file for the results.
     with open(os.path.join(save_path, 'optimised_underlayers.txt'), 'w') as file:
+        g = optimiser.sample.contrast_info(angle_times, contrasts)
+        val = -np.linalg.eigvalsh(g)[0]
+        val = np.format_float_positional(val, precision=4, unique=False, fractional=False, trim='k')
+        
+        file.write('----------- No Underlayers -----------\n')
+        file.write('Thicknesses: {}\n'.format([]))
+        file.write('SLDs: {}\n'.format([]))
+        file.write('Objective value: {}\n'.format(val))
+        
         # Optimise the experiment using 1-4 contrasts.
-        for i, num_underlayers in enumerate([1, 2, 3]):
+        for i, num_underlayers in enumerate([1, 2]):
             # Display progress.
-            print('>>> {0}/{1}'.format(i, 3))
+            print('>>> {0}/{1}'.format(i, 2))
 
             # Time how long the optimisation takes.
             start = time.time()
@@ -278,7 +287,7 @@ def _underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bou
             # Write the optimised conditions, objective value and computation time to the results file.
             file.write('----------- {} Underlayers -----------\n'.format(num_underlayers))
             file.write('Thicknesses: {}\n'.format(list(np.round(thicknesses, 1))))
-            file.write('SLDs (%): {}\n'.format(list(np.round(slds, 2))))
+            file.write('SLDs: {}\n'.format(list(np.round(slds, 2))))
             file.write('Objective value: {}\n'.format(val))
             file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
 
@@ -290,7 +299,7 @@ if __name__ == '__main__':
 
     total_time = 1000
     angle_bounds = (0.2, 4)
-    #_angle_results(optimiser, total_time, angle_bounds)
+    _angle_results(optimiser, total_time, angle_bounds)
 
     angle_splits = [(0.5, 100, 0.06), (2.3, 100, 0.94)]
     contrast_bounds = (-0.56, 6.36)
@@ -300,4 +309,4 @@ if __name__ == '__main__':
     contrasts = [6.36]
     thick_bounds = (0, 500)
     sld_bounds = (1, 9)
-    _underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bounds)
+    #_underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bounds)

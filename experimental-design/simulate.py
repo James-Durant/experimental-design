@@ -77,6 +77,9 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2, spin_state=None,
     data = data[(data != 0).all(1)] # Remove points of zero reflectivity.
     data = data[data[:,0].argsort()] # Sort by Q.
 
+    if len(data) == 0:
+        return None, np.zeros((0, 4)) 
+
     # If a refnx sample was given, create a ReflectModel.
     if isinstance(sample, refnx.reflect.Structure):
         model = refnx.reflect.ReflectModel(sample, scale=scale, bkg=bkg, dq=dq)
@@ -84,6 +87,7 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2, spin_state=None,
     # If a Refl1D sample was given, create a Refl1D Experiment.
     elif isinstance(sample, refl1d.model.Stack):
         q, r, dr = data[:,0], data[:,1], data[:,2]
+        
         model = refl1d_experiment(sample, q, scale, bkg, dq, spin_state)
         model.probe.xs[spin_state].R = r
         model.probe.xs[spin_state].dR = dr
@@ -219,7 +223,6 @@ def refl1d_experiment(sample, q_array, scale, bkg, dq, spin_state=None):
     probe.calc_Qo = np.linspace(q_array[argmin] - 3.5*dq_array[argmin],
                                 q_array[argmax] + 3.5*dq_array[argmax],
                                 21*len(q_array))
-    
     if sample.ismagnetic:
         probes = [None]*4
         probes[spin_state] = probe

@@ -479,6 +479,7 @@ class YIG_Sample(MagneticSample, VariableUnderlayer):
 
         # Save the sampling corner plot.
         save_path = os.path.join(save_path, self.name)
+        save_plot(fig, save_path, 'nested_sampling_'+filename)
 
 class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
     """Abstract class representing the base class for a lipid model."""
@@ -667,7 +668,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
 
         # Save the sampling corner plot.
         save_path = os.path.join(save_path, self.name)
-        save_plot(fig, save_path, filename+'_nested_sampling')
+        save_plot(fig, save_path, 'nested_sampling_'+filename)
 
 class Monolayer(BaseLipid):
     def __init__(self, deuterated=False):
@@ -1005,17 +1006,17 @@ class SymmetricBilayer(BaseLipid):
         substrate = refnx.reflect.SLD(self.si_sld)
         solution  = refnx.reflect.SLD(contrast_sld)(rough=self.bilayer_rough)
 
-        sio2     = refnx.reflect.Slab(self.sio2_thick, self.sio2_sld, self.si_rough,      vfsolv=self.sio2_solv)
         inner_hg = refnx.reflect.Slab(hg_thick,        hg_sld,        self.sio2_rough,    vfsolv=self.bilayer_solv)
         outer_hg = refnx.reflect.Slab(hg_thick,        hg_sld,        self.bilayer_rough, vfsolv=self.bilayer_solv)
         tg       = refnx.reflect.Slab(tg_thick,        self.tg_sld,   self.bilayer_rough, vfsolv=self.bilayer_solv)
 
         # Add the underlayer if specified.
         if underlayers is None:
+            sio2 = refnx.reflect.Slab(self.sio2_thick, self.sio2_sld, self.si_rough, vfsolv=self.sio2_solv)
             return substrate | sio2 | inner_hg | tg | tg | outer_hg | solution
         else:
             # Add each underlayer with given thickness and SLD.
-            sio2.vfsolv.value = 0
+            sio2 = refnx.reflect.Slab(self.sio2_thick, self.sio2_sld, self.si_rough, vfsolv=0)
             structure = substrate | sio2
             for thick, sld in underlayers:
                 underlayer = refnx.reflect.SLD(sld)(thick, 2)
@@ -1184,11 +1185,41 @@ class AsymmetricBilayer(BaseLipid):
             return substrate | sio2 | inner_hg | inner_tg | outer_tg | core | solution
         else:
             # Add each underlayer with given thickness and SLD.
+            sio2.vfsolv.value = 0
             structure = substrate | sio2
             for thick, sld in underlayers:
-                underlayer = refnx.reflect.SLD(sld)(thick, self.sio2_rough, self.sio2_solv)
+                underlayer = refnx.reflect.SLD(sld)(thick, 2)
                 structure |= underlayer
             return structure | inner_hg | inner_tg | outer_tg | core | solution
+
+    def underlayer_info(self, angle_times, contrasts, underlayers):
+        """Calculates the Fisher information matrix for a lipid sample with `underlayers`,
+           and with contrasts measured over a number of angles.
+
+        Args:
+            angle_times (list): points and counting times for each measurement angle to simulate.
+            contrasts (list): SLDs of contrasts to simulate.
+            underlayers (list): thickness and SLD of each underlayer to add.
+
+        Returns:
+            numpy.ndarray: Fisher information matrix.
+
+        """
+        params_all = self.params
+        self.params = [self.si_rough,
+                       self.sio2_thick,
+                       self.inner_hg_thick,
+                       self.inner_hg_solv,
+                       self.bilayer_rough,
+                       self.inner_tg_thick,
+                       self.outer_tg_thick,
+                       self.tg_solv,
+                       self.core_thick,
+                       self.core_solv]
+        
+        g = super().underlayer_info(angle_times, contrasts, underlayers)
+        self.params = params_all
+        return g
 
 class SingleAsymmetricBilayer(AsymmetricBilayer):
     """Defines a model describing an asymmetric bilayer defined by a single
@@ -1347,13 +1378,11 @@ def similar_sld_sample_2():
     return Sample(structure)
 
 if __name__ == '__main__':
-    #structures = [simple_sample, many_param_sample,
-    #              thin_layer_sample_1, thin_layer_sample_2,
-    #              similar_sld_sample_1, similar_sld_sample_2,
-    #              YIG_Sample, Monolayer,
-    #              SymmetricBilayer, SingleAsymmetricBilayer]
-
-    structures = [Monolayer]
+    structures = [simple_sample, many_param_sample,
+                  thin_layer_sample_1, thin_layer_sample_2,
+                  similar_sld_sample_1, similar_sld_sample_2,
+                  YIG_Sample, Monolayer,
+                  SymmetricBilayer, SingleAsymmetricBilayer]
 
     save_path = './results'
 

@@ -80,17 +80,17 @@ def optimise(sample, angle_bounds, contrast_bounds, apm_range, points, time, sav
     return res.x[0], res.x[1], res.fun
 
 def _kinetics_results(save_path='./results'):
-    angle_range = np.linspace(0.2, 4, 25)
-    contrast_range = np.linspace(-0.56, 6.36, 50)
-    apm_range = np.linspace(54.1039, 500, 25)
+    angle_range = np.linspace(0.2, 4, 50)
+    contrast_range = np.linspace(-0.56, 6.36, 100)
+    apm_range = np.linspace(54.1039, 500, 20)
     points = 100
     time = 1000
     
     monolayer_h, monolayer_d = Monolayer(deuterated=False), Monolayer(deuterated=True)
     
-    #kinetics(monolayer_h, angle_range, contrast_range, apm_range, points, time, save_path)
-    #kinetics(monolayer_d, angle_range, contrast_range, apm_range, points, time, save_path)
-    
+    kinetics(monolayer_h, angle_range, contrast_range, apm_range, points, time, save_path)
+    kinetics(monolayer_d, angle_range, contrast_range, apm_range, points, time, save_path)
+
     angle_bounds = (0.2, 4)
     contrast_bounds = (-0.56, 6.36)
     with open(os.path.join(save_path, monolayer_h.name, 'optimised.txt'), 'w') as file:
