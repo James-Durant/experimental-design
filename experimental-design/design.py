@@ -244,8 +244,8 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path,
     maximum = np.argmax(min_eigs)
     return x[maximum], y[maximum]
 
-def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times, save_path,
-                      reverse_xaxis=False, reverse_yaxis=False):
+def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times, 
+                      save_path, filename='', reverse_xaxis=False, reverse_yaxis=False):
     """Plots the change in minimum eigenvalue of the Fisher information matrix
        as a function of a sample's underlayer thickness and SLD.
 
@@ -255,6 +255,7 @@ def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times
         sld_range (numpy.ndarray): range of underlayer SLDs to consider.
         contrasts (list): SLDs of contrasts to simulate.
         angle_times (list): points and counting time of each angle to simulate.
+        filename
         save_path (str): path to directory to save plot to.
         reverse_xaxis (bool): whether to reverse the x-axis.
         reverse_yaxis (bool): whether to reverse the y-axis.
@@ -299,7 +300,8 @@ def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times
 
     # Save the plot.
     save_path = os.path.join(save_path, sample.name)
-    save_plot(fig, save_path, 'underlayer_choice')
+    filename = 'underlayer_choice' + ('_'+filename if filename != '' else '')
+    save_plot(fig, save_path, filename)
 
     # Return the underlayer thickness and SLD with largest minimum eigenvalue.
     maximum = np.argmax(min_eigs)
@@ -380,16 +382,19 @@ def _underlayer_results(save_path='./results'):
     bilayer = SymmetricBilayer()
 
     # SLDs of contrasts being simulated.
-    contrasts = [6.36]
+    contrasts = [[6.36], [-0.56], [-0.56, 6.36]]
     # Number of points and counting times for each angle to simulate.
     angle_times = [(0.7, 100, 100), (2.3, 100, 400)]
 
     # Investigate underlayer choice assuming no prior measurement.
     thickness_range = np.linspace(5, 500, 50)
     sld_range = np.linspace(1, 9, 100)
-    thick, sld = underlayer_choice(bilayer, thickness_range, sld_range, contrasts, angle_times, save_path)
-    print('Thickness: {}'.format(round(thick)))
-    print('SLD: {}'.format(round(sld, 2)))
+    
+    labels = ['D2O', 'H2O', 'D2O_H2O']
+    for c, label in zip(contrasts, labels):
+        thick, sld = underlayer_choice(bilayer, thickness_range, sld_range, c, angle_times, save_path, label)
+        print('Thickness: {}'.format(round(thick)))
+        print('SLD: {}'.format(round(sld, 2)))
 
 if __name__ == '__main__':
     _angle_results()

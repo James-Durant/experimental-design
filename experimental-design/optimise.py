@@ -41,12 +41,14 @@ class Optimiser:
 
         # Arguments for optimisation function
         args = [num_angles, contrasts, total_time, points]
-
+        
         # Constrain the counting times to sum to the fixed time budget.
-        constraints = [NonlinearConstraint(lambda x: sum(x[num_angles:]), 1, 1)]
+        constraints = [NonlinearConstraint(lambda x: sum(x[num_angles:]), 1, 1),
+                       NonlinearConstraint(lambda x: int(np.all(np.diff(x[:num_angles]) >= 0)), 1, 1)]
 
         # Optimise angles and times, and return results.
         res, val = Optimiser.__optimise(self._angle_times_func, bounds, constraints, args, workers, verbose)
+        print(res)
         return res[:num_angles], res[num_angles:], val
 
     def optimise_contrasts(self, num_contrasts, angle_splits, total_time=1000,
@@ -72,13 +74,15 @@ class Optimiser:
         bounds = [contrast_bounds]*num_contrasts + [(0, 1)]*num_contrasts
 
         # Constrain the counting times of each contrast to sum to the fixed time budget.
-        constraints = [NonlinearConstraint(lambda x: sum(x[num_contrasts:]), 1, 1)]
-
+        constraints = [NonlinearConstraint(lambda x: sum(x[num_contrasts:]), 1, 1),
+                       NonlinearConstraint(lambda x: int(np.all(np.diff(x[:num_contrasts]) >= 0)), 1, 1)]
+        
         # Arguments for optimisation function.
         args = [num_contrasts, angle_splits, total_time]
 
         # Optimise contrasts, counting time splits and return the results.
         res, val = Optimiser.__optimise(self._contrasts_func, bounds, constraints, args, workers, verbose)
+        print(res)
         return res[:num_contrasts], res[num_contrasts:], val
 
     def optimise_underlayers(self, num_underlayers, angle_times, contrasts, 
@@ -175,7 +179,7 @@ class Optimiser:
                                     disp=verbose)
         return res.x, res.fun
 
-def _angle_results(optimiser, total_time, angle_bounds, save_path='./results'):
+def _angle_results(optimiser, contrasts, total_time, angle_bounds, save_path='./results'):
     """Optimises the measurement angles and associated counting times for an experiment
        using different numbers of angles.
 
@@ -188,34 +192,31 @@ def _angle_results(optimiser, total_time, angle_bounds, save_path='./results'):
     """
     save_path = os.path.join(save_path, optimiser.sample.name)
 
-    for contrast, filename in [(6.36, 'D2O'), (2.07, 'SMW'), (-0.56, 'H2O')]:
-        print(filename)
-        # Create a new text file for the results.
-        with open(os.path.join(save_path, 'optimised_angles_{}.txt'.format(filename)), 'w') as file:
-            # Optimise the experiment using 1-4 angles.
-            for i, num_angles in enumerate([1, 2, 3, 4]):
-                # Display progress.
-                print('>>> {0}/{1}'.format(i, 4))
+    # Create a new text file for the results.
+    with open(os.path.join(save_path, 'optimised_angles.txt'), 'w') as file:
+        # Optimise the experiment using 1-4 angles.
+        for i, num_angles in enumerate([1, 2, 3, 4]):
+            # Display progress.
+            print('>>> {0}/{1}'.format(i, 4))
 
-                # Time how long the optimisation takes.
-                start = time.time()
-                angles, splits, val = optimiser.optimise_angle_times(num_angles, [contrast], total_time, angle_bounds, verbose=False)
-                end = time.time()
+            # Time how long the optimisation takes.
+            start = time.time()
+            angles, splits, val = optimiser.optimise_angle_times(num_angles, contrasts, total_time, angle_bounds, verbose=False)
+            end = time.time()
 
-                # Convert to percentages.
-                splits = np.array(splits)*100
+            # Convert to percentages.
+            splits = np.array(splits)*100
 
-                # Round the optimisation function value to 4 significant figures.
-                val = np.format_float_positional(val, precision=4, unique=False, fractional=False, trim='k')
+            # Round the optimisation function value to 4 significant figures.
+            val = np.format_float_positional(val, precision=4, unique=False, fractional=False, trim='k')
 
-                # Write the optimised conditions, objective value and computation time to the results file.
-                file.write('----------- {} Angles -----------\n'.format(num_angles))
-                file.write('Angles: {}\n'.format(list(np.round(angles, 2))))
-                file.write('Splits (%): {}\n'.format(list(np.round(splits, 1))))
-                file.write('Objective value: {}\n'.format(val))
-                file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
+            # Write the optimised conditions, objective value and computation time to the results file.
+            file.write('----------- {} Angles -----------\n'.format(num_angles))
+            file.write('Angles: {}\n'.format(list(np.round(angles, 2))))
+            file.write('Splits (%): {}\n'.format(list(np.round(splits, 1))))
+            file.write('Objective value: {}\n'.format(val))
+            file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
 
-        print()
 
 def _contrast_results(optimiser, total_time, angle_splits, contrast_bounds, save_path='./results'):
     """Optimises the contrasts of an experiment using different numbers of contrasts.
@@ -298,13 +299,13 @@ if __name__ == '__main__':
     optimiser = Optimiser(sample)
 
     total_time = 1000
-    angle_bounds = (0.2, 4)
-    _angle_results(optimiser, total_time, angle_bounds)
-
-    angle_splits = [(0.75, 100, 0.08), (4.0, 100, 0.92)]
-    #angle_splits = [(4.0, 100, 1)]
+    angle_splits = [(0.7, 100, 0.2), (2.3, 100, 0.8)]
     contrast_bounds = (-0.56, 6.36)
     _contrast_results(optimiser, total_time, angle_splits, contrast_bounds)
+
+    angle_bounds = (0.2, 4.0)
+    contrasts = [-0.56, 6.36]
+    _angle_results(optimiser, contrasts, total_time, angle_bounds)
     
     angle_times = [(0.7, 100, 10), (2.3, 100, 40)]
     contrasts = [6.36]

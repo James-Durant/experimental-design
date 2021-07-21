@@ -687,7 +687,7 @@ class Monolayer(BaseLipid):
         self.lipid_apm       = refnx.analysis.Parameter(54.1039, 'Lipid Area Per Molecule',   (30, 80))
         self.hg_waters       = refnx.analysis.Parameter( 6.6874, 'Headgroup Bound Waters',    ( 0, 20))
         self.monolayer_rough = refnx.analysis.Parameter( 2.0233, 'Monolayer Roughness',       ( 0, 10))
-        self.not_lipid_vf    = refnx.analysis.Parameter( 0.0954, 'Not Lipid Volume Fraction', ( 0, 1))
+        self.non_lipid_vf    = refnx.analysis.Parameter( 0.0954, 'Non-lipid Volume Fraction', ( 0, 1))
         self.protein_tg      = refnx.analysis.Parameter( 0.9999, 'Protein Tails',             ( 0, 1))
         self.protein_hg      = refnx.analysis.Parameter( 1.0000, 'Protein Headgroup',         ( 0, 1))
         self.protein_thick   = refnx.analysis.Parameter(32.6858, 'Protein Thickness',         ( 0, 80))
@@ -762,7 +762,6 @@ class Monolayer(BaseLipid):
         
         # Need to include the number of hydrating water molecules in headgroup
         # scattering length sum and headgroup volume.
-        
         lipid_total_sl_sum = sl_sum_water * self.hg_waters
         lipid_total_vol = vWAT * self.hg_waters
         
@@ -786,10 +785,10 @@ class Monolayer(BaseLipid):
             protein_tg_sld = self.protein_tg * protein_sld
             protein_hg_sld = self.protein_hg * protein_sld
             
-            hg_sld = (1-self.not_lipid_vf)*hg_sld + self.not_lipid_vf*protein_hg_sld
+            hg_sld = (1-self.non_lipid_vf)*hg_sld + self.non_lipid_vf*protein_hg_sld
             
-            tg_h_sld = (1-self.not_lipid_vf)*tg_h_sld + self.not_lipid_vf*protein_tg_sld
-            tg_d_sld = (1-self.not_lipid_vf)*tg_d_sld + self.not_lipid_vf*protein_tg_sld
+            tg_h_sld = (1-self.non_lipid_vf)*tg_h_sld + self.non_lipid_vf*protein_tg_sld
+            tg_d_sld = (1-self.non_lipid_vf)*tg_d_sld + self.non_lipid_vf*protein_tg_sld
         
             protein = refnx.reflect.SLD(protein_sld*1e6, name='Protein')(self.protein_thick, self.monolayer_rough, self.protein_vfsolv)
         
@@ -1004,11 +1003,11 @@ class SymmetricBilayer(BaseLipid):
         tg_thick = self.dmpc_tg_vol / self.dmpc_apm
 
         substrate = refnx.reflect.SLD(self.si_sld)
-        solution  = refnx.reflect.SLD(contrast_sld)(rough=self.bilayer_rough)
+        solution = refnx.reflect.SLD(contrast_sld)(rough=self.bilayer_rough)
 
-        inner_hg = refnx.reflect.Slab(hg_thick,        hg_sld,        self.sio2_rough,    vfsolv=self.bilayer_solv)
-        outer_hg = refnx.reflect.Slab(hg_thick,        hg_sld,        self.bilayer_rough, vfsolv=self.bilayer_solv)
-        tg       = refnx.reflect.Slab(tg_thick,        self.tg_sld,   self.bilayer_rough, vfsolv=self.bilayer_solv)
+        inner_hg = refnx.reflect.Slab(hg_thick, hg_sld, self.sio2_rough, vfsolv=self.bilayer_solv)
+        outer_hg = refnx.reflect.Slab(hg_thick, hg_sld, self.bilayer_rough, vfsolv=self.bilayer_solv)
+        tg = refnx.reflect.Slab(tg_thick, self.tg_sld, self.bilayer_rough, vfsolv=self.bilayer_solv)
 
         # Add the underlayer if specified.
         if underlayers is None:
