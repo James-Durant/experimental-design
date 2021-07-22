@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import os
+import os, sys
+sys.path.append(os.path.join(__file__, 'models'))
 plt.rcParams['figure.figsize'] = (6,4)
 plt.rcParams['figure.dpi'] = 600
 
@@ -9,7 +10,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from itertools import combinations
 from utils import save_plot
 
-from structures import VariableAngle, VariableContrast, VariableUnderlayer
+from base import VariableAngle, VariableContrast, VariableUnderlayer
 
 def angle_choice(sample, initial_angle_times, angle_range, points_new, time_new,
                  save_path, filename, contrasts=[]):
@@ -315,15 +316,16 @@ def _angle_results(save_path='./results'):
         save_path (str): path to directory to save results to.
 
     """
-    from structures import similar_sld_sample_1, similar_sld_sample_2
-    from structures import thin_layer_sample_1, thin_layer_sample_2
-    from structures import simple_sample, many_param_sample
-    from structures import YIG_Sample, SymmetricBilayer, SingleAsymmetricBilayer
+    from samples import similar_sld_sample_1, similar_sld_sample_2
+    from samples import thin_layer_sample_1, thin_layer_sample_2
+    from samples import simple_sample, many_param_sample
+    from bilayers import BilayerDMPC, BilayerDPPC
+    from magnetic import SampleYIG
 
     # Choose sample here.
-    sample = simple_sample()
-    contrasts = []
-    #contrasts = [6.36]
+    sample = SampleYIG()
+    #contrasts = []
+    contrasts = [6.36]
 
     # Number of points and counting time for the initial angle choice.
     points = 100
@@ -397,6 +399,6 @@ def _underlayer_results(save_path='./results'):
         print('SLD: {}'.format(round(sld, 2)))
 
 if __name__ == '__main__':
-    #_angle_results()
-    _contrast_results()
+    _angle_results()
+    #_contrast_results()
     #_underlayer_results()

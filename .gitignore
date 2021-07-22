@@ -1,3 +1,4 @@
 /.spyproject
 /examples/.ipynb_checkpoints
 /experimental-design/__pycache__
+/experimental-design/models/__pycache__
