@@ -349,25 +349,25 @@ def _contrast_results(save_path='./results'):
     from structures import SymmetricBilayer, SingleAsymmetricBilayer
 
     # Choose sample here.
-    bilayer = SymmetricBilayer()
+    bilayer = SingleAsymmetricBilayer()
 
     # Number of points and counting times for each angle to simulate.
-    angle_times = [(0.7, 100, 100), (2.3, 100, 400)]
+    angle_times = [(0.7, 100, 10), (2.3, 100, 40)]
 
     # Investigate single contrast choices assuming different initial measurements.
     contrast_range = np.linspace(-0.56, 6.36, 500)
-    contrast_choice_single(bilayer, contrast_range, [], angle_times, save_path, 'initial')
-    contrast_choice_single(bilayer, contrast_range, [6.36], angle_times, save_path, 'D2O')
-    contrast_choice_single(bilayer, contrast_range, [-0.56], angle_times, save_path, 'H2O')
-    contrast_choice_single(bilayer, contrast_range, [-0.56, 6.36], angle_times, save_path, 'H2O_D2O')
+    #contrast_choice_single(bilayer, contrast_range, [], angle_times, save_path, 'initial')
+    #contrast_choice_single(bilayer, contrast_range, [6.36], angle_times, save_path, 'D2O')
+    #contrast_choice_single(bilayer, contrast_range, [-0.56], angle_times, save_path, 'H2O')
+    #contrast_choice_single(bilayer, contrast_range, [-0.56, 6.36], angle_times, save_path, 'H2O_D2O')
 
     # Investigate contrast pair choices assuming no prior measurement.
     contrast_range = np.linspace(-0.55, 6.36, 50)
-    contrast_choice_double(bilayer, contrast_range, angle_times, save_path)
+    #contrast_choice_double(bilayer, contrast_range, angle_times, save_path)
 
     # Run nested sampling on simulated data to validate the improvements using the suggested designs.
-    bilayer.nested_sampling([6.36, 6.36], angle_times, save_path, 'D2O_D2O', dynamic=True)
-    bilayer.nested_sampling([6.36, -0.56], angle_times, save_path, 'D2O_H2O', dynamic=True)
+    #bilayer.nested_sampling([6.36, 6.36], angle_times, save_path, 'D2O_D2O', dynamic=False)
+    bilayer.nested_sampling([6.36, -0.56], angle_times, save_path, 'D2O_H2O', dynamic=False)
 
 def _underlayer_results(save_path='./results'):
     """Investigates the choice of underlayer thickness and SLD for a bilayer sample.
@@ -384,7 +384,7 @@ def _underlayer_results(save_path='./results'):
     # SLDs of contrasts being simulated.
     contrasts = [[6.36], [-0.56], [-0.56, 6.36]]
     # Number of points and counting times for each angle to simulate.
-    angle_times = [(0.7, 100, 100), (2.3, 100, 400)]
+    angle_times = [(0.7, 100, 10), (2.3, 100, 40)]
 
     # Investigate underlayer choice assuming no prior measurement.
     thickness_range = np.linspace(5, 500, 50)
@@ -397,6 +397,6 @@ def _underlayer_results(save_path='./results'):
         print('SLD: {}'.format(round(sld, 2)))
 
 if __name__ == '__main__':
-    _angle_results()
+    #_angle_results()
     _contrast_results()
-    _underlayer_results()
+    #_underlayer_results()

@@ -269,12 +269,12 @@ def _underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bou
         file.write('----------- No Underlayers -----------\n')
         file.write('Thicknesses: {}\n'.format([]))
         file.write('SLDs: {}\n'.format([]))
-        file.write('Objective value: {}\n'.format(val))
+        file.write('Objective value: {}\n\n'.format(val))
         
         # Optimise the experiment using 1-4 contrasts.
-        for i, num_underlayers in enumerate([1, 2]):
+        for i, num_underlayers in enumerate([1, 2, 3]):
             # Display progress.
-            print('>>> {0}/{1}'.format(i, 2))
+            print('>>> {0}/{1}'.format(i, 3))
 
             # Time how long the optimisation takes.
             start = time.time()
@@ -295,7 +295,7 @@ def _underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bou
 if __name__ == '__main__':
     from structures import SymmetricBilayer, SingleAsymmetricBilayer
 
-    sample = SymmetricBilayer()
+    sample = SingleAsymmetricBilayer()
     optimiser = Optimiser(sample)
 
     total_time = 1000
@@ -303,12 +303,13 @@ if __name__ == '__main__':
     contrast_bounds = (-0.56, 6.36)
     _contrast_results(optimiser, total_time, angle_splits, contrast_bounds)
 
-    angle_bounds = (0.2, 4.0)
     contrasts = [-0.56, 6.36]
+    total_time = 1000
+    angle_bounds = (0.2, 4.0)
     _angle_results(optimiser, contrasts, total_time, angle_bounds)
     
     angle_times = [(0.7, 100, 10), (2.3, 100, 40)]
-    contrasts = [6.36]
+    contrasts = [-0.56, 6.36]
     thick_bounds = (0, 500)
     sld_bounds = (1, 9)
     _underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bounds)
