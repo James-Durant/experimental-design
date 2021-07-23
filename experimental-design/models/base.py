@@ -266,7 +266,8 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         objectives = []
         for contrast in contrasts:
             # Simulate an experiment using the given contrast.
-            model, data = simulate(self._using_conditions(contrast, underlayers), angle_times)
+            model, data = simulate(self._using_conditions(contrast, underlayers), angle_times,
+                                   scale=1, bkg=5e-6, dq=2)
             dataset = refnx.dataset.ReflectDataset([data[:,0], data[:,1], data[:,2]])
             objectives.append(refnx.analysis.Objective(model, dataset))
 

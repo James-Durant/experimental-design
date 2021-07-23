@@ -2,3 +2,8 @@
 /examples/.ipynb_checkpoints
 /experimental-design/__pycache__
 /experimental-design/models/__pycache__
+/experimental-design/results/DMPC_bilayer/contrast_choice_double
+/experimental-design/results/DMPC_bilayer/underlayer_choice
+/experimental-design/results/DPPC_RaLPS_bilayer/contrast_choice_double
+/experimental-design/results/DPPC_RaLPS_bilayer/underlayer_choice
+/experimental-design/results/DPPG_monolayer/angle_contrast_choice

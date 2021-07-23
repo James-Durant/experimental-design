@@ -15,13 +15,13 @@ from base import BaseSample, VariableUnderlayer
 class SampleYIG(BaseSample, VariableUnderlayer):
     def __init__(self):
         self.name = 'YIG_sample'
-        
-        self.data_path = '..//data/YIG_sample'
+        self.data_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'YIG_sample')
         self.labels = ['Up', 'Down']
+        
+        self.mag_angle = 90
         self.scale = 1.025
         self.bkg = 4e-7
         self.dq = 2.8
-        self.mag_angle = 90
 
         self.Pt_sld = bumps.parameter.Parameter(5.646, name='Pt SLD')
         self.Pt_thick = bumps.parameter.Parameter(21.08, name='Pt Thickness')

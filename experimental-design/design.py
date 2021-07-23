@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os, sys
-sys.path.append(os.path.join(__file__, 'models'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 plt.rcParams['figure.figsize'] = (6,4)
 plt.rcParams['figure.dpi'] = 600
 
@@ -180,8 +180,7 @@ def contrast_choice_single(sample, contrast_range, initial_contrasts, angle_time
     # Return the contrast SLD with largest minimum eigenvalue.
     return contrast_range[np.argmax(min_eigs)]
 
-def contrast_choice_double(sample, contrast_range, angle_times, save_path,
-                           reverse_xaxis=True, reverse_yaxis=False):
+def contrast_choice_double(sample, contrast_range, angle_times, save_path, save_views=False):
     """Plots the change in minimum eigenvalue of the Fisher information matrix
        as a function of two contrast SLDs, assuming no prior measurement.
 
@@ -190,8 +189,8 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path,
         contrast_range (numpy.ndarray): range of contrast SLDs to investigate.
         angle_times (list): points and counting time of each angle to simulate.
         save_path (str): path to directory to save plot to.
-        reverse_xaxis (bool): whether to reverse the x-axis.
-        reverse_yaxis (bool): whether to reverse the y-axis.
+        save_views
+
 
     Returns:
         tuple: contrast SLD pair with the largest minimum eigenvalue.
@@ -222,31 +221,35 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path,
     min_eigs.extend(min_eigs)
 
     # Create a 3D plot of contrast pair choice vs. minimum eigenvalue.
-    fig = plt.figure(figsize=[10,8])
+    fig = plt.figure(figsize=[12,9])
     ax = fig.add_subplot(111, projection='3d')
-    ax.plot_trisurf(x, y, min_eigs, cmap='Spectral')
-
-    # Reverse the x and y axes if specified.
-    if reverse_xaxis:
-        ax.set_xlim(ax.get_xlim()[::-1])
-    if reverse_yaxis:
-        ax.set_ylim(ax.get_ylim()[::-1])
+    
+    surface = ax.plot_trisurf(x, y, min_eigs, cmap='plasma')
+    fig.colorbar(surface, fraction=0.046, pad=0.04)
 
     ax.set_xlabel('$\mathregular{Contrast \ 1 \ SLD \ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
     ax.set_ylabel('$\mathregular{Contrast \ 2 \ SLD \ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
     ax.set_zlabel('Minimum Eigenvalue', fontsize=11, weight='bold')
     ax.ticklabel_format(axis='z', style='sci', scilimits=(0,0))
-
+    
     # Save the plot.
     save_path = os.path.join(save_path, sample.name)
     save_plot(fig, save_path, 'contrast_choice_double')
+    
+    if save_views:
+        save_path = os.path.join(save_path, 'contrast_choice_double')
+        for i in range(0, 360, 10):
+            ax.view_init(elev=40, azim=i)
+            
+            filename_i = 'contrast_choice_double_{}'.format(i)
+            save_plot(fig, save_path, filename_i)
 
     # Return the contrast SLD pair with largest minimum eigenvalue.
     maximum = np.argmax(min_eigs)
     return x[maximum], y[maximum]
 
 def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times, 
-                      save_path, filename='', reverse_xaxis=False, reverse_yaxis=False):
+                      save_path, filename='', save_views=False):
     """Plots the change in minimum eigenvalue of the Fisher information matrix
        as a function of a sample's underlayer thickness and SLD.
 
@@ -256,10 +259,10 @@ def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times
         sld_range (numpy.ndarray): range of underlayer SLDs to consider.
         contrasts (list): SLDs of contrasts to simulate.
         angle_times (list): points and counting time of each angle to simulate.
-        filename
         save_path (str): path to directory to save plot to.
-        reverse_xaxis (bool): whether to reverse the x-axis.
-        reverse_yaxis (bool): whether to reverse the y-axis.
+        filename
+        save_views
+
 
     Returns:
         tuple: underlayer thickness and SLD with the largest minimum eigenvalue.
@@ -286,13 +289,9 @@ def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times
     # Create a 3D plot of underlayer thickness and SLD vs. minimum eigenvalue.
     fig = plt.figure(figsize=[10,8])
     ax = fig.add_subplot(111, projection='3d')
-    ax.plot_trisurf(x, y, min_eigs, cmap='Spectral')
-
-    # Reverse the x and y axes if specified.
-    if reverse_xaxis:
-        ax.set_xlim(ax.get_xlim()[::-1])
-    if reverse_yaxis:
-        ax.set_ylim(ax.get_ylim()[::-1])
+    
+    surface = ax.plot_trisurf(x, y, min_eigs, cmap='plasma')
+    fig.colorbar(surface, fraction=0.046, pad=0.04)
 
     ax.set_xlabel('$\mathregular{Underlayer\ Thickness\ (\AA)}$', fontsize=11, weight='bold')
     ax.set_ylabel('$\mathregular{Underlayer\ SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
@@ -303,6 +302,14 @@ def underlayer_choice(sample, thickness_range, sld_range, contrasts, angle_times
     save_path = os.path.join(save_path, sample.name)
     filename = 'underlayer_choice' + ('_'+filename if filename != '' else '')
     save_plot(fig, save_path, filename)
+    
+    if save_views:
+        save_path = os.path.join(save_path, 'underlayer_choice', filename)
+        for i in range(0, 360, 10):
+            ax.view_init(elev=40, azim=i)
+            
+            filename_i = filename + '_' + str(i)
+            save_plot(fig, save_path, filename_i)
 
     # Return the underlayer thickness and SLD with largest minimum eigenvalue.
     maximum = np.argmax(min_eigs)
@@ -323,9 +330,9 @@ def _angle_results(save_path='./results'):
     from magnetic import SampleYIG
 
     # Choose sample here.
-    sample = SampleYIG()
-    #contrasts = []
-    contrasts = [6.36]
+    sample = simple_sample()
+    contrasts = []
+    #contrasts = [-0.56, 6.36]
 
     # Number of points and counting time for the initial angle choice.
     points = 100
@@ -348,28 +355,28 @@ def _contrast_results(save_path='./results'):
         save_path (str): path to directory to save results to.
 
     """
-    from structures import SymmetricBilayer, SingleAsymmetricBilayer
+    from bilayers import BilayerDMPC, BilayerDPPC
 
     # Choose sample here.
-    bilayer = SingleAsymmetricBilayer()
+    bilayer = BilayerDMPC()
 
     # Number of points and counting times for each angle to simulate.
     angle_times = [(0.7, 100, 10), (2.3, 100, 40)]
 
     # Investigate single contrast choices assuming different initial measurements.
     contrast_range = np.linspace(-0.56, 6.36, 500)
-    #contrast_choice_single(bilayer, contrast_range, [], angle_times, save_path, 'initial')
-    #contrast_choice_single(bilayer, contrast_range, [6.36], angle_times, save_path, 'D2O')
-    #contrast_choice_single(bilayer, contrast_range, [-0.56], angle_times, save_path, 'H2O')
-    #contrast_choice_single(bilayer, contrast_range, [-0.56, 6.36], angle_times, save_path, 'H2O_D2O')
+    contrast_choice_single(bilayer, contrast_range, [], angle_times, save_path, 'initial')
+    contrast_choice_single(bilayer, contrast_range, [6.36], angle_times, save_path, 'D2O')
+    contrast_choice_single(bilayer, contrast_range, [-0.56], angle_times, save_path, 'H2O')
+    contrast_choice_single(bilayer, contrast_range, [-0.56, 6.36], angle_times, save_path, 'H2O_D2O')
 
     # Investigate contrast pair choices assuming no prior measurement.
-    contrast_range = np.linspace(-0.55, 6.36, 50)
-    #contrast_choice_double(bilayer, contrast_range, angle_times, save_path)
+    contrast_range = np.linspace(-0.56, 6.36, 75)
+    contrast_choice_double(bilayer, contrast_range, angle_times, save_path, save_views=True)
 
     # Run nested sampling on simulated data to validate the improvements using the suggested designs.
-    #bilayer.nested_sampling([6.36, 6.36], angle_times, save_path, 'D2O_D2O', dynamic=False)
-    bilayer.nested_sampling([6.36, -0.56], angle_times, save_path, 'D2O_H2O', dynamic=False)
+    bilayer.nested_sampling([6.36, 6.36], angle_times, save_path, 'D2O_D2O', dynamic=False)
+    bilayer.nested_sampling([-0.56, 6.36], angle_times, save_path, 'H2O_D2O', dynamic=False)
 
 def _underlayer_results(save_path='./results'):
     """Investigates the choice of underlayer thickness and SLD for a bilayer sample.
@@ -378,10 +385,10 @@ def _underlayer_results(save_path='./results'):
         save_path (str): path to directory to save results to.
 
     """
-    from structures import SymmetricBilayer, SingleAsymmetricBilayer
+    from bilayers import BilayerDMPC, BilayerDPPC
 
     # Choose sample here.
-    bilayer = SymmetricBilayer()
+    bilayer = BilayerDMPC()
 
     # SLDs of contrasts being simulated.
     contrasts = [[6.36], [-0.56], [-0.56, 6.36]]
@@ -394,11 +401,11 @@ def _underlayer_results(save_path='./results'):
     
     labels = ['D2O', 'H2O', 'D2O_H2O']
     for c, label in zip(contrasts, labels):
-        thick, sld = underlayer_choice(bilayer, thickness_range, sld_range, c, angle_times, save_path, label)
+        thick, sld = underlayer_choice(bilayer, thickness_range, sld_range, c, angle_times, save_path, label, save_views=True)
         print('Thickness: {}'.format(round(thick)))
         print('SLD: {}'.format(round(sld, 2)))
 
 if __name__ == '__main__':
     _angle_results()
-    #_contrast_results()
-    #_underlayer_results()
+    _contrast_results()
+    _underlayer_results()
