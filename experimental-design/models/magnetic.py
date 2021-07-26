@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os, sys
-sys.path.append(os.path.join(__file__, '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 plt.rcParams['figure.figsize'] = (9,7)
 plt.rcParams['figure.dpi'] = 600
 
@@ -25,20 +25,20 @@ class SampleYIG(BaseSample, VariableUnderlayer):
 
         self.Pt_sld = bumps.parameter.Parameter(5.646, name='Pt SLD')
         self.Pt_thick = bumps.parameter.Parameter(21.08, name='Pt Thickness')
-        self.Pt_rough = bumps.parameter.Parameter(8.211, name='Air|Pt Roughness')
+        self.Pt_rough = bumps.parameter.Parameter(8.211, name='Air/Pt Roughness')
         self.Pt_mag = bumps.parameter.Parameter(0.0128, name='Pt Magnetic SLD')
         
         self.FePt_sld = bumps.parameter.Parameter(4.678, name='FePt SLD')
         self.FePt_thick = bumps.parameter.Parameter(19.67, name='FePt Thickness')
-        self.FePt_rough = bumps.parameter.Parameter(2, name='Pt|FePt Roughness')
+        self.FePt_rough = bumps.parameter.Parameter(2, name='Pt/FePt Roughness')
         
         self.YIG_sld = bumps.parameter.Parameter(5.836, name='YIG SLD')
         self.YIG_thick = bumps.parameter.Parameter(713.8, name='YIG Thickness')
-        self.YIG_rough = bumps.parameter.Parameter(13.55, name='FePt|YIG Roughness')
+        self.YIG_rough = bumps.parameter.Parameter(13.55, name='FePt/YIG Roughness')
         self.YIG_mag = bumps.parameter.Parameter(0.349, name='YIG Magnetic SLD')
         
         self.sub_sld = bumps.parameter.Parameter(5.304, name='Substrate SLD')
-        self.sub_rough = bumps.parameter.Parameter(30, name='YIG|Substrate Roughness')
+        self.sub_rough = bumps.parameter.Parameter(30, name='YIG/Substrate Roughness')
                 
         self.params = [self.Pt_sld,
                        self.Pt_thick,
@@ -105,8 +105,43 @@ class SampleYIG(BaseSample, VariableUnderlayer):
 
         return fisher(qs, self.params, counts, models)
     
-    def underlayer_info(self):
-        pass
+    def underlayer_info(self, angle_times, yig_thick, pt_thick):
+        pt_magnetism = refl1d.magnetism.Magnetism(rhoM=self.Pt_mag, thetaM=self.mag_angle)
+        yig_magnetism = refl1d.magnetism.Magnetism(rhoM=self.YIG_mag, thetaM=self.mag_angle)
+        
+        air = refl1d.material.SLD(rho=0, name='Air')
+        pt = refl1d.material.SLD(rho=self.Pt_sld, name='Pt')(self.Pt_thick, self.Pt_rough, magnetism=pt_magnetism)
+        
+        pt_added = refl1d.material.SLD(rho=self.Pt_sld, name='Pt Added')(pt_thick, 0)
+        
+        intermediate = refl1d.material.SLD(rho=self.FePt_sld, name='FePt')(self.FePt_thick, self.FePt_rough)
+        yig = refl1d.material.SLD(rho=self.YIG_sld, name='YIG')(yig_thick, self.YIG_rough, magnetism=yig_magnetism)
+        sub = refl1d.material.SLD(rho=self.sub_sld, name='Substrate')(0, self.sub_rough)
+        
+        structure = sub | yig | intermediate | pt_added | pt | air
+        
+        models, datasets = simulate_magnetic(structure, angle_times, scale=1, bkg=5e-7, dq=2,
+                                             pp=True, pm=False, mp=False, mm=True)
+
+        qs = [data[:,0] for data in datasets]
+        counts = [data[:,3] for data in datasets]
+        
+        """
+        self.params = [self.Pt_sld,
+                       self.Pt_rough,
+                       self.Pt_mag,
+                       self.FePt_sld,
+                       self.FePt_thick,
+                       self.FePt_rough,
+                       self.YIG_sld,
+                       self.YIG_rough,
+                       self.YIG_mag,
+                       self.sub_sld,
+                       self.sub_rough]
+        """
+        self.params = [self.Pt_mag]
+        
+        return fisher(qs, self.params, counts, models)
     
     def __set_dq(self, probe):
         # Transform the resolution from refnx to Refl1D format.
@@ -136,16 +171,16 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         experiment = refl1d_experiment(self.structure, q, scale, bkg, dq, 0)
         z, slds, _, slds_mag, _ = experiment.magnetic_smooth_profile()
             
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8,6))
         ax = fig.add_subplot(111)
 
         # Plot the SLD profile.
-        ax.plot(z, slds, color='blue', label='SLD')
-        ax.plot(z, slds_mag, color='green', label='Magnetic SLD')
+        ax.plot(z, slds, label='SLD', color='black')
+        ax.plot(z, slds_mag, label='Magnetic SLD', color='red')
 
         ax.set_xlabel('$\mathregular{Distance\ (\AA)}$', fontsize=11, weight='bold')
         ax.set_ylabel('$\mathregular{SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
-        #ax.legend()
+        ax.legend()
         
         # Save the plot.
         save_path = os.path.join(save_path, self.name)
@@ -155,7 +190,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         
-        colours = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        colours = ['b', 'g']
         count = 0
         for probe, qr in zip(self.experiment.probe.xs, self.experiment.reflectivity()):
             if qr is not None:
@@ -166,7 +201,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         ax.set_xlabel('$\mathregular{Q\ (Å^{-1})}$', fontsize=11, weight='bold')
         ax.set_ylabel('Reflectivity (arb.)', fontsize=11, weight='bold')
         ax.set_yscale('log')
-        ax.legend()
+        ax.legend(loc='lower left')
 
         # Save the plot.
         save_path = os.path.join(save_path, self.name)

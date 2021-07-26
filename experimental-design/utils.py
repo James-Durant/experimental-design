@@ -175,17 +175,20 @@ def fisher(qs, xi, counts, models, step=0.005):
     M = np.diag(np.concatenate(counts) / r, k=0)
     g = np.dot(np.dot(J.T, M), J)
 
-    # Scale each parameter's information by its "importance".
-    if isinstance(xi[0], refnx.analysis.Parameter):
-        lb = np.array([param.bounds.lb for param in xi])
-        ub = np.array([param.bounds.ub for param in xi])
+    if len(xi) > 1:
+        # Scale each parameter's information by its "importance".
+        if isinstance(xi[0], refnx.analysis.Parameter):
+            lb = np.array([param.bounds.lb for param in xi])
+            ub = np.array([param.bounds.ub for param in xi])
+            
+        elif isinstance(xi[0], bumps.parameter.Parameter):
+            lb = np.array([param.bounds.limits[0] for param in xi])
+            ub = np.array([param.bounds.limits[1] for param in xi])
+            
+        H = np.diag(1/(ub-lb))
+        g = np.dot(np.dot(H.T, g), H)
         
-    elif isinstance(xi[0], bumps.parameter.Parameter):
-        lb = np.array([param.bounds.limits[0] for param in xi])
-        ub = np.array([param.bounds.limits[1] for param in xi])
-        
-    H = np.diag(1/(ub-lb))
-    return np.dot(np.dot(H.T, g), H)
+    return g
 
 def save_plot(fig, save_path, filename):
     """Saves a figure to a given directory.

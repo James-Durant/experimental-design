@@ -409,8 +409,7 @@ def _underlayer_results(save_path='./results'):
     #underlayers = [(127.1, 5.39)]
     underlayers = [(76.5, 9.00)]
     bilayer.nested_sampling([-0.56, 6.36], angle_times, save_path, 'H2O_without_underlayer', underlayers=[])  
-    bilayer.nested_sampling([-0.56, 6.36], angle_times, save_path, 'H2O_with_underlayer', underlayers=underlayers)  
-    
+    bilayer.nested_sampling([-0.56, 6.36], angle_times, save_path, 'H2O_with_underlayer', underlayers=underlayers)     
 
 def _figure_2(save_path='../figures'):
     from bilayers import BilayerDMPC, BilayerDPPC
@@ -466,7 +465,7 @@ def _figure_2(save_path='../figures'):
 
 if __name__ == '__main__':
     _angle_results()
-    _contrast_results()
-    _underlayer_results()
+    #_contrast_results()
+    #_underlayer_results()
 
     #_figure_2()

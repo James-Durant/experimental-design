@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os, sys
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
+sys.path.append(os.path.join(os.path.dirname(__file__)))
 plt.rcParams['figure.figsize'] = (6,4)
 plt.rcParams['figure.dpi'] = 600
 
@@ -16,6 +17,10 @@ def kinetics(sample, angle_range, contrast_range, apm_range, points, time, save_
     
     x, y, infos = [], [], []
     for i, contrast_sld in enumerate(contrast_range):
+        # Display progress.
+        if i % 5 == 0:
+            print('>>> {0}/{1}'.format(i*len(angle_range), len(angle_range)*len(contrast_range)))
+        
         for angle in angle_range:
             apm = sample.lipid_apm.value
             angle_times = [(angle, points, time/len(apm_range))]
@@ -29,10 +34,6 @@ def kinetics(sample, angle_range, contrast_range, apm_range, points, time, save_
             infos.append(information)
             x.append(contrast_sld)
             y.append(angle)
-
-        # Display progress.
-        if i % 5 == 0:
-            print('>>> {0}/{1}'.format((i+1)*len(angle_range), len(angle_range)*len(contrast_range)))
 
     fig = plt.figure(figsize=[10,8])
     ax = fig.add_subplot(111, projection='3d')
@@ -93,9 +94,9 @@ def _kinetics_results(save_path='./results'):
     
     monolayer_h, monolayer_d = MonolayerDPPG(deuterated=False), MonolayerDPPG(deuterated=True)
     
-    #kinetics(monolayer_h, angle_range, contrast_range, apm_range, points, time, save_path, save_views=True)
-    #kinetics(monolayer_d, angle_range, contrast_range, apm_range, points, time, save_path, save_views=True)
-    
+    kinetics(monolayer_h, angle_range, contrast_range, apm_range, points, time, save_path, save_views=True)
+    kinetics(monolayer_d, angle_range, contrast_range, apm_range, points, time, save_path, save_views=True)
+
     time = 1000 # A large time improves DE convergence.
     angle_bounds = (0.2, 4.0)
     contrast_bounds = (-0.56, 6.36)

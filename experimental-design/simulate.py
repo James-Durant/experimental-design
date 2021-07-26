@@ -9,33 +9,34 @@ def simulate_magnetic(sample, angle_times, scale=1, bkg=1e-6, dq=2,
     models, datasets = [], []
 
     if mm:
-        model, data = simulate(sample, angle_times, scale, bkg, dq,
-                               spin_state=0, directbeam_path=directbeam_path)
+        model, data = simulate(sample, angle_times, scale, bkg, dq, spin_state=0,
+                               directbeam_path=directbeam_path, scale_angle=0.5)
         models.append(model)
         datasets.append(data)
         
     if mp:
-        model, data = simulate(sample, angle_times, scale, bkg, dq,
-                               spin_state=1, directbeam_path=directbeam_path)
+        model, data = simulate(sample, angle_times, scale, bkg, dq, spin_state=1,
+                               directbeam_path=directbeam_path, scale_angle=0.5)
         models.append(model)
         datasets.append(data)
         
     if pm:
-        model, data = simulate(sample, angle_times, scale, bkg, dq,
-                               spin_state=2, directbeam_path=directbeam_path)
+        model, data = simulate(sample, angle_times, scale, bkg, dq, spin_state=2,
+                               directbeam_path=directbeam_path, scale_angle=0.5)
         models.append(model)
         datasets.append(data)
         
     if pp:
-        model, data = simulate(sample, angle_times, scale, bkg, dq,
-                               spin_state=3, directbeam_path=directbeam_path)
+        model, data = simulate(sample, angle_times, scale, bkg, dq, spin_state=3,
+                               directbeam_path=directbeam_path, scale_angle=0.5)
         models.append(model)
         datasets.append(data)
         
     return models, datasets
 
 def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2, spin_state=None,
-             directbeam_path='../experimental-design/data/directbeams/OFFSPEC.dat'):
+             directbeam_path='../experimental-design/data/directbeams/OFFSPEC.dat',
+             scale_angle=0.3):
     """Simulates an experiment of a given `sample` measured over a number of angles.
 
     Args:
@@ -45,6 +46,8 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2, spin_state=None,
         bkg (float): level of instrument background noise.
         dq (float): instrument resolution.
         spin_state
+        directbeam_path
+        scale_angle
 
     Returns:
         tuple: model and simulated data for given `sample`.
@@ -59,7 +62,8 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2, spin_state=None,
     for angle, points, time in angle_times:
         # Simulate the experiment.
         total_points += points
-        simulated = _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state, directbeam_path)
+        simulated = _run_experiment(sample, angle, points, time, scale, bkg, dq,
+                                    spin_state, directbeam_path, scale_angle)
 
         # Combine the data for the angle with the data from previous angles.
         q.append(simulated[0])
@@ -100,7 +104,7 @@ def simulate(sample, angle_times, scale=1, bkg=1e-6, dq=2, spin_state=None,
 
     return model, data
 
-def _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state, directbeam_path):
+def _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state, directbeam_path, scale_angle):
     """Simulates a single angle measurement of a given `sample`.
 
     Args:
@@ -112,6 +116,8 @@ def _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state, dir
         bkg (float): level of instrument background noise.
         dq (float): instrument resolution.
         spin_state
+        directbeam_path
+        scale_angle
 
     Returns:
         tuple: simulated Q, R, dR data and incident neutron counts for each point.
@@ -122,7 +128,7 @@ def _run_experiment(sample, angle, points, time, scale, bkg, dq, spin_state, dir
     wavelengths = direct_beam[:,0] # 1st column is wavelength, 2nd is flux.
 
     # Adjust flux by measurement angle.
-    direct_flux = direct_beam[:,1] * pow(angle/0.3, 2)
+    direct_flux = direct_beam[:,1] * pow(angle/scale_angle, 2)
 
     # Calculate Q values.
     q = 4*np.pi*np.sin(np.radians(angle)) / wavelengths
