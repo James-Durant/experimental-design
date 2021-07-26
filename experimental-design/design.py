@@ -388,7 +388,7 @@ def _underlayer_results(save_path='./results'):
     from bilayers import BilayerDMPC, BilayerDPPC
 
     # Choose sample here.
-    bilayer = BilayerDPPC()
+    bilayer = BilayerDMPC()
 
     # SLDs of contrasts being simulated.
     contrasts = [[6.36], [-0.56], [-0.56, 6.36]]
@@ -398,12 +398,19 @@ def _underlayer_results(save_path='./results'):
     # Investigate underlayer choice assuming no prior measurement.
     thickness_range = np.linspace(5, 500, 50)
     sld_range = np.linspace(1, 9, 100)
-    
+    """
     labels = ['D2O', 'H2O', 'D2O_H2O']
     for c, label in zip(contrasts, labels):
         thick, sld = underlayer_choice(bilayer, thickness_range, sld_range, c, angle_times, save_path, label, save_views=True)
         print('Thickness: {}'.format(round(thick)))
         print('SLD: {}'.format(round(sld, 2)))
+    """
+    angle_times = [(2.3, 100, 40)]
+    underlayers = [(127.1, 5.39)]
+    #underlayers = [(76.5, 9.00)]
+    #bilayer.nested_sampling([-0.56], angle_times, save_path, 'H2O_without_underlayer', underlayers=[])  
+    bilayer.nested_sampling([-0.56], angle_times, save_path, 'H2O_with_underlayer', underlayers=underlayers)  
+    
 
 def _figure_2(save_path='../figures'):
     from bilayers import BilayerDMPC, BilayerDPPC
@@ -460,6 +467,6 @@ def _figure_2(save_path='../figures'):
 if __name__ == '__main__':
     #_angle_results()
     #_contrast_results()
-    #_underlayer_results()
+    _underlayer_results()
 
-    _figure_2()
+    #_figure_2()
