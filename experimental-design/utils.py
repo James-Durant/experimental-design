@@ -70,12 +70,13 @@ class Sampler:
         """
         return np.asarray([param.bounds.put01(u[i]) for i, param in enumerate(self.params)])
 
-    def sample(self, verbose=True, dynamic=False):
+    def sample(self, verbose=True, dynamic=False, return_evidence=False):
         """Samples an Objective/FitProblem using nested sampling.
 
         Args:
             verbose (bool): whether to display sampling progress.
             dynamic (bool): whether to use static or dynamic nested sampling.
+            return_evidence
 
         Returns:
             matplotlib.pyplot.Figure: nested sampling corner plot.
@@ -97,8 +98,11 @@ class Sampler:
         for i, param in enumerate(self.params):
             param.value = mean[i]
 
-        # Return the corner plot.
-        return self.__corner(results)
+        if return_evidence:
+            return results.logz[-1]
+        else:
+            # Return the corner plot.
+            return self.__corner(results)
 
     def __corner(self, results):
         """Calculates a corner plot from nested sampling results.

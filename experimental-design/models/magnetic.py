@@ -13,7 +13,7 @@ from utils import fisher, Sampler, save_plot
 from base import BaseSample, VariableUnderlayer
 
 class SampleYIG(BaseSample, VariableUnderlayer):
-    def __init__(self):
+    def __init__(self, vary=True):
         self.name = 'YIG_sample'
         self.data_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'YIG_sample')
         self.labels = ['Up', 'Down']
@@ -54,22 +54,23 @@ class SampleYIG(BaseSample, VariableUnderlayer):
                        self.sub_sld,
                        self.sub_rough]
         
-        self.Pt_sld.range(5, 6)
-        self.Pt_thick.range(2, 30)
-        self.Pt_rough.range(0, 9)
-        self.Pt_mag.range(0, 0.2)
-        
-        self.FePt_sld.range(4.5, 5.5)
-        self.FePt_thick.range(0, 25)
-        self.FePt_rough.range(2, 10)
-        
-        self.YIG_sld.range(5, 6)
-        self.YIG_thick.range(100, 900)
-        self.YIG_rough.range(0, 70)
-        self.YIG_mag.range(0, 0.6)
-        
-        self.sub_sld.range(4.5, 5.5)
-        self.sub_rough.range(20, 30)
+        if vary:
+            self.Pt_sld.range(5, 6)
+            self.Pt_thick.range(2, 30)
+            self.Pt_rough.range(0, 9)
+            self.Pt_mag.range(0, 0.2)
+            
+            self.FePt_sld.range(4.5, 5.5)
+            self.FePt_thick.range(0, 25)
+            self.FePt_rough.range(2, 10)
+            
+            self.YIG_sld.range(5, 6)
+            self.YIG_thick.range(100, 900)
+            self.YIG_rough.range(0, 70)
+            self.YIG_mag.range(0, 0.6)
+            
+            self.sub_sld.range(4.5, 5.5)
+            self.sub_rough.range(20, 30)
         
         pt_magnetism = refl1d.magnetism.Magnetism(rhoM=self.Pt_mag, thetaM=self.mag_angle)
         yig_magnetism = refl1d.magnetism.Magnetism(rhoM=self.YIG_mag, thetaM=self.mag_angle)
@@ -194,8 +195,8 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         count = 0
         for probe, qr in zip(self.experiment.probe.xs, self.experiment.reflectivity()):
             if qr is not None:
-                ax.errorbar(probe.Q, probe.R, probe.dR, marker='o', ms=2, lw=0, elinewidth=0.5, capsize=0.5, label=self.labels[count]+' Data', color=colours[count])
-                ax.plot(probe.Q, qr[1], color=colours[count], zorder=20, label=self.labels[count]+' Fitted')
+                ax.errorbar(probe.Q, probe.R, probe.dR, marker='o', ms=2, lw=0, elinewidth=0.5, capsize=0.5, label=self.labels[count], color=colours[count])
+                ax.plot(probe.Q, qr[1], color=colours[count], zorder=20)
                 count += 1
     
         ax.set_xlabel('$\mathregular{Q\ (Å^{-1})}$', fontsize=11, weight='bold')

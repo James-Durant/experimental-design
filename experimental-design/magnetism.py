@@ -4,8 +4,53 @@ import os, sys
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 plt.rcParams['figure.dpi'] = 600
 
+import refl1d.material, refl1d.magnetism, refl1d.experiment, bumps.fitproblem
+
 from magnetic import SampleYIG
-from utils import save_plot
+from simulate import simulate_magnetic
+from utils import save_plot, Sampler
+
+def test(sample, pt_mag):
+    pt_magnetism = refl1d.magnetism.Magnetism(rhoM=pt_mag, thetaM=sample.mag_angle)
+    yig_magnetism = refl1d.magnetism.Magnetism(rhoM=sample.YIG_mag, thetaM=sample.mag_angle)
+    
+    air = refl1d.material.SLD(rho=0, name='Air')
+    Pt = refl1d.material.SLD(rho=sample.Pt_sld, name='Pt')(sample.Pt_thick, sample.Pt_rough, magnetism=pt_magnetism)
+    FePt = refl1d.material.SLD(rho=sample.FePt_sld, name='FePt')(sample.FePt_thick, sample.FePt_rough)
+    YIG = refl1d.material.SLD(rho=sample.YIG_sld, name='YIG')(sample.YIG_thick, sample.YIG_rough, magnetism=yig_magnetism)
+    sub = refl1d.material.SLD(rho=sample.sub_sld, name='Substrate')(0, sample.sub_rough)
+    
+    return sub | YIG | FePt | Pt | air
+
+def bayes(times, angle_splits, save_path):
+    with open(os.path.join(save_path, 'YIG_sample', 'bayes.csv'), 'w') as file:
+        for time in times:
+            angle_times = [(angle, points, time*split) for angle, points, split in angle_splits]
+            
+            sample = SampleYIG(vary=False)
+            sample.Pt_thick.range(0, 0.2)
+            models, datasets = simulate_magnetic(test(sample, 0.01638), angle_times, scale=1, bkg=5e-7, dq=2,
+                                                 pp=True, pm=False, mp=False, mm=True)
+        
+            mm = models[0].probe.xs[0]
+            pp = models[1].probe.xs[3]
+        
+            probe = refl1d.probe.PolarizedQProbe(xs=(mm, None, None, pp), name='Probe')
+            experiment = refl1d.experiment.Experiment(sample=sample.structure, probe=probe)
+            sampler = Sampler(bumps.fitproblem.FitProblem(experiment))
+            logz_1 = sampler.sample(verbose=False, return_evidence=True)
+            
+            sample = SampleYIG(vary=False)
+            sample.Pt_mag.value = 0
+            sample.Pt_thick.range(0, 0.2)
+            
+            experiment = refl1d.experiment.Experiment(sample=sample.structure, probe=probe)
+            sampler = Sampler(bumps.fitproblem.FitProblem(experiment))
+            logz_2 = sampler.sample(verbose=False, return_evidence=True)
+            
+            factor = 2*(logz_1-logz_2)
+            print(factor)
+            file.write('{0},{1}\n'.format(time, factor))
 
 def magnetism(yig_thick_range, pt_thick_range, angle_times, save_path, save_views=False):
     sample = SampleYIG()
@@ -45,20 +90,20 @@ def magnetism(yig_thick_range, pt_thick_range, angle_times, save_path, save_view
             ax.view_init(elev=40, azim=i)
             save_plot(fig, save_path, 'underlayer_choice_{}'.format(i))
             
-    maximum = np.argmax(infos)
-    return x[maximum], y[maximum]
-            
 def _magnetism_results(save_path='./results'):
     yig_thick_range = np.linspace(400, 900, 75)
-    pt_thick_range = np.linspace(20, 100, 50)
+    pt_thick_range = np.concatenate((np.linspace(18, 30, 25), np.linspace(30, 100, 50)))
     
     angle_times = [(0.5, 100, 20),
                    (1.0, 100, 40),
                    (2.0, 100, 80)]
+    #magnetism(yig_thick_range, pt_thick_range, angle_times, save_path, save_views=True)
     
-    yig_thick, pt_thick = magnetism(yig_thick_range, pt_thick_range, angle_times, save_path, save_views=True)
-    print('YIG Thickness: {}'.format(round(yig_thick, 1)))
-    print('Pt Thickness: {}'.format(round(pt_thick, 1)))
+    times = np.linspace(20, 1440, 25)
+    angle_splits = [(0.5, 100, 1/7),
+                    (1.0, 100, 2/7),
+                    (2.0, 100, 4/7)]
+    bayes(times, angle_splits, save_path)
     
 if __name__ == '__main__':
     _magnetism_results()
