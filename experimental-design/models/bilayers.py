@@ -35,6 +35,7 @@ class BilayerDMPC(BaseLipid):
         bilayer_solv (refnx.analysis.Parameter): bilayer hydration.
         hg_waters (refnx.analysis.Parameter): headgroup bound waters.
         params (list): varying model parameters.
+        underlayer_params
         structures
         objectives
 
@@ -79,6 +80,13 @@ class BilayerDMPC(BaseLipid):
                        self.bilayer_rough,
                        self.bilayer_solv,
                        self.hg_waters]
+
+        self.underlayer_params = [self.si_rough,
+                                  self.sio2_thick,
+                                  self.dmpc_apm,
+                                  self.bilayer_rough,
+                                  self.bilayer_solv,
+                                  self.hg_waters]
 
         # Vary all of the parameters defined above.
         for param in self.params:
@@ -193,31 +201,6 @@ class BilayerDMPC(BaseLipid):
                 structure |= underlayer
             return structure | inner_hg | tg | tg | outer_hg | solution
 
-    def underlayer_info(self, angle_times, contrasts, underlayers):
-        """Calculates the Fisher information matrix for a lipid sample with `underlayers`,
-           and with contrasts measured over a number of angles.
-
-        Args:
-            angle_times (list): points and counting times for each measurement angle to simulate.
-            contrasts (list): SLDs of contrasts to simulate.
-            underlayers (list): thickness and SLD of each underlayer to add.
-
-        Returns:
-            numpy.ndarray: Fisher information matrix.
-
-        """
-        params_all = self.params
-        self.params = [self.si_rough,
-                       self.sio2_thick,
-                       self.dmpc_apm,
-                       self.bilayer_rough,
-                       self.bilayer_solv,
-                       self.hg_waters]
-        
-        g = super().underlayer_info(angle_times, contrasts, underlayers)
-        self.params = params_all
-        return g
-
 class BilayerDPPC(BaseLipid):
     """Defines a model describing an asymmetric bilayer defined by a single
        asymmetry value.
@@ -252,6 +235,7 @@ class BilayerDPPC(BaseLipid):
         core_solv (refnx.analysis.Parameter): core hydration.
         asym_value
         params (list): varying model parameters.
+        underlayer_params
         structures
         objectives
 
@@ -304,6 +288,17 @@ class BilayerDPPC(BaseLipid):
                        self.core_thick,
                        self.core_solv,
                        self.asym_value]
+
+        self.underlayer_params = [self.si_rough,
+                                  self.sio2_thick,
+                                  self.inner_hg_thick,
+                                  self.inner_hg_solv,
+                                  self.bilayer_rough,
+                                  self.inner_tg_thick,
+                                  self.outer_tg_thick,
+                                  self.tg_solv,
+                                  self.core_thick,
+                                  self.core_solv]
 
         # Vary all of the parameters defined above.
         for param in self.params:
@@ -370,35 +365,6 @@ class BilayerDPPC(BaseLipid):
                 underlayer = refnx.reflect.SLD(sld)(thick, 2)
                 structure |= underlayer
             return structure | inner_hg | inner_tg | outer_tg | core | solution
-
-    def underlayer_info(self, angle_times, contrasts, underlayers):
-        """Calculates the Fisher information matrix for a lipid sample with `underlayers`,
-           and with contrasts measured over a number of angles.
-
-        Args:
-            angle_times (list): points and counting times for each measurement angle to simulate.
-            contrasts (list): SLDs of contrasts to simulate.
-            underlayers (list): thickness and SLD of each underlayer to add.
-
-        Returns:
-            numpy.ndarray: Fisher information matrix.
-
-        """
-        params_all = self.params
-        self.params = [self.si_rough,
-                       self.sio2_thick,
-                       self.inner_hg_thick,
-                       self.inner_hg_solv,
-                       self.bilayer_rough,
-                       self.inner_tg_thick,
-                       self.outer_tg_thick,
-                       self.tg_solv,
-                       self.core_thick,
-                       self.core_solv]
-        
-        g = super().underlayer_info(angle_times, contrasts, underlayers)
-        self.params = params_all
-        return g
     
 if __name__ == '__main__':
     save_path = '../results'

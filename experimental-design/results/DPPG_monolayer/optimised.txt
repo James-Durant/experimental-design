@@ -1,10 +1,10 @@
 -------------- Hydrogenated --------------
-Angle: 1.78
-Contrast: 0.04
-Objective value: -0.0005120785082883001
+Angle: 1.41
+Contrast: 0.21
+Objective value: -0.0002557240793344688
 
 -------------- Deuterated --------------
 Angle: 0.35
-Contrast: -0.02
-Objective value: -0.07073971113712915
+Contrast: -0.01
+Objective value: -0.07065838376882994
 

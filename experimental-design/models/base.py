@@ -159,8 +159,11 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             qs.append(data[:,0])
             counts.append(data[:,3])
             models.append(model)
-
-        return fisher(qs, self.params, counts, models)
+            
+        if underlayers is None:
+            return fisher(qs, self.params, counts, models)
+        else:
+            return fisher(qs, self.underlayer_params, counts, models)
 
     @abstractmethod
     def _using_conditions(self, contrast, underlayers):
@@ -273,7 +276,11 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
 
         # Combine objectives into a single global objective.
         global_objective = refnx.analysis.GlobalObjective(objectives)
-        global_objective.varying_parameters = lambda: self.params
+        
+        if underlayers is None:
+            global_objective.varying_parameters = lambda: self.params
+        else:
+            global_objective.varying_parameters = lambda: self.underlayer_params
 
         # Sample the objective using nested sampling.
         sampler = Sampler(global_objective)

@@ -375,8 +375,8 @@ def _contrast_results(save_path='./results'):
     contrast_choice_double(bilayer, contrast_range, angle_times, save_path, save_views=True)
 
     # Run nested sampling on simulated data to validate the improvements using the suggested designs.
-    bilayer.nested_sampling([6.36, 6.36], angle_times, save_path, 'D2O_D2O', dynamic=False)
-    bilayer.nested_sampling([-0.56, 6.36], angle_times, save_path, 'H2O_D2O', dynamic=False)
+    bilayer.nested_sampling([6.36, 6.36], angle_times, save_path, 'D2O_D2O')
+    bilayer.nested_sampling([-0.56, 6.36], angle_times, save_path, 'H2O_D2O')
 
 def _underlayer_results(save_path='./results'):
     """Investigates the choice of underlayer thickness and SLD for a bilayer sample.
@@ -388,7 +388,7 @@ def _underlayer_results(save_path='./results'):
     from bilayers import BilayerDMPC, BilayerDPPC
 
     # Choose sample here.
-    bilayer = BilayerDMPC()
+    bilayer = BilayerDPPC()
 
     # SLDs of contrasts being simulated.
     contrasts = [[6.36], [-0.56], [-0.56, 6.36]]
@@ -405,7 +405,61 @@ def _underlayer_results(save_path='./results'):
         print('Thickness: {}'.format(round(thick)))
         print('SLD: {}'.format(round(sld, 2)))
 
+def _figure_2(save_path='../figures'):
+    from bilayers import BilayerDMPC, BilayerDPPC
+
+    sample_1, sample_2 = BilayerDMPC(), BilayerDPPC()
+    
+    total_time = 1000
+    angle_splits = [(0.7, 100, 0.2), (2.3, 100, 0.8)]
+
+    h2o_split_1 = 0.220
+    d2o_split_1 = 0.515
+    
+    h2o_split_2 = 0.245
+    d2o_split_2 = 0.540
+
+    d2o_angle_times_1 = [(angle, points, total_time*split*d2o_split_1) for angle, points, split in angle_splits]
+    d2o_angle_times_2 = [(angle, points, total_time*split*d2o_split_2) for angle, points, split in angle_splits]
+        
+    h2o_angle_times_1 = [(angle, points, total_time*split*h2o_split_1) for angle, points, split in angle_splits]
+    h2o_angle_times_2 = [(angle, points, total_time*split*h2o_split_2) for angle, points, split in angle_splits]
+    
+    nxt_angle_times_1 = [(angle, points, total_time*split*(1-d2o_split_1-h2o_split_1)) for angle, points, split in angle_splits]
+    nxt_angle_times_2 = [(angle, points, total_time*split*(1-d2o_split_2-h2o_split_2)) for angle, points, split in angle_splits]
+
+    g_init_1 = sample_1.angle_info(d2o_angle_times_1, [6.36]) + sample_1.angle_info(h2o_angle_times_1, [-0.56])
+    g_init_2 = sample_2.angle_info(d2o_angle_times_2, [6.36]) + sample_2.angle_info(h2o_angle_times_2, [-0.56])
+
+    min_eigs_1, min_eigs_2 = [], []
+    contrast_range = np.linspace(-0.56, 6.36, 500)
+    for i, new_contrast in enumerate(contrast_range):
+        g_new_1 = sample_1.contrast_info(nxt_angle_times_1, [new_contrast])
+        g_new_2 = sample_2.contrast_info(nxt_angle_times_2, [new_contrast])
+        
+        min_eigs_1.append(np.linalg.eigvalsh(g_init_1+g_new_1)[0])
+        min_eigs_2.append(np.linalg.eigvalsh(g_init_2+g_new_2)[0])
+
+    print(contrast_range[np.argmax(min_eigs_1)])
+    print(contrast_range[np.argmax(min_eigs_2)])
+
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    ax2 = ax1.twinx()
+    
+    line_1 = ax1.plot(contrast_range, min_eigs_1, color='b')
+    line_2 = ax2.plot(contrast_range, min_eigs_2, color='g')
+    
+    ax1.set_xlabel('$\mathregular{Contrast\ SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
+    ax1.set_ylabel('Minimum Eigenvalue', fontsize=11, weight='bold', color='b')
+    ax2.set_ylabel('Minimum Eigenvalue', fontsize=11, weight='bold', color='g')
+    ax1.legend(line_1+line_2, ['DMPC', 'DPPC/Ra LPS'], loc=0)
+
+    save_plot(fig, save_path, 'figure_2')
+
 if __name__ == '__main__':
-    _angle_results()
-    _contrast_results()
-    _underlayer_results()
+    #_angle_results()
+    #_contrast_results()
+    #_underlayer_results()
+
+    _figure_2()

@@ -1,9 +1,10 @@
 import numpy as np
 import os, sys, time
-sys.path.append('./')
+sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
+sys.path.append(os.path.dirname(__file__))
 
 from scipy.optimize import differential_evolution, NonlinearConstraint
-from structures import VariableAngle, VariableContrast, VariableUnderlayer
+from base import VariableAngle, VariableContrast, VariableUnderlayer
 
 class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.
@@ -48,7 +49,6 @@ class Optimiser:
 
         # Optimise angles and times, and return results.
         res, val = Optimiser.__optimise(self._angle_times_func, bounds, constraints, args, workers, verbose)
-        print(res)
         return res[:num_angles], res[num_angles:], val
 
     def optimise_contrasts(self, num_contrasts, angle_splits, total_time=1000,
@@ -82,7 +82,6 @@ class Optimiser:
 
         # Optimise contrasts, counting time splits and return the results.
         res, val = Optimiser.__optimise(self._contrasts_func, bounds, constraints, args, workers, verbose)
-        print(res)
         return res[:num_contrasts], res[num_contrasts:], val
 
     def optimise_underlayers(self, num_underlayers, angle_times, contrasts, 
@@ -262,7 +261,7 @@ def _underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bou
 
     # Create a new text file for the results.
     with open(os.path.join(save_path, 'optimised_underlayers.txt'), 'w') as file:
-        g = optimiser.sample.contrast_info(angle_times, contrasts)
+        g = optimiser.sample.underlayer_info(angle_times, contrasts, [])
         val = -np.linalg.eigvalsh(g)[0]
         val = np.format_float_positional(val, precision=4, unique=False, fractional=False, trim='k')
         
@@ -293,9 +292,9 @@ def _underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bou
             file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
 
 if __name__ == '__main__':
-    from structures import SymmetricBilayer, SingleAsymmetricBilayer
+    from bilayers import BilayerDMPC, BilayerDPPC
 
-    sample = SingleAsymmetricBilayer()
+    sample = BilayerDMPC()
     optimiser = Optimiser(sample)
 
     total_time = 1000

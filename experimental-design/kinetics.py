@@ -80,7 +80,7 @@ def optimise(sample, angle_bounds, contrast_bounds, apm_range, points, time, sav
     
     # Optimise angles and times, and return results.
     res = differential_evolution(_func, bounds, args=args, polish=False, tol=0.001,
-                                 updating='deferred', workers=-1, disp=True)
+                                 updating='deferred', workers=-1, disp=False)
     
     return res.x[0], res.x[1], res.fun
 
@@ -89,14 +89,15 @@ def _kinetics_results(save_path='./results'):
     contrast_range = np.linspace(-0.56, 6.36, 75)
     apm_range = np.linspace(54.1039, 500, 20)
     points = 100
-    time = 1000
+    time = 100
     
     monolayer_h, monolayer_d = MonolayerDPPG(deuterated=False), MonolayerDPPG(deuterated=True)
     
-    kinetics(monolayer_h, angle_range, contrast_range, apm_range, points, time, save_path, save_views=True)
-    kinetics(monolayer_d, angle_range, contrast_range, apm_range, points, time, save_path, save_views=True)
-
-    angle_bounds = (0.2, 4)
+    #kinetics(monolayer_h, angle_range, contrast_range, apm_range, points, time, save_path, save_views=True)
+    #kinetics(monolayer_d, angle_range, contrast_range, apm_range, points, time, save_path, save_views=True)
+    
+    time = 1000 # A large time improves DE convergence.
+    angle_bounds = (0.2, 4.0)
     contrast_bounds = (-0.56, 6.36)
     with open(os.path.join(save_path, monolayer_h.name, 'optimised.txt'), 'w') as file:
         for monolayer, label in zip([monolayer_h, monolayer_d], ['Hydrogenated', 'Deuterated']):
