@@ -37,8 +37,8 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         self.YIG_rough = bumps.parameter.Parameter(13.55, name='FePt/YIG Roughness')
         self.YIG_mag = bumps.parameter.Parameter(0.349, name='YIG Magnetic SLD')
         
-        self.sub_sld = bumps.parameter.Parameter(5.304, name='Substrate SLD')
-        self.sub_rough = bumps.parameter.Parameter(30, name='YIG/Substrate Roughness')
+        self.YAG_sld = bumps.parameter.Parameter(5.304, name='YAG SLD')
+        self.YAG_rough = bumps.parameter.Parameter(30, name='YIG/YAG Roughness')
                 
         self.params = [self.Pt_sld,
                        self.Pt_thick,
@@ -51,8 +51,8 @@ class SampleYIG(BaseSample, VariableUnderlayer):
                        self.YIG_thick,
                        self.YIG_rough,
                        self.YIG_mag,
-                       self.sub_sld,
-                       self.sub_rough]
+                       self.YAG_sld,
+                       self.YAG_rough]
         
         if vary:
             self.Pt_sld.range(5, 6)
@@ -69,8 +69,8 @@ class SampleYIG(BaseSample, VariableUnderlayer):
             self.YIG_rough.range(0, 70)
             self.YIG_mag.range(0, 0.6)
             
-            self.sub_sld.range(4.5, 5.5)
-            self.sub_rough.range(20, 30)
+            self.YAG_sld.range(4.5, 5.5)
+            self.YAG_rough.range(20, 30)
         
         pt_magnetism = refl1d.magnetism.Magnetism(rhoM=self.Pt_mag, thetaM=self.mag_angle)
         yig_magnetism = refl1d.magnetism.Magnetism(rhoM=self.YIG_mag, thetaM=self.mag_angle)
@@ -79,7 +79,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         Pt = refl1d.material.SLD(rho=self.Pt_sld, name='Pt')(self.Pt_thick, self.Pt_rough, magnetism=pt_magnetism)
         FePt = refl1d.material.SLD(rho=self.FePt_sld, name='FePt')(self.FePt_thick, self.FePt_rough)
         YIG = refl1d.material.SLD(rho=self.YIG_sld, name='YIG')(self.YIG_thick, self.YIG_rough, magnetism=yig_magnetism)
-        sub = refl1d.material.SLD(rho=self.sub_sld, name='Substrate')(0, self.sub_rough)
+        sub = refl1d.material.SLD(rho=self.YAG_sld, name='Substrate')(0, self.YAG_rough)
         
         self.structure = sub | YIG | FePt | Pt | air
         
@@ -107,6 +107,9 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         return fisher(qs, self.params, counts, models)
     
     def underlayer_info(self, angle_times, yig_thick, pt_thick):
+        pt_thick -= self.Pt_thick.value
+        assert pt_thick >= 0
+        
         pt_magnetism = refl1d.magnetism.Magnetism(rhoM=self.Pt_mag, thetaM=self.mag_angle)
         yig_magnetism = refl1d.magnetism.Magnetism(rhoM=self.YIG_mag, thetaM=self.mag_angle)
         
@@ -117,7 +120,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         
         intermediate = refl1d.material.SLD(rho=self.FePt_sld, name='FePt')(self.FePt_thick, self.FePt_rough)
         yig = refl1d.material.SLD(rho=self.YIG_sld, name='YIG')(yig_thick, self.YIG_rough, magnetism=yig_magnetism)
-        sub = refl1d.material.SLD(rho=self.sub_sld, name='Substrate')(0, self.sub_rough)
+        sub = refl1d.material.SLD(rho=self.YAG_sld, name='Substrate')(0, self.YAG_rough)
         
         structure = sub | yig | intermediate | pt_added | pt | air
         
@@ -195,8 +198,11 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         count = 0
         for probe, qr in zip(self.experiment.probe.xs, self.experiment.reflectivity()):
             if qr is not None:
-                ax.errorbar(probe.Q, probe.R, probe.dR, marker='o', ms=2, lw=0, elinewidth=0.5, capsize=0.5, label=self.labels[count], color=colours[count])
-                ax.plot(probe.Q, qr[1], color=colours[count], zorder=20)
+                ax.errorbar(probe.Q, probe.R, probe.dR,
+                            marker='o', ms=2, lw=0, elinewidth=0.5, capsize=0.5,
+                            label=self.labels[count]+' Data', color=colours[count])
+                ax.plot(probe.Q, qr[1], color=colours[count], zorder=20,
+                        label=self.labels[count]+' Fitted')
                 count += 1
     
         ax.set_xlabel('$\mathregular{Q\ (Å^{-1})}$', fontsize=11, weight='bold')

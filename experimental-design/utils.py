@@ -65,10 +65,11 @@ class Sampler:
             u (numpy.ndarray): values in interval [0,1] to be transformed.
 
         Returns:
-            numpy.ndarray: `u` array transformed to parameter space of interest.
+            numpy.ndarray: `u` transformed to parameter space of interest.
 
         """
-        return np.asarray([param.bounds.put01(u[i]) for i, param in enumerate(self.params)])
+        return np.asarray([param.bounds.put01(u[i])
+                           for i, param in enumerate(self.params)])
 
     def sample(self, verbose=True, dynamic=False, return_evidence=False):
         """Samples an Objective/FitProblem using nested sampling.
@@ -76,10 +77,10 @@ class Sampler:
         Args:
             verbose (bool): whether to display sampling progress.
             dynamic (bool): whether to use static or dynamic nested sampling.
-            return_evidence
+            return_evidence (bool): whether to return a corner plot of the log-evidence.
 
         Returns:
-            matplotlib.pyplot.Figure: nested sampling corner plot.
+            matplotlib.pyplot.Figure or float: nested sampling corner plot or log-evidence.
 
         """
         if dynamic:
@@ -97,24 +98,24 @@ class Sampler:
         # Set the parameter values to the estimated means.
         for i, param in enumerate(self.params):
             param.value = mean[i]
-
+        
+        # Return the log-evidence if requested. Otherwise return the corner plot.
         if return_evidence:
             return results.logz[-1]
         else:
-            # Return the corner plot.
             return self.__corner(results)
 
     def __corner(self, results):
-        """Calculates a corner plot from nested sampling results.
+        """Calculates a corner plot from given nested sampling `results`.
 
         Args:
-            results (dynesty.results.Results): full output of sampling run.
+            results (dynesty.results.Results): full output of a sampling run.
 
         Returns:
             matplotlib.pyplot.Figure: nested sampling corner plot.
 
         """
-        # Get corner plot from dynesty package.
+        # Get the corner plot from dynesty package.
         fig, _ = dyplot.cornerplot(results, color='blue', quantiles=None,
                                    show_titles=True, max_n_ticks=3,
                                    truths=np.zeros(self.ndim),
@@ -133,7 +134,8 @@ class Sampler:
         return fig
 
 def fisher(qs, xi, counts, models, step=0.005):
-    """Calculates the FI matrix for multiple `models` containing parameters `xi`.
+    """Calculates the Fisher information matrix for multiple `models`
+       containing parameters `xi`.
 
     Args:
         qs (list): Q points for each model.
@@ -143,19 +145,19 @@ def fisher(qs, xi, counts, models, step=0.005):
         step (float): step size to take when calculating gradient.
 
     Returns:
-        (numpy.ndarray): FI matrix for given models and data.
+        numpy.ndarray: Fisher information matrix for given models and data.
 
     """
     n = sum(len(q) for q in qs) # Number of data points.
     m = len(xi) # Number of parameters.
     J = np.zeros((n, m))
 
-    # There is no information is there is no data.
+    # There is no information if there is no data.
     if n == 0:
         return np.zeros((m, m))
 
-    # Calculate the gradient of model reflectivity with every model
-    # parameter for every model data point.
+    # Calculate the gradient of model reflectivity with every model parameter
+    # for every model data point.
     for i in range(m):
         parameter = xi[i]
         old = parameter.value
@@ -175,12 +177,12 @@ def fisher(qs, xi, counts, models, step=0.005):
     # Calculate the reflectance for each model for the given Q values.
     r = np.concatenate([reflectivity(q, model)for q, model in list(zip(qs, models))])
 
-    # Calculate the FI matrix using the equations from the paper.
+    # Calculate the Fisher information matrix using the equations from the paper.
     M = np.diag(np.concatenate(counts) / r, k=0)
     g = np.dot(np.dot(J.T, M), J)
-
+    
+    # If there are multiple parameters, scale each parameter's information by its "importance".
     if len(xi) > 1:
-        # Scale each parameter's information by its "importance".
         if isinstance(xi[0], refnx.analysis.Parameter):
             lb = np.array([param.bounds.lb for param in xi])
             ub = np.array([param.bounds.ub for param in xi])
@@ -188,10 +190,12 @@ def fisher(qs, xi, counts, models, step=0.005):
         elif isinstance(xi[0], bumps.parameter.Parameter):
             lb = np.array([param.bounds.limits[0] for param in xi])
             ub = np.array([param.bounds.limits[1] for param in xi])
-            
+        
+        # Using the equations from the paper for the coordiate transform.
         H = np.diag(1/(ub-lb))
         g = np.dot(np.dot(H.T, g), H)
-        
+    
+    # Return the Fisher information matrix.
     return g
 
 def save_plot(fig, save_path, filename):
