@@ -14,11 +14,12 @@ class Sampler:
     """Contains code for running nested sampling on refnx and Refl1D models.
 
     Attributes:
-        objective (refnx.analysis.Objective or bumps.fitproblem.FitProblem): objective to sample.
+        objective (refnx.analysis.Objective or
+                   bumps.fitproblem.FitProblem): objective to sample.
         params (list): varying model parameters.
         ndim (int): number of varying model parameters.
-        sampler_nested_static (dynesty.NestedSampler): sampler for static nested sampling.
-        sampler_nested_dynamic (dynesty.DynamicNestedSampler): sampler for dynamic nested sampling.
+        sampler_static (dynesty.NestedSampler): static nested sampler.
+        sampler_dynamic (dynesty.DynamicNestedSampler): dynamic nested sampler.
 
     """
     def __init__(self, objective):
@@ -26,13 +27,14 @@ class Sampler:
 
         # Determine if the objective is from refnx or Refl1D.
         if isinstance(objective, refnx.analysis.BaseObjective):
-            # Use the log-likelihood and prior transform methods of the refnx objective.
+            # Use the log-likelihood and prior transform methods
+            # of the refnx objective.
             self.params = objective.varying_parameters()
             logl = objective.logl
             prior_transform = objective.prior_transform
 
         elif isinstance(objective, bumps.fitproblem.BaseFitProblem):
-            # Use the custom log-likelihood and prior transform methods of this class.
+            # Use this class' custom log-likelihood and prior transform methods.
             self.params = self.objective._parameters
             logl = self.logl_refl1d
             prior_transform = self.prior_transform_refl1d
@@ -42,11 +44,12 @@ class Sampler:
             raise RuntimeError('invalid objective/fitproblem given')
 
         self.ndim = len(self.params)
-        self.sampler_nested_static = NestedSampler(logl, prior_transform, self.ndim)
-        self.sampler_nested_dynamic = DynamicNestedSampler(logl, prior_transform, self.ndim)
+        self.sampler_static = NestedSampler(logl, prior_transform, self.ndim)
+        self.sampler_dynamic = DynamicNestedSampler(logl, prior_transform, self.ndim)
 
     def logl_refl1d(self, x):
-        """Calculates the log-likelihood of given parameter values `x` for a Refl1D FitProblem.
+        """Calculates the log-likelihood of given parameter values `x`
+           for a Refl1D FitProblem.
 
         Args:
             x (numpy.ndarray): parameter values to calculate likelihood of.
@@ -77,7 +80,7 @@ class Sampler:
         Args:
             verbose (bool): whether to display sampling progress.
             dynamic (bool): whether to use static or dynamic nested sampling.
-            return_evidence (bool): whether to return a corner plot of the log-evidence.
+            return_evidence (bool): whether to return a corner plot or evidence.
 
         Returns:
             matplotlib.pyplot.Figure or float: nested sampling corner plot or log-evidence.
@@ -85,10 +88,12 @@ class Sampler:
         """
         if dynamic:
             # Weighting is entirely on the posterior (0 weight on evidence).
-            self.sampler_nested_dynamic.run_nested(print_progress=verbose, wt_kwargs={'pfrac': 1.0})
+            self.sampler_dynamic.run_nested(print_progress=verbose,
+                                            wt_kwargs={'pfrac': 1.0})
             results = self.sampler_nested_dynamic.results
+            
         else:
-            self.sampler_nested_static.run_nested(print_progress=verbose)
+            self.sampler_static.run_nested(print_progress=verbose)
             results = self.sampler_nested_static.results
 
         # Calculate the parameter means.
@@ -99,9 +104,11 @@ class Sampler:
         for i, param in enumerate(self.params):
             param.value = mean[i]
 
-        # Return the log-evidence if requested. Otherwise return the corner plot.
+        # Return the log-evidence if requested..
         if return_evidence:
             return results.logz[-1]
+        
+        # Otherwise, return the corner plot
         else:
             return self.__corner(results)
 
@@ -162,26 +169,30 @@ def fisher(qs, xi, counts, models, step=0.005):
         parameter = xi[i]
         old = parameter.value
 
-        # Calculate the reflectance for each model for the first side of the gradient.
+        # Calculate the reflectance for each model for first side.
         x1 = parameter.value = old*(1-step)
-        y1 = np.concatenate([reflectivity(q, model) for q, model in list(zip(qs, models))])
+        y1 = np.concatenate([reflectivity(q, model)
+                             for q, model in list(zip(qs, models))])
 
-        # Calculate the reflectance for each model for the second side of the gradient.
+        # Calculate the reflectance for each model for second side.
         x2 = parameter.value = old*(1+step)
-        y2 = np.concatenate([reflectivity(q, model) for q, model in list(zip(qs, models))])
+        y2 = np.concatenate([reflectivity(q, model)
+                             for q, model in list(zip(qs, models))])
 
         parameter.value = old # Reset the parameter.
 
         J[:,i] = (y2-y1) / (x2-x1) # Calculate the gradient.
 
     # Calculate the reflectance for each model for the given Q values.
-    r = np.concatenate([reflectivity(q, model)for q, model in list(zip(qs, models))])
+    r = np.concatenate([reflectivity(q, model)
+                        for q, model in list(zip(qs, models))])
 
-    # Calculate the Fisher information matrix using the equations from the paper.
+    # Calculate the Fisher information matrix using equations from the paper.
     M = np.diag(np.concatenate(counts) / r, k=0)
     g = np.dot(np.dot(J.T, M), J)
 
-    # If there are multiple parameters, scale each parameter's information by its "importance".
+    # If there are multiple parameters,
+    # scale each parameter's information by its "importance".
     if len(xi) > 1:
         if isinstance(xi[0], refnx.analysis.Parameter):
             lb = np.array([param.bounds.lb for param in xi])

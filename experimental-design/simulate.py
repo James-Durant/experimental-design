@@ -7,11 +7,13 @@ import refl1d.model, refl1d.probe, refl1d.experiment
 def simulate_magnetic(sample, angle_times, scale=1, bkg=5e-7, dq=2,
                       mm=True, mp=True, pm=True, pp=True, angle_scale=0.5,
                       directbeam_path=None):
-    """Simulates an experiment of a given magnetic `sample` measured over a number of angles.
+    """Simulates an experiment of a given magnetic `sample` measured
+       over a number of angles.
 
     Args:
-        sample (refnx.reflect.Stucture or refld1d.model.Stack): sample to simulate an experiment for.
-        angle_times (list): number of points and counting times for each angle to simulate.
+        sample (refnx.reflect.Stucture or
+                refld1d.model.Stack): sample to simulate.
+        angle_times (list): points and times for each angle to simulate.
         scale (float): experimental scale factor.
         bkg (float): level of instrument background noise.
         dq (float): instrument resolution.
@@ -20,7 +22,7 @@ def simulate_magnetic(sample, angle_times, scale=1, bkg=5e-7, dq=2,
         mp (bool): whether to simulate "minus plus" spin state.
         mm (bool): whether to simulate "minus minus" spin state.
         angle_scale (float): angle to use when scaling directbeam flux.
-        directbeam_path (str): path to directbeam file for instrument to simulate.
+        directbeam_path (str): path to directbeam file to simulate.
 
     Returns:
         tuple: model and simulated data for the given `sample`.
@@ -30,30 +32,37 @@ def simulate_magnetic(sample, angle_times, scale=1, bkg=5e-7, dq=2,
 
     # Path to directbeam file for OFFSPEC when polarised.
     if directbeam_path is None:
-        directbeam_path = os.path.join(os.path.dirname(__file__), 'data', 'directbeams', 'OFFSPEC_polarised.dat')
+        directbeam_path = os.path.join(os.path.dirname(__file__),
+                                       'data',
+                                       'directbeams',
+                                       'OFFSPEC_polarised.dat')
         angle_scale = 0.5
 
     # Simulate the "minus minus" spin state if requested.
     if mm:
-        model, data = simulate(sample, angle_times, scale, bkg, dq, directbeam_path, angle_scale, 0)
+        model, data = simulate(sample, angle_times, scale, bkg, dq,
+                               directbeam_path, angle_scale, 0)
         models.append(model)
         datasets.append(data)
 
     # Simulate the "minus plus" spin state if requested.
     if mp:
-        model, data = simulate(sample, angle_times, scale, bkg, dq, directbeam_path, angle_scale, 1)
+        model, data = simulate(sample, angle_times, scale, bkg, dq,
+                               directbeam_path, angle_scale, 1)
         models.append(model)
         datasets.append(data)
 
     # Simulate the "plus minus" spin state if requested.
     if pm:
-        model, data = simulate(sample, angle_times, scale, bkg, dq, directbeam_path, angle_scale, 2)
+        model, data = simulate(sample, angle_times, scale, bkg, dq,
+                               directbeam_path, angle_scale, 2)
         models.append(model)
         datasets.append(data)
 
     # Simulate the "plus plus" spin state if requested.
     if pp:
-        model, data = simulate(sample, angle_times, scale, bkg, dq, directbeam_path, angle_scale, 3)
+        model, data = simulate(sample, angle_times, scale, bkg, dq,
+                               directbeam_path, angle_scale, 3)
         models.append(model)
         datasets.append(data)
 
@@ -61,15 +70,16 @@ def simulate_magnetic(sample, angle_times, scale=1, bkg=5e-7, dq=2,
 
 def simulate(sample, angle_times, scale=1, bkg=5e-6, dq=2, directbeam_path=None,
              angle_scale=0.3, spin_state=None):
-    """Simulates an experiment of a given `sample` measured over a number of angles.
+    """Simulates an experiment of a `sample` measured over a number of angles.
 
     Args:
-        sample (refnx.reflect.Stucture or refld1d.model.Stack): sample to simulate an experiment for.
-        angle_times (list): number of points and counting times for each angle to simulate.
+        sample (refnx.reflect.Stucture or
+                refld1d.model.Stack): sample to simulate an experiment for.
+        angle_times (list): points and times for each angle to simulate.
         scale (float): experimental scale factor.
         bkg (float): level of instrument background noise.
         dq (float): instrument resolution.
-        directbeam_path (str): path to directbeam file for instrument to simulate.
+        directbeam_path (str): path to directbeam file to simulate.
         angle_scale (float): angle to use when scaling directbeam flux.
         spin_state (int): spin state to simulate if given a magnetic sample.
 
@@ -83,7 +93,10 @@ def simulate(sample, angle_times, scale=1, bkg=5e-6, dq=2, directbeam_path=None,
 
     # Path to directbeam file for OFFSPEC when non-polarised.
     if directbeam_path is None:
-        directbeam_path = os.path.join(os.path.dirname(__file__), 'data', 'directbeams', 'OFFSPEC_non-polarised.dat')
+        directbeam_path = os.path.join(os.path.dirname(__file__),
+                                       'data',
+                                       'directbeams',
+                                       'OFFSPEC_non-polarised.dat')
         angle_scale = 0.3
 
     # Iterate over each angle to simulate.
@@ -92,7 +105,8 @@ def simulate(sample, angle_times, scale=1, bkg=5e-6, dq=2, directbeam_path=None,
     for angle, points, time in angle_times:
         # Simulate the experiment.
         total_points += points
-        simulated = _run_experiment(sample, angle, points, time, scale, bkg, dq,
+        simulated = _run_experiment(sample, angle, points, time,
+                                    scale, bkg, dq,
                                     directbeam_path, angle_scale, spin_state)
 
         # Combine the data for the angle with the data from previous angles.
@@ -137,23 +151,25 @@ def simulate(sample, angle_times, scale=1, bkg=5e-6, dq=2, directbeam_path=None,
 
     return model, data
 
-def _run_experiment(sample, angle, points, time, scale, bkg, dq, directbeam_path, angle_scale, spin_state):
+def _run_experiment(sample, angle, points, time, scale, bkg, dq,
+                    directbeam_path, angle_scale, spin_state):
     """Simulates a single angle measurement of a given `sample`.
 
     Args:
-        sample (refnx.reflect.Stucture or refld1d.model.Stack): sample to simulate the experiment on.
+        sample (refnx.reflect.Stucture or
+                refld1d.model.Stack): sample to simulate the experiment on.
         angle (float): measurement angle to simulate.
         points (int): number of data points to use in simulated data.
         time (float): counting time for simulation.
         scale (float): experimental scale factor.
         bkg (float): level of instrument background noise.
         dq (float): instrument resolution.
-        directbeam_path (str): path to directbeam file for instrument to simulate.
+        directbeam_path (str): path to directbeam file to simulate.
         angle_scale (float): angle to use when scaling directbeam flux.
         spin_state (int): spin state to simulate if given a magnetic sample.
 
     Returns:
-        tuple: simulated Q, R, dR data and incident neutron counts for each point.
+        tuple: simulated Q, R, dR data and incident neutron counts.
 
     """
     # Load the directbeam file.
@@ -171,7 +187,8 @@ def _run_experiment(sample, angle, points, time, scale, bkg, dq, directbeam_path
     flux_binned, _ = np.histogram(q, q_bin_edges, weights=direct_flux)
 
     # Get the bin centres.
-    q_binned = np.asarray([(q_bin_edges[i] + q_bin_edges[i+1]) / 2 for i in range(points)])
+    q_binned = np.asarray([(q_bin_edges[i] + q_bin_edges[i+1]) / 2
+                           for i in range(points)])
 
     # Calculate the model reflectivity at each Q point.
     if isinstance(sample, refnx.reflect.Structure):
@@ -197,19 +214,22 @@ def _run_experiment(sample, angle, points, time, scale, bkg, dq, directbeam_path
     # Convert from count space to reflectivity space.
     # Point has zero reflectivity if there is no flux.
     r_noisy = np.divide(counts_reflected, counts_incident,
-                        out=np.zeros_like(counts_reflected), where=counts_incident!=0)
+                        out=np.zeros_like(counts_reflected),
+                        where=counts_incident!=0)
 
     r_error = np.divide(np.sqrt(counts_reflected), counts_incident,
-                        out=np.zeros_like(counts_reflected), where=counts_incident!=0)
+                        out=np.zeros_like(counts_reflected),
+                        where=counts_incident!=0)
 
     return q_binned, r_noisy, r_error, counts_incident
 
 def reflectivity(q, model):
-    """Calculates the model reflectivity of a given `model` at given `q` points.
+    """Calculates the model reflectivity of a `model` at given `q` points.
 
     Args:
         q (numpy.ndarray): Q points to calculate reflectance at.
-        model (refnx.reflect.ReflectModel or refl1d.experiment.Experiment): model to calculate the reflectivity of.
+        model (refnx.reflect.ReflectModel or
+               refl1d.experiment.Experiment): model to calculate reflectivity of.
 
     Returns:
         numpy.ndarray: reflectivity for each Q point.
@@ -229,12 +249,19 @@ def reflectivity(q, model):
             # Get the probe for the spin state to simulate.
             probe = model.probe.xs[model.probe.spin_state]
             scale, bkg, dq = probe.intensity, probe.background, probe.dq
-            experiment = refl1d_experiment(model.sample, q, scale, bkg, dq, model.probe.spin_state)
+            
+            experiment = refl1d_experiment(model.sample, q,
+                                           scale, bkg, dq,
+                                           model.probe.spin_state)
+            
             return experiment.reflectivity()[model.probe.spin_state][1]
 
         # Otherwise, the sample is not magnetic.
         else:
-            scale, bkg, dq = model.probe.intensity, model.probe.background, model.probe.dq
+            scale = model.probe.intensity
+            bkg = model.probe.background
+            dq = model.probe.dq
+            
             experiment = refl1d_experiment(model.sample, q, scale, bkg, dq)
             return experiment.reflectivity()[1]
 
@@ -258,7 +285,8 @@ def refl1d_experiment(sample, q_array, scale, bkg, dq, spin_state=None):
 
     # Calculate the dq array and use it to define a QProbe.
     dq_array = q_array * refl1d_dq
-    probe = refl1d.probe.QProbe(q_array, dq_array, intensity=scale, background=bkg)
+    probe = refl1d.probe.QProbe(q_array, dq_array,
+                                intensity=scale, background=bkg)
     probe.dq = dq
 
     # Adjust probe calculation for constant resolution.
