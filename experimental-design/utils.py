@@ -36,7 +36,7 @@ class Sampler:
             self.params = self.objective._parameters
             logl = self.logl_refl1d
             prior_transform = self.prior_transform_refl1d
-        
+
         # Otherwise the given objective must be invalid.
         else:
             raise RuntimeError('invalid objective/fitproblem given')
@@ -98,7 +98,7 @@ class Sampler:
         # Set the parameter values to the estimated means.
         for i, param in enumerate(self.params):
             param.value = mean[i]
-        
+
         # Return the log-evidence if requested. Otherwise return the corner plot.
         if return_evidence:
             return results.logz[-1]
@@ -180,21 +180,21 @@ def fisher(qs, xi, counts, models, step=0.005):
     # Calculate the Fisher information matrix using the equations from the paper.
     M = np.diag(np.concatenate(counts) / r, k=0)
     g = np.dot(np.dot(J.T, M), J)
-    
+
     # If there are multiple parameters, scale each parameter's information by its "importance".
     if len(xi) > 1:
         if isinstance(xi[0], refnx.analysis.Parameter):
             lb = np.array([param.bounds.lb for param in xi])
             ub = np.array([param.bounds.ub for param in xi])
-            
+
         elif isinstance(xi[0], bumps.parameter.Parameter):
             lb = np.array([param.bounds.limits[0] for param in xi])
             ub = np.array([param.bounds.limits[1] for param in xi])
-        
-        # Using the equations from the paper for the coordiate transform.
+
+        # Using the equations from the paper for the coordinate transform.
         H = np.diag(1/(ub-lb))
         g = np.dot(np.dot(H.T, g), H)
-    
+
     # Return the Fisher information matrix.
     return g
 

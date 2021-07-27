@@ -15,7 +15,7 @@ from base import VariableAngle, VariableContrast, VariableUnderlayer
 
 def angle_choice(sample, initial_angle_times, angle_range, points_new, time_new,
                  save_path, filename, contrasts=[]):
-    """Plots the change in minimum eigenvalue of the Fisher information matrix
+    """Plots the minimum eigenvalue of the Fisher information matrix
        as a function of angle choice.
 
     Args:
@@ -26,7 +26,7 @@ def angle_choice(sample, initial_angle_times, angle_range, points_new, time_new,
         time_new (type): counting time to use for the new data.
         save_path (str): path to directory to save plot to.
         filename (str): filename to use when saving the plot.
-        contrasts (list): SLDs of contrasts to simulate, if applicable.
+        contrasts (list): contrasts to simulate, if applicable.
 
     Returns:
         float: angle with the largest minimum eigenvalue of its Fisher information matrix.
