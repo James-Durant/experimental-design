@@ -1,97 +1,64 @@
 import matplotlib.pyplot as plt
 import os, sys
+# Add parent directory to system path to access simulate.py and utils.py
 sys.path.append(os.path.join(__file__, '..'))
 plt.rcParams['figure.figsize'] = (9,7)
 plt.rcParams['figure.dpi'] = 600
 
 from abc import ABC, abstractmethod
-
 import refnx.dataset, refnx.reflect, refnx.analysis
 
 from simulate import simulate
 from utils import fisher, Sampler, save_plot
 
 class VariableAngle(ABC):
-    """Abstract class representing whether the measurement angle of a sample can be varied."""
+    """Abstract class representing whether the measurement angle of a sample
+       can be varied."""
     @abstractmethod
-    def angle_info(self, angle_times):
-        """Calculates the Fisher information matrix for a sample measured over a number of angles.
-
-        Args:
-            angle_times (list): points and counting times for each measurement angle to simulate.
-
-        """
+    def angle_info(self):
+        """Calculates the Fisher information matrix for a sample measured
+           over a number of angles."""
         pass
 
 class VariableContrast(ABC):
-    """Abstract class representing whether the contrast of a sample can be varied."""
+    """Abstract class representing whether the contrast of a sample
+       can be varied."""
     @abstractmethod
-    def contrast_info(self, angle_times, contrasts):
+    def contrast_info(self):
         """Calculates the Fisher information matrix for a sample with contrasts
-           measured over a number of angles.
-
-        Args:
-            angle_times (list): points and counting times for each measurement angle to simulate.
-            contrasts (list): SLDs of contrasts to simulate.
-
-        """
+           measured over a number of angles."""
         pass
 
 class VariableUnderlayer(ABC):
-    """Abstract class representing whether the underlayer(s) of a sample can be varied."""
+    """Abstract class representing whether the underlayer(s) of a sample
+       can be varied."""
     @abstractmethod
-    def underlayer_info(self, angle_times, contrasts, underlayers):
-        """Calculates the Fisher information matrix for a sample with `underlayers`,
-           and with contrasts measured over a number of angles.
-
-        Args:
-            angle_times (list): points and counting times for each measurement angle to simulate.
-            contrasts (list): SLDs of contrasts to simulate.
-            underlayers (tuple): thickness and SLD of each underlayer to add.
-
-        """
+    def underlayer_info(self):
+        """Calculates the Fisher information matrix for a sample with
+           underlayers, and contrasts measured over a number of angles."""
         pass
 
 class BaseSample(VariableAngle):
     """Abstract class representing a neutron reflectometry sample."""
     @abstractmethod
-    def sld_profile(self, save_path):
-        """Plots the SLD profile of the sample.
-
-        Args:
-            save_path (str): path to directory to save SLD profile to.
-
-        """
+    def sld_profile(self):
+        """Plots the SLD profile of the sample."""
         pass
 
     @abstractmethod
-    def reflectivity_profile(self, save_path):
-        """Plots the reflectivity profile of the sample.
-
-        Args:
-            save_path (str): path to directory to save reflectivity profile to.
-
-        """
+    def reflectivity_profile(self):
+        """Plots the reflectivity profile of the sample."""
         pass
 
     @abstractmethod
-    def nested_sampling(self, angle_times, save_path, filename, dynamic=False):
-        """Runs nested sampling on simulated data of the sample.
-
-        Args:
-            angle_times (list): points and counting times for each measurement angle to simulate.
-            save_path (str): path to directory to save corner plot to.
-            filename (str): name of file to save corner plot to.
-            dynamic (bool): whether to use static or dynamic nested sampling.
-
-        """
+    def nested_sampling(self):
+        """Runs nested sampling on measured or simulated data of the sample."""
         pass
 
 class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
     """Abstract class representing the base class for a lipid model."""
     def __init__(self):
-        # Load experimentally-measured data.
-        self._create_objectives()
+        self._create_objectives() # Load experimentally-measured data.
 
     @abstractmethod
     def _create_objectives(self):
@@ -99,10 +66,11 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         pass
 
     def angle_info(self, angle_times, contrasts):
-        """Calculates the Fisher information matrix for the lipid sample measured over a number of angles.
+        """Calculates the Fisher information matrix for the lipid sample
+           measured over a number of angles.
 
         Args:
-            angle_times (list): points and counting times for each measurement angle to simulate.
+            angle_times (list): points and times for each angle to simulate.
             contrasts (list): SLDs of contrasts to simulate.
 
         Returns:
@@ -112,11 +80,11 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         return self.__conditions_info(angle_times, contrasts, None)
 
     def contrast_info(self, angle_times, contrasts):
-        """Calculates the Fisher information matrix for the lipid sample with contrasts
-           measured over a number of angles.
+        """Calculates the Fisher information matrix for the lipid sample
+           with contrasts measured over a number of angles.
 
         Args:
-            angle_times (list): points and counting times for each measurement angle to simulate.
+            angle_times (list): points and times for each angle to simulate.
             contrasts (list): SLDs of contrasts to simulate.
 
         Returns:
@@ -126,11 +94,11 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         return self.__conditions_info(angle_times, contrasts, None)
 
     def underlayer_info(self, angle_times, contrasts, underlayers):
-        """Calculates the Fisher information matrix for the lipid sample with `underlayers`,
-           and with contrasts measured over a number of angles.
+        """Calculates the Fisher information matrix for the lipid sample with
+           `underlayers`, and contrasts measured over a number of angles.
 
         Args:
-            angle_times (list): points and counting times for each measurement angle to simulate.
+            angle_times (list): points and times for each angle to simulate.
             contrasts (list): SLDs of contrasts to simulate.
             underlayers (list): thickness and SLD of each underlayer to add.
 
@@ -141,10 +109,11 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         return self.__conditions_info(angle_times, contrasts, underlayers)
 
     def __conditions_info(self, angle_times, contrasts, underlayers):
-        """Calculates the Fisher information matrix for the lipid sample with given conditions.
+        """Calculates the Fisher information matrix for the lipid sample
+           with given conditions.
 
         Args:
-            angle_times (list): points and counting times for each measurement angle to simulate.
+            angle_times (list): points and times for each angle to simulate.
             contrasts (list): SLDs of contrasts to simulate.
             underlayers (list): thickness and SLD of each underlayer to add.
 
@@ -152,41 +121,36 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             numpy.ndarray: Fisher information matrix.
 
         """
+        # Iterate over each contrast to simulate.
         qs, counts, models = [], [], []
         for contrast in contrasts:
-            model, data = simulate(self._using_conditions(contrast, underlayers),
-                                   angle_times, scale=1, bkg=5e-6, dq=2)
+            # Simulate data for the contrast.
+            sample = self._using_conditions(contrast, underlayers)
+            model, data = simulate(sample, angle_times, scale=1, bkg=5e-6, dq=2)
             qs.append(data[:,0])
             counts.append(data[:,3])
             models.append(model)
-            
+
+        # Exclude certain parameters if underlayers are being used.
         if underlayers is None:
             return fisher(qs, self.params, counts, models)
         else:
             return fisher(qs, self.underlayer_params, counts, models)
 
     @abstractmethod
-    def _using_conditions(self, contrast, underlayers):
-        """Creates a refnx structure describing the given measurement conditions.
-
-        Args:
-            contrasts (list): SLDs of contrasts to simulate.
-            underlayers (list): thickness and SLD of each underlayer to add.
-
-        Returns:
-            refnx.reflect.Structure: structure describing measurement conditions.
-
-        """
+    def _using_conditions(self):
+        """Creates a structure describing the given measurement conditions."""
         pass
 
-    def sld_profile(self, save_path, filename='sld_profile', ylim=None, legend=True):
+    def sld_profile(self, save_path, filename='sld_profile',
+                    ylim=None, legend=True):
         """Plots the SLD profile of the lipid sample.
 
         Args:
             save_path (str): path to directory to save SLD profile to.
-            filename
-            ylim
-            legend
+            filename (str): file name to use when saving the SLD profile.
+            ylim (tuple): limits to place on the SLD profile y-axis.
+            legend (bool): whether to include a legend in the SLD profile.
 
         """
         fig = plt.figure()
@@ -196,12 +160,17 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         for structure in self.structures:
             ax.plot(*structure.sld_profile(self.distances))
 
-        ax.set_xlabel('$\mathregular{Distance\ (\AA)}$', fontsize=11, weight='bold')
-        ax.set_ylabel('$\mathregular{SLD\ (10^{-6} \AA^{-2})}$', fontsize=11, weight='bold')
-        
+        x_label = '$\mathregular{Distance\ (\AA)}$'
+        y_label = '$\mathregular{SLD\ (10^{-6} \AA^{-2})}$'
+
+        ax.set_xlabel(x_label, fontsize=11, weight='bold')
+        ax.set_ylabel(y_label, fontsize=11, weight='bold')
+
+        # Limit the y-axis if specified.
         if ylim:
             ax.set_ylim(*ylim)
-            
+
+        # Add a legend if specified.
         if legend:
             ax.legend(self.labels)
 
@@ -213,8 +182,8 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         """Plots the reflectivity profile of the lipid sample.
 
         Args:
-            save_path (str): path to directory to save reflectivity profile to.
-            filename
+            save_path (str): path to directory to save profile to.
+            filename (str): file name to use when saving the profile.
 
         """
         fig = plt.figure()
@@ -223,27 +192,32 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         # Iterate over each measured contrast.
         colours = plt.rcParams['axes.prop_cycle'].by_key()['color']
         for i, objective in enumerate(self.objectives):
-            # Get the measured data and calculate the model reflectivity at each point.
+            # Get the measured data and calculate the model reflectivity.
             q, r, dr = objective.data.x, objective.data.y, objective.data.y_err
             r_model = objective.model(q)
 
-            # Offset the data (for clarity).
+            # Offset the data, for clarity.
             offset = 10**(-2*i)
             r *= offset
             dr *= offset
             r_model *= offset
 
+            # Add the offset in the label.
             label = self.labels[i]
             if offset != 1:
                 label += ' $\mathregular{(x10^{-'+str(2*i)+'})}$'
 
             # Plot the measured data and the model reflectivity.
-            ax.errorbar(q, r, dr, marker='o', ms=3, lw=0, elinewidth=1, capsize=1.5,
+            ax.errorbar(q, r, dr,
+                        marker='o', ms=3, lw=0, elinewidth=1, capsize=1.5,
                         color=colours[i], label=label)
             ax.plot(q, r_model, color=colours[i], zorder=20)
 
-        ax.set_xlabel('$\mathregular{Q\ (Å^{-1})}$', fontsize=11, weight='bold')
-        ax.set_ylabel('Reflectivity (arb.)', fontsize=11, weight='bold')
+        x_label = '$\mathregular{Q\ (Å^{-1})}$'
+        y_label = 'Reflectivity (arb.)'
+
+        ax.set_xlabel(x_label, fontsize=11, weight='bold')
+        ax.set_ylabel(y_label, fontsize=11, weight='bold')
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.set_ylim(1e-10, 3)
@@ -253,14 +227,15 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, filename)
 
-    def nested_sampling(self, contrasts, angle_times, save_path, filename, underlayers=None, dynamic=False):
+    def nested_sampling(self, contrasts, angle_times, save_path, filename,
+                        underlayers=None, dynamic=False):
         """Runs nested sampling on simulated data of the lipid sample.
 
         Args:
             contrasts (list): SLDs of contrasts to simulate.
-            angle_times (list): points and counting times for each measurement angle to simulate.
+            angle_times (list): points and times for each angle to simulate.
             save_path (str): path to directory to save corner plot to.
-            filename (str): name of file to save corner plot to.
+            filename (str): file name to use when saving corner plot.
             underlayers (list): thickness and SLD of each underlayer to add.
             dynamic (bool): whether to use static or dynamic nested sampling.
 
@@ -269,14 +244,15 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         objectives = []
         for contrast in contrasts:
             # Simulate an experiment using the given contrast.
-            model, data = simulate(self._using_conditions(contrast, underlayers), angle_times,
-                                   scale=1, bkg=5e-6, dq=2)
+            sample = self._using_conditions(contrast, underlayers)
+            model, data = simulate(sample, angle_times, scale=1, bkg=5e-6, dq=2)
             dataset = refnx.dataset.ReflectDataset([data[:,0], data[:,1], data[:,2]])
             objectives.append(refnx.analysis.Objective(model, dataset))
 
         # Combine objectives into a single global objective.
         global_objective = refnx.analysis.GlobalObjective(objectives)
-        
+
+        # Exclude certain parameters if underlayers are being used.
         if underlayers is None:
             global_objective.varying_parameters = lambda: self.params
         else:

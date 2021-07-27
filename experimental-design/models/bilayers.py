@@ -8,16 +8,16 @@ import refnx.dataset, refnx.reflect, refnx.analysis
 from base import BaseLipid
 
 class BilayerDMPC(BaseLipid):
-    """Defines a model describing a symmetric DMPC bilayer.
+    """Defines a model describing a DMPC bilayer.
 
     Attributes:
-        name (str): name of the sample.
+        name (str): name of the bilayer sample.
         data_path (str): path to directory containing measured data.
-        scales (list): experimental scale factor for each measured contrast.
-        bkgs (list): level of instrument background noise for each measured contrast.
-        dq (float): instrument resolution.
         labels (list): label for each measured contrast.
         distances (numpy.ndarray): SLD profile x-axis range.
+        scales (list): experimental scale factor for each measured contrast.
+        bkgs (list): level of instrument background noise for each contrast.
+        dq (float): instrument resolution.
         si_sld (float): SLD of silicon substrate.
         sio2_sld (float): SLD of silicon oxide.
         dmpc_hg_vol (float): headgroup volume of DMPC bilayer.
@@ -33,19 +33,22 @@ class BilayerDMPC(BaseLipid):
         dmpc_apm (refnx.analysis.Parameter): DMPC area per molecule.
         bilayer_rough (refnx.analysis.Parameter): bilayer roughness.
         bilayer_solv (refnx.analysis.Parameter): bilayer hydration.
-        hg_waters (refnx.analysis.Parameter): headgroup bound waters.
-        params (list): varying model parameters.
-        underlayer_params
-        structures
-        objectives
+        hg_waters (refnx.analysis.Parameter): amount of headgroup bound water.
+        params (list): model parameters.
+        underlayer_params (list): model parameters when underlayers are added.
+        structures (list): structures corresponding to each measured contrast.
+        objectives (list): objectives corresponding to each measured contrast.
 
     """
     def __init__(self):
         self.name = 'DMPC_bilayer'
-        self.data_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'DMPC_bilayer')
+        self.data_path = os.path.join(os.path.dirname(__file__),
+                                      '..',
+                                      'data',
+                                      'DMPC_bilayer')
+
         self.labels = ['Si-D2O', 'Si-DMPC-D2O', 'Si-DMPC-H2O']
         self.distances = np.linspace(-20, 95, 500)
-        
         self.scales = [0.677763, 0.645217, 0.667776]
         self.bkgs = [3.20559e-06, 2.05875e-06, 2.80358e-06]
         self.dq = 2
@@ -92,7 +95,7 @@ class BilayerDMPC(BaseLipid):
         for param in self.params:
             param.vary=True
 
-        # Call the base bilayer class' constructor.
+        # Call the BaseLipid constructor.
         super().__init__()
 
     def _create_objectives(self):
@@ -121,7 +124,7 @@ class BilayerDMPC(BaseLipid):
         sld_hg_d2o = (dmpc_hg_sl_d2o / vol_hg) * 1e6 # SLD = sum b / v
         sld_hg_h2o = (dmpc_hg_sl_h2o / vol_hg) * 1e6
 
-        # Calculate the thickness from the headgroup volume over the lipid area per molecule.
+        # Calculate thickness from headgroup volume over lipid APM.
         hg_thick = vol_hg / self.dmpc_apm # Thickness = v / APM
 
         # Calculate the thickness of the tailgroup
@@ -131,11 +134,12 @@ class BilayerDMPC(BaseLipid):
         substrate = refnx.reflect.SLD(self.si_sld)
         sio2 = refnx.reflect.Slab(self.sio2_thick, self.sio2_sld, self.si_rough, vfsolv=self.sio2_solv)
 
-        inner_hg_d2o = refnx.reflect.Slab(hg_thick, sld_hg_d2o,  self.sio2_rough,    vfsolv=self.bilayer_solv)
-        outer_hg_d2o = refnx.reflect.Slab(hg_thick, sld_hg_d2o,  self.bilayer_rough, vfsolv=self.bilayer_solv)
-        inner_hg_h2o = refnx.reflect.Slab(hg_thick, sld_hg_d2o,  self.sio2_rough,    vfsolv=self.bilayer_solv)
-        outer_hg_h2o = refnx.reflect.Slab(hg_thick, sld_hg_h2o,  self.bilayer_rough, vfsolv=self.bilayer_solv)
-        tg           = refnx.reflect.Slab(tg_thick, self.tg_sld, self.bilayer_rough, vfsolv=self.bilayer_solv)
+        inner_hg_d2o = refnx.reflect.Slab(hg_thick, sld_hg_d2o, self.sio2_rough,    vfsolv=self.bilayer_solv)
+        outer_hg_d2o = refnx.reflect.Slab(hg_thick, sld_hg_d2o, self.bilayer_rough, vfsolv=self.bilayer_solv)
+        inner_hg_h2o = refnx.reflect.Slab(hg_thick, sld_hg_d2o, self.sio2_rough,    vfsolv=self.bilayer_solv)
+        outer_hg_h2o = refnx.reflect.Slab(hg_thick, sld_hg_h2o, self.bilayer_rough, vfsolv=self.bilayer_solv)
+
+        tg = refnx.reflect.Slab(tg_thick, self.tg_sld, self.bilayer_rough, vfsolv=self.bilayer_solv)
 
         # Structure corresponding to measuring the Si/D2O interface.
         si_D2O_structure = substrate | sio2 | D2O(rough=self.sio2_rough)
@@ -153,7 +157,7 @@ class BilayerDMPC(BaseLipid):
         # Define models using structures above.
         models = [refnx.reflect.ReflectModel(structure, scale=scale, bkg=bkg, dq=self.dq)
                   for structure, scale, bkg in zip(self.structures, self.scales, self.bkgs)]
-        
+
         # Load the measured datasets.
         datasets = [refnx.dataset.ReflectDataset(os.path.join(self.data_path, '{}.dat'.format(label)))
                     for label in self.labels]
@@ -163,24 +167,26 @@ class BilayerDMPC(BaseLipid):
                            for model, data in zip(models, datasets)]
 
     def _using_conditions(self, contrast_sld, underlayers=None):
-        """Creates a structure representing the bilayer measured using given measurement conditions.
+        """Creates a structure representing the bilayer measured using
+           given measurement conditions.
 
         Args:
             contrast_sld (float): SLD of contrast to simulate.
             underlayers (list): thickness and SLD of each underlayer to add.
 
         Returns:
-            refnx.reflect.Structure: structure describing measurement conditions.
+            refnx.reflect.Structure: bilayer using measurement conditions.
 
         """
         # Calculate the SLD of the headgroup with the given contrast SLD.
         hg_sld = contrast_sld*0.27 + 1.98*0.73
 
-        # Calculate the headgroup and tailgroup thicknesses with the given contrast SLD.
+        # Calculate the headgroup and tailgroup thicknesses.
         vol_hg = self.dmpc_hg_vol + self.hg_waters*self.water_vol
         hg_thick = vol_hg / self.dmpc_apm
         tg_thick = self.dmpc_tg_vol / self.dmpc_apm
 
+        # Define the layer structure.
         substrate = refnx.reflect.SLD(self.si_sld)
         solution = refnx.reflect.SLD(contrast_sld)(rough=self.bilayer_rough)
 
@@ -188,27 +194,30 @@ class BilayerDMPC(BaseLipid):
         outer_hg = refnx.reflect.Slab(hg_thick, hg_sld, self.bilayer_rough, vfsolv=self.bilayer_solv)
         tg = refnx.reflect.Slab(tg_thick, self.tg_sld, self.bilayer_rough, vfsolv=self.bilayer_solv)
 
-        # Add the underlayer if specified.
+        # Add underlayers if specified.
         if underlayers is None:
             sio2 = refnx.reflect.Slab(self.sio2_thick, self.sio2_sld, self.si_rough, vfsolv=self.sio2_solv)
             return substrate | sio2 | inner_hg | tg | tg | outer_hg | solution
         else:
-            # Add each underlayer with given thickness and SLD.
+            # Use 0% hydration for the SiO2 layer.
             sio2 = refnx.reflect.Slab(self.sio2_thick, self.sio2_sld, self.si_rough, vfsolv=0)
             structure = substrate | sio2
+
+            # Add each underlayer with given thickness and SLD.
             for thick, sld in underlayers:
-                underlayer = refnx.reflect.SLD(sld)(thick, 2)
+                underlayer = refnx.reflect.SLD(sld)(thick, 2) # Default 2 roughness.
                 structure |= underlayer
+
             return structure | inner_hg | tg | tg | outer_hg | solution
 
 class BilayerDPPC(BaseLipid):
-    """Defines a model describing an asymmetric bilayer defined by a single
-       asymmetry value.
+    """Defines a model describing an asymmetric DPPC/Ra LPS bilayer
+       defined by a single asymmetry value.
 
     Attributes:
-        name
-        labels (list): label for each measured contrast.
+        name (str): name of the bilayer sample.
         data_path (str): path to directory containing measured data.
+        labels (list): label for each measured contrast.
         distances (numpy.ndarray): SLD profile x-axis range.
         contrast_slds (list): SLD of each measured contrast.
         scale (float): experimental scale factor for measured contrasts.
@@ -216,11 +225,11 @@ class BilayerDPPC(BaseLipid):
         dq (float): instrument resolution.
         si_sld (float): SLD of silicon substrate.
         sio2_sld (float): SLD of silicon oxide.
-        pc_hg_sld (float):
-        dPC_tg (float):
-        hLPS_tg (float):
-        core_D2O (float):
-        core_H2O (float):
+        pc_hg_sld (float): pc headgroup SLD.
+        dppc_tg (float): deuterated DPPC tailgroup SLD.
+        lps_tg (float): hydrogenated Ra LPS tailgroup SLD.
+        core_d2o (float): core SLD in D2O.
+        core_h2o (float): core SLD in H2O.
         si_rough (refnx.analysis.Parameter): silicon substrate roughness.
         sio2_thick (refnx.analysis.Parameter): silicon oxide thickness.
         sio2_rough (refnx.analysis.Parameter): silicon oxide roughness.
@@ -233,32 +242,36 @@ class BilayerDPPC(BaseLipid):
         tg_solv (refnx.analysis.Parameter): tailgroup hydration.
         core_thick (refnx.analysis.Parameter): core thickness.
         core_solv (refnx.analysis.Parameter): core hydration.
-        asym_value
+        asym_value (refnx.analysis.Parameter): bilayer asymmetry parameter.
         params (list): varying model parameters.
-        underlayer_params
-        structures
-        objectives
+        underlayer_params (list): model parameters when underlayers are added.
+        structures (list): structures corresponding to each measured contrast.
+        objectives (list): objectives corresponding to each measured contrast.
 
     """
     def __init__(self):
         self.name = 'DPPC_RaLPS_bilayer'
+        self.data_path = os.path.join(os.path.dirname(__file__),
+                                      '..',
+                                      'data',
+                                      'DPPC_RaLPS_bilayer')
+
         self.labels = ['dDPPC-RaLPS-D2O', 'dDPPC-RaLPS-SMW', 'dDPPC-RaLPS-H2O']
-        self.data_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'DPPC_RaLPS_bilayer')
         self.distances = np.linspace(-30, 110, 500)
-        
+
         self.contrast_slds = [6.14, 2.07, -0.56]
         self.scale = 0.8
         self.bkgs = [4.6e-6, 8.6e-6, 8.7e-6]
         self.dq = 4
 
         # Define known values.
-        self.si_sld    =  2.07
-        self.sio2_sld  =  3.41
-        self.pc_hg_sld =  1.98
-        self.dPC_tg    =  7.45
-        self.hLPS_tg   = -0.37
-        self.core_D2O  =  4.2
-        self.core_H2O  =  2.01
+        self.si_sld = 2.07
+        self.sio2_sld = 3.41
+        self.pc_hg_sld = 1.98
+        self.dppc_tg_sld = 7.45
+        self.lps_tg_sld = -0.37
+        self.core_d2o_sld = 4.2
+        self.core_h2o_sld = 2.01
 
         # Define the varying parameters of the model.
         self.si_rough       = refnx.analysis.Parameter(5.5,    'Si/SiO2 Roughness',         (3,8))
@@ -274,7 +287,7 @@ class BilayerDPPC(BaseLipid):
         self.core_thick     = refnx.analysis.Parameter(28.7,   'Core Thickness',            (0,50))
         self.core_solv      = refnx.analysis.Parameter(0.26,   'Core Hydration',            (0,1))
         self.asym_value     = refnx.analysis.Parameter(0.95,   'Asymmetry Value',           (0,1))
-        
+
         self.params = [self.si_rough,
                        self.sio2_thick,
                        self.sio2_rough,
@@ -303,13 +316,15 @@ class BilayerDPPC(BaseLipid):
         # Vary all of the parameters defined above.
         for param in self.params:
             param.vary=True
-            
-        self._create_objectives()
+
+        # Call the BaseLipid constructor.
+        super().__init__()
 
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
         # Define structures for each contrast.
-        self.structures = [self._using_conditions(contrast_sld) for contrast_sld in self.contrast_slds]
+        self.structures = [self._using_conditions(contrast_sld)
+                           for contrast_sld in self.contrast_slds]
 
         # Label each structure.
         for i, label in enumerate(self.labels):
@@ -324,57 +339,68 @@ class BilayerDPPC(BaseLipid):
                     for label in self.labels]
 
         # Combine models and datasets into objectives corresponding to each contrast.
-        self.objectives = [refnx.analysis.Objective(model, data) for model, data in list(zip(models, datasets))]
+        self.objectives = [refnx.analysis.Objective(model, data)
+                           for model, data in list(zip(models, datasets))]
 
     def _using_conditions(self, contrast_sld, underlayers=None):
-        """Creates a structure representing the bilayer measured using given measurement conditions.
+        """Creates a structure representing the bilayer measured using the
+           given measurement conditions.
 
         Args:
             contrast_sld (float): SLD of contrast to simulate.
             underlayers (list): thickness and SLD of each underlayer to add.
 
         Returns:
-            refnx.reflect.Structure: structure describing measurement conditions.
+            refnx.reflect.Structure: bilayer using measurement conditions.
 
         """
         # Calculate core SLD with the given contrast SLD.
         contrast_point = (contrast_sld + 0.56) / (6.35 + 0.56)
-        core_sld = contrast_point*self.core_D2O + (1-contrast_point)*self.core_H2O
+        core_sld = contrast_point*self.core_d2o + (1-contrast_point)*self.core_h2o
 
         # Use asymmetry to define inner and outer tailgroup SLDs.
-        inner_tg_sld = self.asym_value*self.dPC_tg + (1-self.asym_value)*self.hLPS_tg
-        outer_tg_sld = self.asym_value*self.hLPS_tg + (1-self.asym_value)*self.dPC_tg
+        inner_tg_sld = self.asym_value*self.dppc_tg + (1-self.asym_value)*self.lps_tg
+        outer_tg_sld = self.asym_value*self.lps_tg + (1-self.asym_value)*self.dppc_tg
 
+        # Define the layers of the model.
         substrate = refnx.reflect.SLD(self.si_sld)
-        solution  = refnx.reflect.SLD(contrast_sld)(0, self.bilayer_rough)
 
         inner_hg = refnx.reflect.Slab(self.inner_hg_thick, self.pc_hg_sld, self.sio2_rough,    vfsolv=self.inner_hg_solv)
         inner_tg = refnx.reflect.Slab(self.inner_tg_thick, inner_tg_sld,   self.bilayer_rough, vfsolv=self.tg_solv)
         outer_tg = refnx.reflect.Slab(self.outer_tg_thick, outer_tg_sld,   self.bilayer_rough, vfsolv=self.tg_solv)
-        core     = refnx.reflect.Slab(self.core_thick,     core_sld,       self.bilayer_rough, vfsolv=self.core_solv)
 
-        # Add the underlayer if specified.
+        core = refnx.reflect.Slab(self.core_thick, core_sld, self.bilayer_rough, vfsolv=self.core_solv)
+
+        solution = refnx.reflect.SLD(contrast_sld)(0, self.bilayer_rough)
+
+        # Add the underlayers if specified.
         if underlayers is None:
             sio2 = refnx.reflect.Slab(self.sio2_thick, self.sio2_sld, self.si_rough, vfsolv=self.sio2_solv)
             return substrate | sio2 | inner_hg | inner_tg | outer_tg | core | solution
         else:
-            # Add each underlayer with given thickness and SLD.
+            # Use 0% hydration for the SiO2 layer.
             sio2 = refnx.reflect.Slab(self.sio2_thick, self.sio2_sld, self.si_rough, vfsolv=0)
             structure = substrate | sio2
-            for thick, sld in underlayers:
-                underlayer = refnx.reflect.SLD(sld)(thick, 2)
-                structure |= underlayer
-            return structure | inner_hg | inner_tg | outer_tg | core | solution
-    
-if __name__ == '__main__':
-    save_path = '../results'
 
-    dmpc_bilayer = BilayerDMPC() 
-    dmpc_bilayer.sld_profile(save_path)    
+            # Add each underlayer with given thickness and SLD.
+            for thick, sld in underlayers:
+                underlayer = refnx.reflect.SLD(sld)(thick, 2) # Default 2 roughness.
+                structure |= underlayer
+
+            return structure | inner_hg | inner_tg | outer_tg | core | solution
+
+if __name__ == '__main__':
+    save_path = '../paper/results'
+
+    # Save the SLD and reflectivity profiles of the DMPC bilayer.
+    dmpc_bilayer = BilayerDMPC()
+    dmpc_bilayer.sld_profile(save_path)
     dmpc_bilayer.reflectivity_profile(save_path)
 
-    dppc_bilayer = BilayerDPPC() 
-    dppc_bilayer.sld_profile(save_path)    
+    # Save the SLD and reflectivity profiles of the DPPC/Ra LPS bilayer.
+    dppc_bilayer = BilayerDPPC()
+    dppc_bilayer.sld_profile(save_path)
     dppc_bilayer.reflectivity_profile(save_path)
 
+    # Close the plots.
     plt.close('all')

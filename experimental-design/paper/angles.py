@@ -10,7 +10,7 @@ from visualise import underlayer_choice
 
 from utils import save_plot
     
-def _angle_results(save_path='./results'):
+def _angle_plots(save_path='./results'):
     """Investigates the initial angle choice for a sample and how the choice of
        next angle changes as the counting time of the initial angle increases.
 
@@ -45,7 +45,7 @@ def _angle_results(save_path='./results'):
     time_range = np.linspace(0, time*8, 50)
     angle_choice_with_time(sample, initial_angle, angle_range, time_range, points, time, save_path, contrasts)
 
-def _contrast_results(save_path='./results'):
+def _contrast_plots(save_path='./results'):
     """Investigates the choice of contrasts for a sample.
 
     Args:
@@ -75,7 +75,7 @@ def _contrast_results(save_path='./results'):
     bilayer.nested_sampling([6.36, 6.36], angle_times, save_path, 'D2O_D2O')
     bilayer.nested_sampling([-0.56, 6.36], angle_times, save_path, 'H2O_D2O')
 
-def _underlayer_results(save_path='./results'):
+def _underlayer_plots(save_path='./results'):
     """Investigates the choice of underlayer thickness and SLD for a sample.
 
     Args:
@@ -162,8 +162,143 @@ def _figure_2():
 
     save_plot(fig, '..', 'figures', 'figure_2')
 
+def _angle_results(optimiser, contrasts, total_time, angle_bounds, save_path='./results'):
+    """Optimises the measurement angles and associated counting times for an experiment
+       using different numbers of angles.
+
+    Args:
+        optimiser (optimise.Optimiser): optimiser for the experiment.
+        total_time (float): total time budget for the experiment.
+        angle_bounds (tuple): interval containing angles to consider.
+        save_path (str): path to directory to save results to.
+
+    """
+    save_path = os.path.join(save_path, optimiser.sample.name)
+
+    # Create a new text file for the results.
+    with open(os.path.join(save_path, 'optimised_angles.txt'), 'w') as file:
+        # Optimise the experiment using 1-4 angles.
+        for i, num_angles in enumerate([1, 2, 3, 4]):
+            # Display progress.
+            print('>>> {0}/{1}'.format(i, 4))
+
+            # Time how long the optimisation takes.
+            start = time.time()
+            angles, splits, val = optimiser.optimise_angle_times(num_angles, contrasts, total_time, angle_bounds, verbose=False)
+            end = time.time()
+
+            # Convert to percentages.
+            splits = np.array(splits)*100
+
+            # Round the optimisation function value to 4 significant figures.
+            val = np.format_float_positional(val, precision=4, unique=False, fractional=False, trim='k')
+
+            # Write the optimised conditions, objective value and computation time to the results file.
+            file.write('----------- {} Angles -----------\n'.format(num_angles))
+            file.write('Angles: {}\n'.format(list(np.round(angles, 2))))
+            file.write('Splits (%): {}\n'.format(list(np.round(splits, 1))))
+            file.write('Objective value: {}\n'.format(val))
+            file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
+
+
+def _contrast_results(optimiser, total_time, angle_splits, contrast_bounds, save_path='./results'):
+    """Optimises the contrasts of an experiment using different numbers of contrasts.
+
+    Args:
+        optimiser (optimise.Optimiser): optimiser for the experiment.
+        total_time (float): time budget for experiment.
+        angle_splits (list): points and proportion of total counting time for each angle.
+        contrast_bounds (tuple): interval containing contrast SLDs to consider.
+
+        save_path (str): path to directory to save results to.
+
+    """
+    save_path = os.path.join(save_path, optimiser.sample.name)
+
+    # Create a new text file for the results.
+    with open(os.path.join(save_path, 'optimised_contrasts.txt'), 'w') as file:
+        # Optimise the experiment using 1-4 contrasts.
+        for i, num_contrasts in enumerate([1, 2, 3, 4]):
+            # Display progress.
+            print('>>> {0}/{1}'.format(i, 4))
+
+            # Time how long the optimisation takes.
+            start = time.time()
+            contrasts, splits, val = optimiser.optimise_contrasts(num_contrasts, angle_splits, total_time, contrast_bounds, verbose=False)
+            end = time.time()
+            
+            # Convert to percentages.
+            splits = np.array(splits)*100
+
+            # Round the optimisation function value to 4 significant figures.
+            val = np.format_float_positional(val, precision=4, unique=False, fractional=False, trim='k')
+
+            # Write the optimised conditions, objective value and computation time to the results file.
+            file.write('----------- {} Contrasts -----------\n'.format(num_contrasts))
+            file.write('Contrasts: {}\n'.format(list(np.round(contrasts, 2))))
+            file.write('Splits (%): {}\n'.format(list(np.round(splits, 1))))
+            file.write('Objective value: {}\n'.format(val))
+            file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
+
+def _underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bounds, save_path='./results'):
+    save_path = os.path.join(save_path, optimiser.sample.name)
+
+    # Create a new text file for the results.
+    with open(os.path.join(save_path, 'optimised_underlayers.txt'), 'w') as file:
+        g = optimiser.sample.underlayer_info(angle_times, contrasts, [])
+        val = -np.linalg.eigvalsh(g)[0]
+        val = np.format_float_positional(val, precision=4, unique=False, fractional=False, trim='k')
+        
+        file.write('----------- No Underlayers -----------\n')
+        file.write('Thicknesses: {}\n'.format([]))
+        file.write('SLDs: {}\n'.format([]))
+        file.write('Objective value: {}\n\n'.format(val))
+        
+        # Optimise the experiment using 1-4 contrasts.
+        for i, num_underlayers in enumerate([1, 2, 3]):
+            # Display progress.
+            print('>>> {0}/{1}'.format(i, 3))
+
+            # Time how long the optimisation takes.
+            start = time.time()
+            thicknesses, slds, val = optimiser.optimise_underlayers(num_underlayers, angle_times, contrasts, 
+                                                                    thick_bounds, sld_bounds, verbose=False)
+            end = time.time()
+
+            # Round the optimisation function value to 4 significant figures.
+            val = np.format_float_positional(val, precision=4, unique=False, fractional=False, trim='k')
+
+            # Write the optimised conditions, objective value and computation time to the results file.
+            file.write('----------- {} Underlayers -----------\n'.format(num_underlayers))
+            file.write('Thicknesses: {}\n'.format(list(np.round(thicknesses, 1))))
+            file.write('SLDs: {}\n'.format(list(np.round(slds, 2))))
+            file.write('Objective value: {}\n'.format(val))
+            file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
+
 if __name__ == '__main__':
-    _angle_results()
-    #_contrast_results()
-    #_underlayer_results()
+    from bilayers import BilayerDMPC, BilayerDPPC
+
+    sample = BilayerDMPC()
+    optimiser = Optimiser(sample)
+
+    total_time = 1000
+    angle_splits = [(0.7, 100, 0.2), (2.3, 100, 0.8)]
+    contrast_bounds = (-0.56, 6.36)
+    _contrast_results(optimiser, total_time, angle_splits, contrast_bounds)
+
+    contrasts = [-0.56, 6.36]
+    total_time = 1000
+    angle_bounds = (0.2, 4.0)
+    _angle_results(optimiser, contrasts, total_time, angle_bounds)
+    
+    angle_times = [(0.7, 100, 10), (2.3, 100, 40)]
+    contrasts = [-0.56, 6.36]
+    thick_bounds = (0, 500)
+    sld_bounds = (1, 9)
+    _underlayer_results(optimiser, angle_times, contrasts, thick_bounds, sld_bounds)
+
+if __name__ == '__main__':
+    _angle_plots()
+    #_contrast_plots()
+    #_underlayer_plots()
     #_figure_2()

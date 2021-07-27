@@ -13,19 +13,35 @@ from utils import save_plot
 
 def kinetics(sample, angle_range, contrast_range, apm_range, points, time, save_path,
              save_views=False):
+    """Short summary.
+
+    Args:
+        sample (type): Description of parameter `sample`.
+        angle_range (type): Description of parameter `angle_range`.
+        contrast_range (type): Description of parameter `contrast_range`.
+        apm_range (type): Description of parameter `apm_range`.
+        points (type): Description of parameter `points`.
+        time (type): Description of parameter `time`.
+        save_path (type): Description of parameter `save_path`.
+        save_views (type): Description of parameter `save_views`.
+
+    Returns:
+        type: Description of returned object.
+
+    """
     assert isinstance(sample, MonolayerDPPG)
-    
+
     x, y, infos = [], [], []
     for i, contrast_sld in enumerate(contrast_range):
         # Display progress.
         if i % 5 == 0:
             print('>>> {0}/{1}'.format(i*len(angle_range), len(angle_range)*len(contrast_range)))
-        
+
         for angle in angle_range:
             apm = sample.lipid_apm.value
             angle_times = [(angle, points, time/len(apm_range))]
             information = 0
-            
+
             for new_apm in apm_range:
                 sample.lipid_apm.value = new_apm
                 information += sample.contrast_info(angle_times, [contrast_sld])[0, 0]
@@ -37,7 +53,7 @@ def kinetics(sample, angle_range, contrast_range, apm_range, points, time, save_
 
     fig = plt.figure(figsize=[10,8])
     ax = fig.add_subplot(111, projection='3d')
-    
+
     surface = ax.plot_trisurf(x, y, infos, cmap='plasma')
     fig.colorbar(surface, fraction=0.046, pad=0.04)
 
@@ -56,14 +72,27 @@ def kinetics(sample, angle_range, contrast_range, apm_range, points, time, save_
         save_path = os.path.join(save_path, 'angle_contrast_choice', tg_type)
         for i in range(0, 360, 10):
             ax.view_init(elev=40, azim=i)
-            
+
             filename_i = filename + '_' + str(i)
             save_plot(fig, save_path, filename_i)
 
 def _func(x, sample, apm_range, points, time):
+    """Short summary.
+
+    Args:
+        x (type): Description of parameter `x`.
+        sample (type): Description of parameter `sample`.
+        apm_range (type): Description of parameter `apm_range`.
+        points (type): Description of parameter `points`.
+        time (type): Description of parameter `time`.
+
+    Returns:
+        type: Description of returned object.
+
+    """
     angle, contrast_sld = x[0], x[1]
     angle_times = [(angle, points, time/len(apm_range))]
-    
+
     information = 0
     apm = sample.lipid_apm.value
     for new_apm in apm_range:
@@ -74,26 +103,50 @@ def _func(x, sample, apm_range, points, time):
     return -information
 
 def optimise(sample, angle_bounds, contrast_bounds, apm_range, points, time, save_path):
+    """Short summary.
+
+    Args:
+        sample (type): Description of parameter `sample`.
+        angle_bounds (type): Description of parameter `angle_bounds`.
+        contrast_bounds (type): Description of parameter `contrast_bounds`.
+        apm_range (type): Description of parameter `apm_range`.
+        points (type): Description of parameter `points`.
+        time (type): Description of parameter `time`.
+        save_path (type): Description of parameter `save_path`.
+
+    Returns:
+        type: Description of returned object.
+
+    """
     bounds = [angle_bounds, contrast_bounds]
 
     # Arguments for optimisation function
     args = [sample, apm_range, points, time]
-    
+
     # Optimise angles and times, and return results.
     res = differential_evolution(_func, bounds, args=args, polish=False, tol=0.001,
                                  updating='deferred', workers=-1, disp=False)
-    
+
     return res.x[0], res.x[1], res.fun
 
 def _kinetics_results(save_path='./results'):
+    """Short summary.
+
+    Args:
+        save_path (type): Description of parameter `save_path`.
+
+    Returns:
+        type: Description of returned object.
+
+    """
     angle_range = np.linspace(0.2, 4, 75)
     contrast_range = np.linspace(-0.56, 6.36, 75)
     apm_range = np.linspace(54.1039, 500, 20)
     points = 100
     time = 100
-    
+
     monolayer_h, monolayer_d = MonolayerDPPG(deuterated=False), MonolayerDPPG(deuterated=True)
-    
+
     kinetics(monolayer_h, angle_range, contrast_range, apm_range, points, time, save_path, save_views=True)
     kinetics(monolayer_d, angle_range, contrast_range, apm_range, points, time, save_path, save_views=True)
 
@@ -103,7 +156,7 @@ def _kinetics_results(save_path='./results'):
     with open(os.path.join(save_path, monolayer_h.name, 'optimised.txt'), 'w') as file:
         for monolayer, label in zip([monolayer_h, monolayer_d], ['Hydrogenated', 'Deuterated']):
             angle, contrast, val = optimise(monolayer, angle_bounds, contrast_bounds, apm_range, points, time, save_path)
-    
+
             file.write('-------------- ' + label + ' --------------\n')
             file.write('Angle: {}\n'.format(round(angle, 2)))
             file.write('Contrast: {}\n'.format(round(contrast, 2)))
