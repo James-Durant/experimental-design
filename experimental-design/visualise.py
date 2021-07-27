@@ -1,16 +1,15 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os, sys
+plt.rcParams['figure.figsize'] = (9,7)
+plt.rcParams['figure.dpi'] = 600
 # Add the models directory to the system path.
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
-plt.rcParams['figure.figsize'] = (6,4)
-plt.rcParams['figure.dpi'] = 600
 
 from matplotlib.animation import FuncAnimation, PillowWriter
-
 from itertools import combinations
-from utils import save_plot
 
+from utils import save_plot
 from base import VariableAngle, VariableContrast, VariableUnderlayer
 
 def angle_choice(sample, initial_angle_times, angle_range, points_new,

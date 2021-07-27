@@ -1,7 +1,7 @@
 import numpy as np
 import os, sys
 # Add the models directory to the system path.
-# Add the current directory to the path to avoid issues with threads.
+# Add the current directory to the path to avoid issues with threading.
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 sys.path.append(os.path.dirname(__file__))
 

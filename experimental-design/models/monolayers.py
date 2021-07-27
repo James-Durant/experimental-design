@@ -7,45 +7,46 @@ import refnx.dataset, refnx.reflect, refnx.analysis
 from base import BaseLipid
 
 class MonolayerDPPG(BaseLipid):
-    """Short summary.
-
-    Args:
-        deuterated (type): Description of parameter `deuterated`.
+    """Defines a model describing a DPPG monolayer.
 
     Attributes:
-        name (type): Description of parameter `name`.
-        data_path (type): Description of parameter `data_path`.
-        labels (type): Description of parameter `labels`.
-        distances (type): Description of parameter `distances`.
-        scales (type): Description of parameter `scales`.
-        bkgs (type): Description of parameter `bkgs`.
-        dq (type): Description of parameter `dq`.
-        air_tg_rough (type): Description of parameter `air_tg_rough`.
-        lipid_apm (type): Description of parameter `lipid_apm`.
-        hg_waters (type): Description of parameter `hg_waters`.
-        monolayer_rough (type): Description of parameter `monolayer_rough`.
-        non_lipid_vf (type): Description of parameter `non_lipid_vf`.
-        protein_tg (type): Description of parameter `protein_tg`.
-        protein_hg (type): Description of parameter `protein_hg`.
-        protein_thick (type): Description of parameter `protein_thick`.
-        protein_vfsolv (type): Description of parameter `protein_vfsolv`.
-        water_rough (type): Description of parameter `water_rough`.
-        params (type): Description of parameter `params`.
-        deuterated
+        name (str): name of the monolayer sample.
+        data_path (str): path to directory containing measured data.
+        labels (list): label for each measured contrast.
+        distances (numpy.ndarray): SLD profile x-axis range.
+        deuterated (bool): whether the tailgroups are deuterated or not.
+        scales (list): experimental scale factor for each measured contrast.
+        bkgs (list): level of instrument background noise for each contrast.
+        dq (float): instrument resolution.
+        air_tg_rough (refnx.analysis.Parameter): air/tailgroup roughness.
+        lipid_apm (refnx.analysis.Parameter): lipid area per molecule.
+        hg_waters (refnx.analysis.Parameter): amount of headgroup bound water.
+        monolayer_rough (refnx.analysis.Parameter): monolayer roughness.
+        non_lipid_vf (refnx.analysis.Parameter): non-lipid volume fraction.
+        protein_tg (refnx.analysis.Parameter): protein tailgroup volume fraction.
+        protein_hg (refnx.analysis.Parameter): protein headgroup volume fraction.
+        protein_thick (refnx.analysis.Parameter): protein thickness.
+        protein_vfsolv (refnx.analysis.Parameter): protein hydration.
+        water_rough (refnx.analysis.Parameter): protein/water roughness.
+        params (list): varying model parameters.
 
     """
     def __init__(self, deuterated=False):
         self.name = 'DPPG_monolayer'
-        self.data_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'DPPG_monolayer')
+        self.data_path = os.path.join(os.path.dirname(__file__),
+                                      '..',
+                                      'data',
+                                      'DPPG_monolayer')
+
         self.labels = ['hDPPG-D2O', 'dDPPG-NRW', 'hDPPG-NRW']
         self.distances = np.linspace(-25, 90, 500)
-
         self.deuterated = deuterated
 
         self.scales = [1.8899, 1.8832, 1.8574]
         self.bkgs = [3.565e-6, 5.348e-6, 6.542e-6]
         self.dq = 3
 
+        # Define the varying parameters of the model.
         self.air_tg_rough    = refnx.analysis.Parameter( 5.0000, 'Air/Tailgroup Roughness',   ( 5, 8))
         self.lipid_apm       = refnx.analysis.Parameter(54.1039, 'Lipid Area Per Molecule',   (30, 80))
         self.hg_waters       = refnx.analysis.Parameter( 6.6874, 'Headgroup Bound Waters',    ( 0, 20))
@@ -57,32 +58,69 @@ class MonolayerDPPG(BaseLipid):
         self.protein_vfsolv  = refnx.analysis.Parameter( 0.5501, 'Protein Hydration',         ( 0, 100))
         self.water_rough     = refnx.analysis.Parameter( 3.4590, 'Protein/Water Roughness',   ( 0, 15))
 
+        # We are only interested in the lipid APM.
         self.params = [self.lipid_apm]
 
         # Vary all of the parameters defined above.
         for param in self.params:
             param.vary=True
 
+        # Call the BaseLipid constructor.
         super().__init__()
 
-    def _using_conditions(self, contrast_sld, underlayers=None, deuterated=None, protein=False):
-        """Short summary.
+    def _create_objectives(self, protein=True):
+        """Creates objectives corresponding to each measured contrast.
 
         Args:
-            contrast_sld (type): Description of parameter `contrast_sld`.
-            underlayers (type): Description of parameter `underlayers`.
-            deuterated (type): Description of parameter `deuterated`.
-            protein (type): Description of parameter `protein`.
-
-        Returns:
-            type: Description of returned object.
+            protein (bool): whether the protein is included or not in the model.
 
         """
+        # SLDs of null-reflecting water (NRW) and D2O.
+        nrw, d2o = 0.1, 6.35
+
+        # Define the measured structures.
+        self.structures = [self._using_conditions(d2o, deuterated=False, protein=protein),
+                           self._using_conditions(nrw, deuterated=True,  protein=protein),
+                           self._using_conditions(nrw, deuterated=False, protein=protein)]
+
+        self.objectives = []
+        for i, structure in enumerate(self.structures):
+            # Define the model.
+            model = refnx.reflect.ReflectModel(structure,
+                                               scale=self.scales[i],
+                                               bkg=self.bkgs[i]*self.scales[i],
+                                               dq=self.dq)
+            # Load the measured data.
+            filename = '{}.dat'.format(self.labels[i])
+            file_path = os.path.join(self.data_path, filename)
+            data = refnx.dataset.ReflectDataset(file_path)
+
+            # Combine model and data into an objective that can be fitted.
+            self.objectives.append(refnx.analysis.Objective(model, data))
+
+    def _using_conditions(self, contrast_sld, underlayers=None,
+                          deuterated=None, protein=False):
+        """Creates a structure representing the monolayer measured using
+           given measurement conditions.
+
+        Args:
+            contrast_sld (float): SLD of contrast to simulate.
+            underlayers (list): thickness and SLD of each underlayer to add.
+            deuterated (bool): whether the tailgroups are deuterated or not.
+            protein (bool): whether to include the protein in the model or not.
+
+        Returns:
+            refnx.reflect.Structure: monolayer using measurement conditions.
+
+        """
+        # Underlayers are not supported for this model.
         assert underlayers is None
 
+        # If not specified, use the object's attribute.
         if deuterated is None:
             deuterated = self.deuterated
 
+        # Convert the units of the given SLD.
         contrast_sld *= 1e-6
 
         # Define known SLDs of D2O and H2O
@@ -148,6 +186,7 @@ class MonolayerDPPG(BaseLipid):
         tg_h_sld = sl_sum_tg_h / tg_vol
         tg_d_sld = sl_sum_tg_d / tg_vol
 
+        # If including the protein in the model.
         if protein:
             # Contrast_point calculation.
             contrast_point = (contrast_sld - h2o_sld) / (d2o_sld - h2o_sld)
@@ -155,7 +194,7 @@ class MonolayerDPPG(BaseLipid):
             # Calculated SLD of protein and hydration
             protein_sld = (contrast_point * protein_d2o_sld) + ((1-contrast_point) * protein_h2o_sld)
 
-            # Bulk in is 0 SLD so no extra terms.
+            # Bulk-in is 0 SLD so no extra terms.
             protein_tg_sld = self.protein_tg * protein_sld
             protein_hg_sld = self.protein_hg * protein_sld
 
@@ -177,62 +216,40 @@ class MonolayerDPPG(BaseLipid):
         hg = refnx.reflect.SLD(hg_sld*1e6, name='Headgroup')(hg_thick, self.monolayer_rough)
         water = refnx.reflect.SLD(contrast_sld*1e6, name='Water')(0, self.water_rough)
 
+        # Add either hydrogenated or deuterated tailgroups.
         structure = air
         if deuterated:
             structure |= tg_d
         else:
             structure |= tg_h
 
+        # Add the protein if specified.
         if protein:
             return structure | hg | protein | water
         else:
             return structure | hg | water
 
-    def _create_objectives(self, protein=True):
-        """Short summary.
-
-        Args:
-            protein (type): Description of parameter `protein`.
-
-        Returns:
-            type: Description of returned object.
-
-        """
-        nrw, d2o = 0.1, 6.35
-
-        self.structures = [self._using_conditions(d2o, deuterated=False, protein=protein),
-                           self._using_conditions(nrw, deuterated=True,  protein=protein),
-                           self._using_conditions(nrw, deuterated=False, protein=protein)]
-
-        models = [refnx.reflect.ReflectModel(structure, scale=scale, bkg=bkg*scale, dq=self.dq)
-                  for structure, scale, bkg in zip(self.structures, self.scales, self.bkgs)]
-
-        datasets = [refnx.dataset.ReflectDataset(os.path.join(self.data_path, '{}.dat'.format(label)))
-                    for label in self.labels]
-
-        self.objectives = [refnx.analysis.Objective(model, data)
-                           for model, data in zip(models, datasets)]
-
     def sld_profile(self, save_path):
-        """Short summary.
+        """Plots the SLD profiles of the monolayer sample.
 
         Args:
-            save_path (type): Description of parameter `save_path`.
-
-        Returns:
-            type: Description of returned object.
+            save_path (str): path to directory to save SLD profile to.
 
         """
+        # Plot the SLD profile without the protein.
         plt.rcParams['figure.figsize'] = (4.5,7)
         self._create_objectives(protein=False)
         super().sld_profile(save_path, 'sld_profile_no_protein', ylim=(-0.6, 7.5), legend=False)
+
+        # Plot the SLD profile with the protein.
         self._create_objectives(protein=True)
         super().sld_profile(save_path, 'sld_profile_protein', ylim=(-0.6, 7.5), legend=False)
         plt.rcParams['figure.figsize'] = (9,7)
 
 if __name__ == '__main__':
-    save_path = '../results'
+    save_path = '../paper/results'
 
+    # Plot the SLD and reflectivity profiles of the DPPG monolayer.
     dppg_monolayer = MonolayerDPPG()
     dppg_monolayer.sld_profile(save_path)
     dppg_monolayer.reflectivity_profile(save_path)

@@ -148,23 +148,25 @@ class BilayerDMPC(BaseLipid):
         si_DMPC_D2O_structure = substrate | sio2 | inner_hg_d2o | tg | tg | outer_hg_d2o | D2O(rough=self.bilayer_rough)
         si_DMPC_H2O_structure = substrate | sio2 | inner_hg_h2o | tg | tg | outer_hg_h2o | H2O(rough=self.bilayer_rough)
 
-        self.structures = [si_D2O_structure, si_DMPC_D2O_structure, si_DMPC_H2O_structure]
+        self.structures = [si_D2O_structure,
+                           si_DMPC_D2O_structure,
+                           si_DMPC_H2O_structure]
 
-        # Label the structures.
+        # Iterate over each measured structure.
+        self.objectives = []
         for i, structure in enumerate(self.structures):
-            structure.name = self.labels[i]
+            # Define the model.
+            model = refnx.reflect.ReflectModel(structure,
+                                               scale=self.scales[i],
+                                               bkg=self.bkgs[i],
+                                               dq=self.dq)
+            # Load the measured data.
+            filename = '{}.dat'.format(self.labels[i])
+            file_path = os.path.join(self.data_path, filename)
+            data = refnx.dataset.ReflectDataset(file_path)
 
-        # Define models using structures above.
-        models = [refnx.reflect.ReflectModel(structure, scale=scale, bkg=bkg, dq=self.dq)
-                  for structure, scale, bkg in zip(self.structures, self.scales, self.bkgs)]
-
-        # Load the measured datasets.
-        datasets = [refnx.dataset.ReflectDataset(os.path.join(self.data_path, '{}.dat'.format(label)))
-                    for label in self.labels]
-
-        # Combine models and datasets into objectives that can be fitted.
-        self.objectives = [refnx.analysis.Objective(model, data)
-                           for model, data in zip(models, datasets)]
+            # Combine model and data into an objective that can be fitted.
+            self.objectives.append(refnx.analysis.Objective(model, data))
 
     def _using_conditions(self, contrast_sld, underlayers=None):
         """Creates a structure representing the bilayer measured using
@@ -326,21 +328,22 @@ class BilayerDPPC(BaseLipid):
         self.structures = [self._using_conditions(contrast_sld)
                            for contrast_sld in self.contrast_slds]
 
-        # Label each structure.
-        for i, label in enumerate(self.labels):
-            self.structures[i].name = label
+        # Iterate over each measured structure.
+        self.objectives = []
+        for i, structure in enumerate(self.structures):
+            # Define the model.
+            model = refnx.reflect.ReflectModel(structure,
+                                               scale=self.scale,
+                                               bkg=self.bkgs[i],
+                                               dq=self.dq)
 
-        # Define models for the structures above.
-        models = [refnx.reflect.ReflectModel(structure, scale=self.scale, bkg=bkg, dq=self.dq)
-                  for structure, bkg in list(zip(self.structures, self.bkgs))]
+            # Load the measured data.
+            filename = '{}.dat'.format(self.labels[i])
+            file_path = os.path.join(self.data_path, filename)
+            data = refnx.dataset.ReflectDataset(file_path)
 
-        # Load the measured data for each contrast.
-        datasets = [refnx.dataset.ReflectDataset(os.path.join(self.data_path, '{}.dat'.format(label)))
-                    for label in self.labels]
-
-        # Combine models and datasets into objectives corresponding to each contrast.
-        self.objectives = [refnx.analysis.Objective(model, data)
-                           for model, data in list(zip(models, datasets))]
+            # Combine model and data into an objective that can be fitted.
+            self.objectives.append(refnx.analysis.Objective(model, data))
 
     def _using_conditions(self, contrast_sld, underlayers=None):
         """Creates a structure representing the bilayer measured using the
@@ -356,11 +359,11 @@ class BilayerDPPC(BaseLipid):
         """
         # Calculate core SLD with the given contrast SLD.
         contrast_point = (contrast_sld + 0.56) / (6.35 + 0.56)
-        core_sld = contrast_point*self.core_d2o + (1-contrast_point)*self.core_h2o
+        core_sld = contrast_point*self.core_d2o_sld + (1-contrast_point)*self.core_h2o_sld
 
         # Use asymmetry to define inner and outer tailgroup SLDs.
-        inner_tg_sld = self.asym_value*self.dppc_tg + (1-self.asym_value)*self.lps_tg
-        outer_tg_sld = self.asym_value*self.lps_tg + (1-self.asym_value)*self.dppc_tg
+        inner_tg_sld = self.asym_value*self.dppc_tg_sld + (1-self.asym_value)*self.lps_tg_sld
+        outer_tg_sld = self.asym_value*self.lps_tg_sld + (1-self.asym_value)*self.dppc_tg_sld
 
         # Define the layers of the model.
         substrate = refnx.reflect.SLD(self.si_sld)

@@ -235,7 +235,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         save_plot(fig, save_path, 'nested_sampling_'+filename)
         
 if __name__ == '__main__':
-    save_path = '../results'
+    save_path = '../paper/results'
 
     yig_sample = SampleYIG() 
     yig_sample.sld_profile(save_path)    
