@@ -1,7 +1,7 @@
 # experimental-design
+## About the Project
 **For the original code that this work was based on, please see the [fisher-information](https://github.com/James-Durant/fisher-information) repository**.
 
-## About the Project
 This repository contains the [code](/experimental-design), [data](/experimental-design/data) and [results](/experimental-design/results) for a framework for optimising experimental design in neutron reflectometry experiments using the Fisher information (FI).
 
 Please refer to the [examples](/examples) directory for an introduction. 
