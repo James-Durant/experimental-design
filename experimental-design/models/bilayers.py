@@ -1,14 +1,16 @@
 import matplotlib.pyplot as plt
-import numpy as np
-import os
 plt.rcParams['figure.figsize'] = (9,7)
 plt.rcParams['figure.dpi'] = 600
+
+import numpy as np
+import os
 
 import refnx.dataset, refnx.reflect, refnx.analysis
 from base import BaseLipid
 
 class BilayerDMPC(BaseLipid):
-    """Defines a model describing a DMPC bilayer.
+    """Defines a model describing a 1,2-dimyristoyl-sn-glycero-3-phosphocholine
+       (DMPC) bilayer.
 
     Attributes:
         name (str): name of the bilayer sample.
@@ -34,7 +36,7 @@ class BilayerDMPC(BaseLipid):
         bilayer_rough (refnx.analysis.Parameter): bilayer roughness.
         bilayer_solv (refnx.analysis.Parameter): bilayer hydration.
         hg_waters (refnx.analysis.Parameter): amount of headgroup bound water.
-        params (list): model parameters.
+        params (list): varying model parameters.
         underlayer_params (list): model parameters when underlayers are added.
         structures (list): structures corresponding to each measured contrast.
         objectives (list): objectives corresponding to each measured contrast.
@@ -213,8 +215,9 @@ class BilayerDMPC(BaseLipid):
             return structure | inner_hg | tg | tg | outer_hg | solution
 
 class BilayerDPPC(BaseLipid):
-    """Defines a model describing an asymmetric DPPC/Ra LPS bilayer
-       defined by a single asymmetry value.
+    """Defines a model describing a 1,2-dipalmitoyl-sn-glycero-3-phosphocholine
+      (DPPC) and Ra lipopolysaccharide (LPS) bilayer defined by a single
+      asymmetry value.
 
     Attributes:
         name (str): name of the bilayer sample.
@@ -336,7 +339,6 @@ class BilayerDPPC(BaseLipid):
                                                scale=self.scale,
                                                bkg=self.bkgs[i],
                                                dq=self.dq)
-
             # Load the measured data.
             filename = '{}.dat'.format(self.labels[i])
             file_path = os.path.join(self.data_path, filename)
@@ -393,7 +395,7 @@ class BilayerDPPC(BaseLipid):
             return structure | inner_hg | inner_tg | outer_tg | core | solution
 
 if __name__ == '__main__':
-    save_path = '../paper/results'
+    save_path = '../results'
 
     # Save the SLD and reflectivity profiles of the DMPC bilayer.
     dmpc_bilayer = BilayerDMPC()

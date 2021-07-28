@@ -7,7 +7,9 @@ import refnx.dataset, refnx.reflect, refnx.analysis
 from base import BaseLipid
 
 class MonolayerDPPG(BaseLipid):
-    """Defines a model describing a DPPG monolayer.
+    """Defines a model describing puroindoline-a (Pin-a) proteins bound to
+       lipid monolayers composed of
+       1,2-dipalmitoyl-sn-glycero-3-phospho-(1-rac-glycerol) (DPPG).
 
     Attributes:
         name (str): name of the monolayer sample.
@@ -247,7 +249,7 @@ class MonolayerDPPG(BaseLipid):
         plt.rcParams['figure.figsize'] = (9,7)
 
 if __name__ == '__main__':
-    save_path = '../paper/results'
+    save_path = '../results'
 
     # Plot the SLD and reflectivity profiles of the DPPG monolayer.
     dppg_monolayer = MonolayerDPPG()

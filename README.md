@@ -4,7 +4,7 @@
 
 This repository contains the [code](/experimental-design), [data](/experimental-design/data) and [results](/experimental-design/results) for a framework for optimising experimental design in neutron reflectometry experiments using the Fisher information (FI).
 
-Please refer to the [examples](/examples) directory for an introduction. 
+Please refer to the [examples](/examples) directory for an introduction.
 
 ### Citation
 Please cite the following article if you intend on including elements of this work in your own publications:

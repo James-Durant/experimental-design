@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
+plt.rcParams['figure.figsize'] = (9,7)
+plt.rcParams['figure.dpi'] = 600
+
 import os, sys
 # Add parent directory to system path to access simulate.py and utils.py
 sys.path.append(os.path.join(__file__, '..'))
-plt.rcParams['figure.figsize'] = (9,7)
-plt.rcParams['figure.dpi'] = 600
 
 from abc import ABC, abstractmethod
 import refnx.dataset, refnx.reflect, refnx.analysis
@@ -39,7 +40,8 @@ class VariableUnderlayer(ABC):
         pass
 
 class BaseSample(VariableAngle):
-    """Abstract class representing a neutron reflectometry sample."""
+    """Abstract class representing a "standard" neutron reflectometry sample
+       defined by a series of contiguous layers."""
     @abstractmethod
     def sld_profile(self):
         """Plots the SLD profile of the sample."""
@@ -95,7 +97,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
 
     def underlayer_info(self, angle_times, contrasts, underlayers):
         """Calculates the Fisher information matrix for the lipid sample with
-           `underlayers`, and contrasts measured over a number of angles.
+           `underlayers`, and `contrasts` measured over a number of angles.
 
         Args:
             angle_times (list): points and times for each angle to simulate.

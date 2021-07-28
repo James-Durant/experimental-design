@@ -1,12 +1,14 @@
 import matplotlib.pyplot as plt
+plt.rcParams['figure.figsize'] = (9,7)
+plt.rcParams['figure.dpi'] = 600
+
 import numpy as np
 import os, sys
 # Add parent directory to system path to access simulate.py and utils.py
 sys.path.append(os.path.join(__file__, '..'))
-plt.rcParams['figure.figsize'] = (9,7)
-plt.rcParams['figure.dpi'] = 600
 
 import refnx.dataset, refnx.reflect, refnx.analysis
+
 import refl1d.material, refl1d.model, refl1d.probe, refl1d.experiment, refl1d.magnetism
 import bumps.parameter, bumps.fitproblem
 
@@ -86,7 +88,7 @@ class Sample(BaseSample):
             numpy.ndarray: Fisher information matrix.
 
         """
-        # Return Fisher information matrix calculating using simulated data.
+        # Return the Fisher information matrix calculated from simulated data.
         model, data = simulate(self.structure, angle_times)
         qs, counts, models = [data[:,0]], [data[:,3]], [model]
         return fisher(qs, self.params, counts, models)
@@ -98,11 +100,11 @@ class Sample(BaseSample):
             save_path (str): path to directory to save SLD profile to.
 
         """
-        # The structure was defined in refnx.
+        # Determine if the structure was defined in refnx.
         if isinstance(self.structure, refnx.reflect.Structure):
             z, slds = self.structure.sld_profile()
 
-        # The structure was defined in Refl1D.
+        # Determine if the structure was defined in Refl1D.
         elif isinstance(self.structure, refl1d.model.Stack):
             q = np.geomspace(0.005, 0.3, 500) # This is not used.
             scale, bkg, dq = 1, 1e-6, 2 # These are not used.
@@ -146,11 +148,11 @@ class Sample(BaseSample):
         # Geometriaclly-space Q points over the specified range.
         q = np.geomspace(q_min, q_max, points)
 
-        # The structure was defined in refnx.
+        # Determine if the structure was defined in refnx.
         if isinstance(self.structure, refnx.reflect.Structure):
             model = refnx.reflect.ReflectModel(self.structure, scale=scale, bkg=bkg, dq=dq)
 
-        # The structure was defined in Refl1D.
+        # Determine if the structure was defined in Refl1D.
         elif isinstance(self.structure, refl1d.model.Stack):
             model = refl1d_experiment(self.structure, q, scale, bkg, dq)
 
@@ -161,7 +163,7 @@ class Sample(BaseSample):
         # Calculate the model reflectivity.
         r = reflectivity(q, model)
 
-        # Plot Q versus the model reflectivity.
+        # Plot Q versus model reflectivity.
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.plot(q, r, color='black')
@@ -190,12 +192,12 @@ class Sample(BaseSample):
         # Simulate data for the sample.
         model, data = simulate(self.structure, angle_times)
 
-        # The structure was defined in refnx.
+        # Determine if the structure was defined in refnx.
         if isinstance(self.structure, refnx.reflect.Structure):
             dataset = refnx.reflect.ReflectDataset([data[:,0], data[:,1], data[:,2]])
             objective = refnx.anaylsis.Objective(model, dataset)
 
-        # The structure was defined in Refl1D.
+        # Determine if the structure was defined in Refl1D.
         elif isinstance(self.structure, refl1d.model.Stack):
             objective = bumps.fitproblem.FitProblem(model)
 
@@ -212,15 +214,10 @@ class Sample(BaseSample):
         save_plot(fig, save_path, filename+'_nested_sampling')
 
     def to_refl1d(self):
-        """Converts a refnx structure to an equivalent Refl1D structure.
+        """Converts the refnx structure to an equivalent Refl1D structure."""
+        # Check that the current structure is defined in refnx.
+        assert isinstance(self.structure, refnx.reflect.Structure)
 
-        Args:
-            sample (refnx.reflect.Structure): refnx structure to convert.
-
-        Returns:
-            refl1d.model.Stack: equivalent structure defined in Refl1D.
-
-        """
         # Iterate over each component.
         structure = refl1d.material.SLD(rho=0, name='Air')
         for component in self.structure[1:]:
@@ -231,10 +228,15 @@ class Sample(BaseSample):
             layer = refl1d.material.SLD(rho=sld, name=name)(thick, rough)
             structure = layer | structure
 
+        # Update the current structure to use the new version.
         structure.name = self.structure.name
         self.structure = structure
 
     def to_refnx(self):
+        """Converts a Refl1D structure to an equivalent refnx structure."""
+        # Check that the current structure is defined in Refl1D.
+        assert isinstance(self.structure, refl1d.model.Stack)
+
         # Iterate over each component.
         structure = refnx.reflect.SLD(0, name='Air')
         for component in list(reversed(self.structure))[1:]:
@@ -244,6 +246,7 @@ class Sample(BaseSample):
             # Add the component in the opposite direction to the Refl1D definition.
             structure |= refnx.reflect.SLD(sld, name=name)(thick, rough)
 
+        # Update the current structure to use the new version.
         structure.name = self.structure.name
         self.structure = structure
 
@@ -349,7 +352,7 @@ def similar_sld_sample_2():
     return Sample(structure)
 
 if __name__ == '__main__':
-    save_path = '../paper/results'
+    save_path = '../results'
 
     # Plot the SLD and reflectivity profiles of all structures in this file.
     for structure in [simple_sample, many_param_sample,

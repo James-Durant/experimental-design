@@ -159,11 +159,8 @@ def _figure_2(save_path):
         min_eigs_1.append(np.linalg.eigvalsh(g_init_1+g_new_1)[0])
         min_eigs_2.append(np.linalg.eigvalsh(g_init_2+g_new_2)[0])
 
-    #print(contrast_range[np.argmax(min_eigs_1)])
-    #print(contrast_range[np.argmax(min_eigs_2)])
-
     # Create the plot of third contrast versus minimum eigenvalue.
-    fig = plt.figure(figsize=[6,4])
+    fig = plt.figure()
     ax1 = fig.add_subplot(111)
     ax2 = ax1.twinx()
 
@@ -177,14 +174,14 @@ def _figure_2(save_path):
     ax1.set_xlabel(x_label, fontsize=11, weight='bold')
     ax1.set_ylabel(y_label, fontsize=11, weight='bold', color='b')
     ax2.set_ylabel(y_label, fontsize=11, weight='bold', color='g')
-    ax1.legend(line_1+line_2, ['DMPC', 'DPPC/Ra LPS'], loc=0)
+    ax1.legend(line_1+line_2, ['DMPC', 'DPPC/RaLPS'], loc=0)
 
     # Save the plot.
-    save_plot(fig, '..', 'figures', 'figure_2')
+    save_plot(fig, save_path, 'figure_2')
 
 if __name__ == '__main__':
     save_path = './results'
     _contrast_results_visualise(save_path)
     _contrast_results_optimise(save_path)
 
-    _figure_2('./figures')
+    _figure_2('../figures')
