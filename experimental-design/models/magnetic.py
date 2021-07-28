@@ -87,8 +87,8 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         self.__create_experiment()
 
     def __create_experiment(self):
-        pp = refl1d.probe.load4(os.path.join(self.data_path, 'YAG_up.dat'), sep='\t', intensity=self.scale, background=self.bkg, columns='Q R dR dQ')
-        mm = refl1d.probe.load4(os.path.join(self.data_path, 'YAG_down.dat'), sep='\t', intensity=self.scale, background=self.bkg, columns='Q R dR dQ')
+        pp = refl1d.probe.load4(os.path.join(self.data_path, 'YIG_up.dat'), sep='\t', intensity=self.scale, background=self.bkg, columns='Q R dR dQ')
+        mm = refl1d.probe.load4(os.path.join(self.data_path, 'YIG_down.dat'), sep='\t', intensity=self.scale, background=self.bkg, columns='Q R dR dQ')
         pm = None
         mp = None
         
