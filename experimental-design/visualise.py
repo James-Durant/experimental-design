@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
-import numpy as np
-import os, sys
 plt.rcParams['figure.figsize'] = (9,7)
 plt.rcParams['figure.dpi'] = 600
+
+import numpy as np
+import os, sys
 # Add the models directory to the system path.
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 

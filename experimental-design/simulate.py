@@ -140,10 +140,14 @@ def simulate(sample, angle_times, scale=1, bkg=5e-6, dq=2, directbeam_path=None,
         model = refl1d_experiment(sample, q, scale, bkg, dq, spin_state)
 
         # Record the data.
-        model.probe.xs[spin_state].R = r
-        model.probe.xs[spin_state].dR = dr
         model.probe.dq = dq
-        model.probe.spin_state = spin_state
+        if sample.ismagnetic:
+            model.probe.xs[spin_state].R = r
+            model.probe.xs[spin_state].dR = dr
+            model.probe.spin_state = spin_state
+        else:
+            model.probe.R = r
+            model.probe.dR = dr
 
     # Otherwise, the sample must be invalid.
     else:
