@@ -1,5 +1,5 @@
 ## Code
-* [base.py](/experimental-design/models/base.py) - Contains the code for the base classes used in all model definitions for this work.
+* [base.py](/experimental-design/models/base.py) - Contains the code for the base classes used in all model definitions in this work.
 * [bilayers.py](/experimental-design/models/bilayers.py) - Defines the DMPC and DPPC/RaLPS bilayer models.
 * [magnetic.py](/experimental-design/models/magnetic.py) - Defines the magnetic YIG sample.
 * [monolayers.py](/experimental-design/models/monolayers.py) - Defines the DPPG monolayer model.

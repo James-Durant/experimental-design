@@ -1,7 +1,7 @@
 ## Directories
-* [data](/experimental-design/data) - Contains directbeam files and experimentally-measured data for a selection of samples of varying complexity.
-* [models](/experimental-design/models) - Contains model definitions and fits for the selection of samples.
-* [results](/experimental-design/results) - Contains results for the selection of samples.
+* [data](/experimental-design/data) - Directbeam files and experimentally-measured data for a selection of samples of varying complexity.
+* [models](/experimental-design/models) - Model definitions and fits for the aforementioned samples.
+* [results](/experimental-design/results) - Results for the aforementioned samples.
 
 ## Code
 * [angles.py](/experimental-design/angles.py) - Optimises and visualises the choice of measurement angle(s) for a collection of samples of varying complexity.

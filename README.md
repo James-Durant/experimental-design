@@ -1,8 +1,32 @@
 # experimental-design
+**For the original code that this work was based on, please see the [fisher-information](https://github.com/James-Durant/fisher-information) repository**.
+
 ## About the Project
-Experimental design in neutron reflectometry using the Fisher information.
+This repository contains the [code](/experimental-design), [data](/experimental-design/data) and [results](/experimental-design/results) for a framework for optimising experimental design in neutron reflectometry experiments using the Fisher information (FI).
 
 Please refer to the [examples](/examples) directory for an introduction. 
+
+### Citation
+Please cite the following article if you intend on including elements of this work in your own publications:
+> To do.
+
+Or with BibTeX as:
+```
+@article{Durant2021,
+   author  = {Durant, J. H. and Wilkins, L. and Cooper, J. F. K.},
+   doi     = {},
+   journal = {},
+   month   = {},
+   number  = {},
+   pages   = {},
+   title   = {},
+   url     = {},
+   volume  = {},
+   year    = {}
+}
+```
+
+For the figures presented in this article, see [figures](/figures).
 
 ## Installation
 1. To replicate the development environment with the [Anaconda](https://www.anaconda.com/products/individual) distribution, first create an empty conda environment by running: <br /> ```conda create --name experimental-design python=3.8.3```
