@@ -72,6 +72,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
             self.YAG_sld.range(4.5, 5.5)
             self.YAG_rough.range(20, 30)
         
+        # 1 uB/atom = 1.638 
         pt_magnetism = refl1d.magnetism.Magnetism(rhoM=self.Pt_mag, thetaM=self.mag_angle)
         yig_magnetism = refl1d.magnetism.Magnetism(rhoM=self.YIG_mag, thetaM=self.mag_angle)
         
@@ -86,8 +87,8 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         self.__create_experiment()
 
     def __create_experiment(self):
-        pp = refl1d.probe.load4(os.path.join(self.data_path, 'YAG_2_Air.u'), sep='\t', intensity=self.scale, background=self.bkg, columns='Q R dR dQ')
-        mm = refl1d.probe.load4(os.path.join(self.data_path, 'YAG_2_Air.d'), sep='\t', intensity=self.scale, background=self.bkg, columns='Q R dR dQ')
+        pp = refl1d.probe.load4(os.path.join(self.data_path, 'YAG_up.dat'), sep='\t', intensity=self.scale, background=self.bkg, columns='Q R dR dQ')
+        mm = refl1d.probe.load4(os.path.join(self.data_path, 'YAG_down.dat'), sep='\t', intensity=self.scale, background=self.bkg, columns='Q R dR dQ')
         pm = None
         mp = None
         
