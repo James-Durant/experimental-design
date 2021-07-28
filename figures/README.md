@@ -4,7 +4,7 @@ To do.
 
 ## Figure 2
 To do.
-<img src="https://github.com/James-Durant/experimental-design/blob/master/figures/figure_2_low_res.png" width="900">
+<img src="https://github.com/James-Durant/experimental-design/blob/master/figures/figure_2.png" width="900">
 
 ## Figure 3
 To do.
