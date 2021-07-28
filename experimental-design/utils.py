@@ -27,8 +27,7 @@ class Sampler:
 
         # Determine if the objective is from refnx or Refl1D.
         if isinstance(objective, refnx.analysis.BaseObjective):
-            # Use the log-likelihood and prior transform methods
-            # of the refnx objective.
+            # Use log-likelihood and prior transform methods of refnx objective.
             self.params = objective.varying_parameters()
             logl = objective.logl
             prior_transform = objective.prior_transform
@@ -80,18 +79,19 @@ class Sampler:
         Args:
             verbose (bool): whether to display sampling progress.
             dynamic (bool): whether to use static or dynamic nested sampling.
-            return_evidence (bool): whether to return a corner plot or evidence.
+            return_evidence (bool): whether to return corner plot or evidence.
 
         Returns:
-            matplotlib.pyplot.Figure or float: nested sampling corner plot or log-evidence.
+            matplotlib.pyplot.Figure or float: corner plot or log-evidence.
 
         """
+        # Run either static or dynamic nested sampling.
         if dynamic:
             # Weighting is entirely on the posterior (0 weight on evidence).
             self.sampler_dynamic.run_nested(print_progress=verbose,
                                             wt_kwargs={'pfrac': 1.0})
             results = self.sampler_nested_dynamic.results
-            
+
         else:
             self.sampler_static.run_nested(print_progress=verbose)
             results = self.sampler_nested_static.results
@@ -104,10 +104,10 @@ class Sampler:
         for i, param in enumerate(self.params):
             param.value = mean[i]
 
-        # Return the log-evidence if requested..
+        # Return the log-evidence if requested.
         if return_evidence:
             return results.logz[-1]
-        
+
         # Otherwise, return the corner plot
         else:
             return self.__corner(results)
@@ -169,12 +169,12 @@ def fisher(qs, xi, counts, models, step=0.005):
         parameter = xi[i]
         old = parameter.value
 
-        # Calculate the reflectance for each model for first side.
+        # Calculate reflectance for each model for first part of gradient.
         x1 = parameter.value = old*(1-step)
         y1 = np.concatenate([reflectivity(q, model)
                              for q, model in list(zip(qs, models))])
 
-        # Calculate the reflectance for each model for second side.
+        # Calculate reflectance for each model for second part of gradient.
         x2 = parameter.value = old*(1+step)
         y2 = np.concatenate([reflectivity(q, model)
                              for q, model in list(zip(qs, models))])

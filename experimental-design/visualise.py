@@ -130,9 +130,10 @@ def angle_choice_with_time(sample, initial_angle, angle_range, time_range,
                          frames=frames, interval=anim_length//frames)
     plt.close()
 
-    # Save the animation as a gif file.
+    # Save the animation as a .gif file.
     writergif = PillowWriter()
-    save_path = os.path.join(save_path, sample.name, 'angle_choice_with_time.gif')
+    save_path = os.path.join(save_path, sample.name,
+                             'angle_choice_with_time.gif')
     anim.save(save_path, writer=writergif)
     return anim
 
@@ -166,7 +167,7 @@ def contrast_choice_single(sample, contrast_range, initial_contrasts,
         if i % 100 == 0:
             print('>>> {0}/{1}'.format(i, len(contrast_range)))
 
-        # Get the information from new contrast and combine with initial.
+        # Get the information from the new contrast and combine with initial.
         g_new = sample.contrast_info(angle_times, [new_contrast])
         min_eigs.append(np.linalg.eigvalsh(g_init+g_new)[0])
 
