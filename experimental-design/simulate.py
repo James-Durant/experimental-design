@@ -234,7 +234,7 @@ def reflectivity(q, model):
     Args:
         q (numpy.ndarray): Q points to calculate reflectance at.
         model (refnx.reflect.ReflectModel or
-               refl1d.experiment.Experiment): model to calculate reflectivity of.
+               refl1d.experiment.Experiment): model to calculate reflectivity.
 
     Returns:
         numpy.ndarray: reflectivity for each Q point.

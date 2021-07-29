@@ -90,11 +90,11 @@ class Sampler:
             # Weighting is entirely on the posterior (0 weight on evidence).
             self.sampler_dynamic.run_nested(print_progress=verbose,
                                             wt_kwargs={'pfrac': 1.0})
-            results = self.sampler_nested_dynamic.results
+            results = self.sampler_dynamic.results
 
         else:
             self.sampler_static.run_nested(print_progress=verbose)
-            results = self.sampler_nested_static.results
+            results = self.sampler_static.results
 
         # Calculate the parameter means.
         weights = np.exp(results.logwt - results.logz[-1])

@@ -362,5 +362,6 @@ if __name__ == '__main__':
         sample = structure()
         sample.sld_profile(save_path)
         sample.reflectivity_profile(save_path)
-
+        
+        # Close the plots.
         plt.close('all')
