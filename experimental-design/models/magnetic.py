@@ -44,7 +44,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         experiment (refl1d.experiment.Experiment): fittable experiment for sample.
 
     """
-    def __init__(self, vary=True):
+    def __init__(self):
         self.name = 'YIG_sample'
         self.data_path = os.path.join(os.path.dirname(__file__),
                                       '..',
@@ -93,24 +93,22 @@ class SampleYIG(BaseSample, VariableUnderlayer):
 
         self.params = [self.pt_mag]
 
-        # Set bounds on the model parameters if requested.
-        if vary:
-            #self.pt_sld.range(5, 6)
-            self.pt_thick.range(2, 30)
-            self.pt_rough.range(0, 9)
-            self.pt_mag.range(0, 0.2)
+        self.pt_sld.range(5, 6)
+        self.pt_thick.range(2, 30)
+        self.pt_rough.range(0, 9)
+        self.pt_mag.range(0, 0.2)
 
-            self.intermediary_sld.range(4.5, 5.5)
-            self.intermediary_thick.range(0, 25)
-            self.intermediary_rough.range(2, 10)
+        self.intermediary_sld.range(4.5, 5.5)
+        self.intermediary_thick.range(0, 25)
+        self.intermediary_rough.range(2, 10)
 
-            self.yig_sld.range(5, 6)
-            self.yig_thick.range(100, 900)
-            self.yig_rough.range(0, 70)
-            self.yig_mag.range(0, 0.6)
+        self.yig_sld.range(5, 6)
+        self.yig_thick.range(100, 900)
+        self.yig_rough.range(0, 70)
+        self.yig_mag.range(0, 0.6)
 
-            self.yag_sld.range(4.5, 5.5)
-            self.yag_rough.range(20, 30)
+        self.yag_sld.range(4.5, 5.5)
+        self.yag_rough.range(20, 30)
 
         # Load the experimentally-measured data for the sample.
         self.__create_experiment()

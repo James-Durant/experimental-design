@@ -1,66 +1,80 @@
 import matplotlib.pyplot as plt
+plt.rcParams['figure.figsize'] = (9,7)
+plt.rcParams['figure.dpi'] = 600
+
 import numpy as np
 import os, sys, time
+# Add the models directory to the system path.
+# Add the current directory to the path to avoid issues with threading.
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 sys.path.append(os.path.join(os.path.dirname(__file__)))
-plt.rcParams['figure.dpi'] = 600
 
 import refl1d.material, refl1d.magnetism, refl1d.experiment, bumps.fitproblem
 
 from scipy.optimize import differential_evolution
 
-from optimise import Optimiser
 from magnetic import SampleYIG
+from optimise import Optimiser
 from simulate import simulate_magnetic
 from utils import save_plot, Sampler
 
-def test(sample, pt_mag):
-    pt_magnetism = refl1d.magnetism.Magnetism(rhoM=pt_mag, thetaM=sample.mag_angle)
-    yig_magnetism = refl1d.magnetism.Magnetism(rhoM=sample.YIG_mag, thetaM=sample.mag_angle)
-
-    air = refl1d.material.SLD(rho=0, name='Air')
-    Pt = refl1d.material.SLD(rho=sample.Pt_sld, name='Pt')(sample.Pt_thick, sample.Pt_rough, magnetism=pt_magnetism)
-    FePt = refl1d.material.SLD(rho=sample.FePt_sld, name='FePt')(sample.FePt_thick, sample.FePt_rough)
-    YIG = refl1d.material.SLD(rho=sample.YIG_sld, name='YIG')(sample.YIG_thick, sample.YIG_rough, magnetism=yig_magnetism)
-    sub = refl1d.material.SLD(rho=sample.sub_sld, name='Substrate')(0, sample.sub_rough)
-
-    return sub | YIG | FePt | Pt | air
-
-def bayes(times, angle_splits, save_path):
-    with open(os.path.join(save_path, 'YIG_sample', 'bayes.csv'), 'w') as file:
-        for time in times:
-            angle_times = [(angle, points, time*split) for angle, points, split in angle_splits]
-
-            sample = SampleYIG(vary=False)
-            sample.Pt_thick.range(0, 0.2)
-            models, datasets = simulate_magnetic(test(sample, 0.01638), angle_times, scale=1, bkg=5e-7, dq=2,
-                                                 pp=True, pm=False, mp=False, mm=True)
-
+def bayes_factor(times, angle_splits, save_path):
+    # Create a .txt file to save the results to.
+    file_path = os.path.join(save_path, 'YIG_sample', 'bayes_factor.csv')
+    with open(file_path, 'w') as file:
+        # Iterate over each time being considered.
+        for total_time in times:
+            # Define the number of points and counting times for each angle.
+            angle_times = [(angle, points, total_time*split)
+                           for angle, points, split in angle_splits]
+            
+            # Simulate data for the YIG sample with a 1 uB/atom magnetic
+            # moment in the platinum layer.
+            sample = SampleYIG()
+            sample.pt_mag.fittable = False
+            
+            structure = sample.using_conditions()
+            structure[3].magnetism.rhoM.value = 0.01638
+            models, datasets = simulate_magnetic(structure, angle_times,
+                                                 scale=1, bkg=5e-7, dq=2,
+                                                 pp=True, pm=False,
+                                                 mp=False, mm=True)
+            
+            # Extract the probes for the simulated "up" and "down" spin states
+            # and combine into a single probe.
             mm = models[0].probe.xs[0]
             pp = models[1].probe.xs[3]
-
-            probe = refl1d.probe.PolarizedQProbe(xs=(mm, None, None, pp), name='Probe')
-            experiment = refl1d.experiment.Experiment(sample=sample.structure, probe=probe)
+            probe = refl1d.probe.PolarizedQProbe(xs=(mm, None, None, pp), name='')
+            
+            # Calculate the log-evidence from nested sampling on the simulated
+            # data with a model containing the platinum layer magnetic moment.
+            experiment = refl1d.experiment.Experiment(sample=structure, probe=probe)
             sampler = Sampler(bumps.fitproblem.FitProblem(experiment))
-            logz_1 = sampler.sample(verbose=False, return_evidence=True)
-
-            sample = SampleYIG(vary=False)
-            sample.Pt_mag.value = 0
-            sample.Pt_thick.range(0, 0.2)
-
-            experiment = refl1d.experiment.Experiment(sample=sample.structure, probe=probe)
+            logz_1 = sampler.sample(verbose=True, return_evidence=True)
+            val_1 = structure[3].magnetism.rhoM.value
+            print(val_1)
+            
+            # Calculate the log-evidence with a 0 uB/atom magnetic
+            # moment in the platinum layer.
+            structure[3].magnetism.rhoM.value = 0
+            experiment = refl1d.experiment.Experiment(sample=structure, probe=probe)
             sampler = Sampler(bumps.fitproblem.FitProblem(experiment))
-            logz_2 = sampler.sample(verbose=False, return_evidence=True)
-
+            logz_2 = sampler.sample(verbose=True, return_evidence=True)
+            val_2 = structure[3].magnetism.rhoM.value
+            print(val_2)
+            
+            # Record the Bayes factor between the two models.
             factor = 2*(logz_1-logz_2)
             print(factor)
-            file.write('{0},{1}\n'.format(time, factor))
+            print()
+            file.write('{0},{1},{2},{3}\n'.format(total_time, factor, val_1, val_2))
 
-def plot_bayes(save_path='./results/YIG_sample'):
-    data = np.loadtxt(os.path.join(save_path, 'bayes.csv'), delimiter=',')
+def load_bayes():
+    file_path = os.path.join(save_path, 'YIG_sample', 'bayes_factor.csv')
+    data = np.loadtxt(file_path, delimiter=',')
     times, factors = data[:,0], data[:,1]
 
-    fig = plt.figure(figsize=[9,7])
+    fig = plt.figure()
     ax = fig.add_subplot(111)
 
     ax.plot(1.5*times, factors)
@@ -125,50 +139,15 @@ def optimise(yig_thick_bounds, pt_thick_bounds, angle_times, save_path):
 
     return res.x[0], res.x[1], res.fun
 
-def _optimise_angles(total_time, angle_bounds, save_path='./results/YIG_sample'):
-    sample = SampleYIG()
-    sample.params = [sample.Pt_thick]
-    optimiser = Optimiser(sample)
-
-    # Create a new text file for the results.
-    with open(os.path.join(save_path, 'optimised_angles.txt'), 'w') as file:
-        # Optimise the experiment using 1-4 angles.
-        for i, num_angles in enumerate([1, 2, 3, 4]):
-            # Display progress.
-            print('>>> {0}/{1}'.format(i, 4))
-
-            # Time how long the optimisation takes.
-            start = time.time()
-            angles, splits, val = optimiser.optimise_angle_times(num_angles, None, total_time, angle_bounds, verbose=False)
-            end = time.time()
-
-            # Convert to percentages.
-            splits = np.array(splits)*100
-
-            # Round the optimisation function value to 4 significant figures.
-            val = np.format_float_positional(val, precision=4, unique=False, fractional=False, trim='k')
-
-            # Write the optimised conditions, objective value and computation time to the results file.
-            file.write('----------- {} Angles -----------\n'.format(num_angles))
-            file.write('Angles: {}\n'.format(list(np.round(angles, 2))))
-            file.write('Splits (%): {}\n'.format(list(np.round(splits, 1))))
-            file.write('Objective value: {}\n'.format(val))
-            file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
-
 def _magnetism_results(save_path='./results'):
-
-    total_time = 1000
-    angle_bounds = (0.2, 4.0)
-    _optimise_angles(total_time, angle_bounds)
-
-
     yig_thick_range = np.linspace(400, 900, 75)
     pt_thick_range = np.concatenate((np.linspace(21.5, 30, 50), np.linspace(30, 100, 50)))
 
     angle_times = [(0.5, 100, 20),
                    (1.0, 100, 40),
                    (2.0, 100, 80)]
-    print(-_func((SampleYIG().YIG_thick.value, SampleYIG().Pt_thick.value), SampleYIG(), angle_times))
+    
+    #print(-_func((SampleYIG().YIG_thick.value, SampleYIG().Pt_thick.value), SampleYIG(), angle_times))
     #magnetism(yig_thick_range, pt_thick_range, angle_times, save_path, save_views=True)
 
     yig_thick_bounds = (200, 900)
@@ -178,11 +157,11 @@ def _magnetism_results(save_path='./results'):
     #print('Pt Thickness: {}'.format(pt_thick))
     #print('Fisher Information: {}'.format(-val))
 
-    times = np.linspace(20, 1440, 25)
+    times = np.linspace(40, 4000, 100)
     angle_splits = [(0.5, 100, 1/7),
                     (1.0, 100, 2/7),
                     (2.0, 100, 4/7)]
-    #bayes(times, angle_splits, save_path)
+    bayes_factor(times, angle_splits, save_path)
     #plot_bayes()
 
 if __name__ == '__main__':
