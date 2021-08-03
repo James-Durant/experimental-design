@@ -192,7 +192,7 @@ def _magnetism_results_logl(save_path):
         ax.plot(1.5*times, factors, label='{}Å Pt Thickness'.format(pt_thick))
 
     ax.set_xlabel('Counting Time (min.)', fontsize=11, weight='bold')
-    ax.set_ylabel('Log-likelihood Ratio', fontsize=11, weight='bold')
+    ax.set_ylabel('Log Likelihood Ratio', fontsize=11, weight='bold')
     ax.legend()
 
     # Save the plot.
