@@ -18,74 +18,22 @@ from optimise import Optimiser
 from simulate import simulate_magnetic
 from utils import save_plot, Sampler
 
-def bayes_factor(times, angle_splits, save_path):
-    # Create a .txt file to save the results to.
-    file_path = os.path.join(save_path, 'YIG_sample', 'bayes_factor.csv')
-    with open(file_path, 'w') as file:
-        # Iterate over each time being considered.
-        for total_time in times:
-            # Define the number of points and counting times for each angle.
-            angle_times = [(angle, points, total_time*split)
-                           for angle, points, split in angle_splits]
-            
-            # Simulate data for the YIG sample with a 1 uB/atom magnetic
-            # moment in the platinum layer.
-            sample = SampleYIG()
-            sample.pt_mag.fittable = False
-            
-            structure = sample.using_conditions()
-            structure[3].magnetism.rhoM.value = 0.01638
-            models, datasets = simulate_magnetic(structure, angle_times,
-                                                 scale=1, bkg=5e-7, dq=2,
-                                                 pp=True, pm=False,
-                                                 mp=False, mm=True)
-            
-            # Extract the probes for the simulated "up" and "down" spin states
-            # and combine into a single probe.
-            mm = models[0].probe.xs[0]
-            pp = models[1].probe.xs[3]
-            probe = refl1d.probe.PolarizedQProbe(xs=(mm, None, None, pp), name='')
-            
-            # Calculate the log-evidence from nested sampling on the simulated
-            # data with a model containing the platinum layer magnetic moment.
-            experiment = refl1d.experiment.Experiment(sample=structure, probe=probe)
-            sampler = Sampler(bumps.fitproblem.FitProblem(experiment))
-            logz_1 = sampler.sample(verbose=True, return_evidence=True)
-            val_1 = structure[3].magnetism.rhoM.value
-            print(val_1)
-            
-            # Calculate the log-evidence with a 0 uB/atom magnetic
-            # moment in the platinum layer.
-            structure[3].magnetism.rhoM.value = 0
-            experiment = refl1d.experiment.Experiment(sample=structure, probe=probe)
-            sampler = Sampler(bumps.fitproblem.FitProblem(experiment))
-            logz_2 = sampler.sample(verbose=True, return_evidence=True)
-            val_2 = structure[3].magnetism.rhoM.value
-            print(val_2)
-            
-            # Record the Bayes factor between the two models.
-            factor = 2*(logz_1-logz_2)
-            print(factor)
-            print()
-            file.write('{0},{1},{2},{3}\n'.format(total_time, factor, val_1, val_2))
+def _magnetism_results_visualise(save_path):
+    """Visualises the choice of measurement angle and contrast SLD for the
+       DPPG monolayer model where the lipid area per molecule is decreasing
+       over time.
 
-def load_bayes():
-    file_path = os.path.join(save_path, 'YIG_sample', 'bayes_factor.csv')
-    data = np.loadtxt(file_path, delimiter=',')
-    times, factors = data[:,0], data[:,1]
+    Args:
+        save_path (str): path to directory to save results to.
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-
-    ax.plot(1.5*times, factors)
-
-    ax.set_xlabel('Counting Time (min)', fontsize=11)
-    ax.set_ylabel('$\mathregular{Bayes \ Factor \ (2 \ln B_{xy})}$', fontsize=11)
-
-    # Save the plot.
-    save_plot(fig, save_path, 'bayes')
-
-def magnetism(yig_thick_range, pt_thick_range, angle_times, save_path, save_views=False):
+    """
+    yig_thick_range = np.linspace(400, 900, 75)
+    pt_thick_range = np.concatenate((np.linspace(21.5, 30, 50), np.linspace(30, 100, 50)))
+    
+    angle_times = [(0.5, 100, 20),
+                   (1.0, 100, 40),
+                   (2.0, 100, 80)]
+    
     sample = SampleYIG()
     sample.Pt_mag.value = 0.01638
 
@@ -117,52 +65,137 @@ def magnetism(yig_thick_range, pt_thick_range, angle_times, save_path, save_view
     save_path = os.path.join(save_path, sample.name)
     save_plot(fig, save_path, 'underlayer_choice')
 
-    if save_views:
-        save_path = os.path.join(save_path, 'underlayer_choice')
-        for i in range(0, 360, 10):
-            ax.view_init(elev=40, azim=i)
-            save_plot(fig, save_path, 'underlayer_choice_{}'.format(i))
+    save_path = os.path.join(save_path, 'underlayer_choice')
+    for i in range(0, 360, 10):
+        ax.view_init(elev=40, azim=i)
+        save_plot(fig, save_path, 'underlayer_choice_{}'.format(i))
+        
+def _magnetism_results_optimise(save_path):
+    """Optimises the choice of measurement angle and contrast SLD for the
+       DPPG monolayer model where the lipid area per molecule is decreasing
+       over time.
 
-def _func(x, sample, angle_times):
-    g = sample.underlayer_info(angle_times, x[0], x[1])
-    return -g[0,0]
+    Args:
+        save_path (str): path to directory to save results to.
 
-def optimise(yig_thick_bounds, pt_thick_bounds, angle_times, save_path):
+    """
+    sample = SampleYIG()
+    
+    yig_thick_bounds = (200, 900)
+    pt_thick_bounds = (21.1, 100)
     bounds = [yig_thick_bounds, pt_thick_bounds]
 
     # Arguments for optimisation function
-    args = [SampleYIG(), angle_times]
+    args = [sample, angle_times]
 
-    # Optimise angles and times, and return results.
-    res = differential_evolution(_func, bounds, args=args, polish=False, tol=0.001,
-                                 updating='deferred', workers=-1, disp=True)
+    file_path = os.path.join(save_path, sample.name, 'optimised_underlayers.txt')
+    with open(file_path, 'w') as file:
+        # Optimise angle and contrast.
+        res = differential_evolution(_optimisation_func, bounds, args=args,
+                                     polish=False, tol=0.001,
+                                     updating='deferred', workers=-1,
+                                     disp=False)
 
-    return res.x[0], res.x[1], res.fun
+        val = _optimisation_func([None, None], sample, angle_times)
+        file.write('-------------- Unoptimised  --------------\n')
+        file.write('Fisher Information: {}\n\n'.format(val))
 
-def _magnetism_results(save_path='./results'):
-    yig_thick_range = np.linspace(400, 900, 75)
-    pt_thick_range = np.concatenate((np.linspace(21.5, 30, 50), np.linspace(30, 100, 50)))
+        # Write the angle, contrast and function value to the .txt file.
+        file.write('-------------- Optimised --------------\n')
+        file.write('YIG Thickness: {}\n'.format(round(angle, 1)))
+        file.write('Pt Thickness: {}\n'.format(round(contrast, 1)))
+        file.write('Fisher Information: {}\n\n'.format(-res.fun))
 
-    angle_times = [(0.5, 100, 20),
-                   (1.0, 100, 40),
-                   (2.0, 100, 80)]
-    
-    #print(-_func((SampleYIG().YIG_thick.value, SampleYIG().Pt_thick.value), SampleYIG(), angle_times))
-    #magnetism(yig_thick_range, pt_thick_range, angle_times, save_path, save_views=True)
+def _optimisation_func(x, sample, angle_times):
+    g = sample.underlayer_info(angle_times, x[0], x[1])
+    return -g[0,0]
 
-    yig_thick_bounds = (200, 900)
-    pt_thick_bounds = (21.5, 100)
-    #yig_thick, pt_thick, val = optimise(yig_thick_bounds, pt_thick_bounds, angle_times, save_path)
-    #print('YIG Thickness: {}'.format(yig_thick))
-    #print('Pt Thickness: {}'.format(pt_thick))
-    #print('Fisher Information: {}'.format(-val))
+def _magnetism_results_logl(save_path):
+    """Optimises the choice of measurement angle and contrast SLD for the
+       DPPG monolayer model where the lipid area per molecule is decreasing
+       over time.
 
-    times = np.linspace(40, 4000, 100)
+    Args:
+        save_path (str): path to directory to save results to.
+
+    """
+    times = np.linspace(40, 4000, 150)
     angle_splits = [(0.5, 100, 1/7),
                     (1.0, 100, 2/7),
                     (2.0, 100, 4/7)]
-    bayes_factor(times, angle_splits, save_path)
-    #plot_bayes()
+    
+    #bayes_factor(26, times, angle_splits, save_path)
+    #bayes_factor(80, times, angle_splits, save_path)
+    
+    save_path = os.path.join(save_path, 'YIG_sample')
+
+    fig = plt.figure(figsize=(6,7))
+    ax = fig.add_subplot(111)
+    
+    for pt_thick in [26, 80]:
+        file_path = os.path.join(save_path, 'logl_ratios_{}.csv'.format(pt_thick))
+        data = np.loadtxt(file_path, delimiter=',')
+        times, factors = data[:,0], data[:,1]
+        ax.plot(1.5*times, factors, label='{}Å Pt Thickness'.format(pt_thick))
+
+    ax.set_xlabel('Counting Time (min.)', fontsize=11, weight='bold')
+    ax.set_ylabel('Log Likelihood Ratio', fontsize=11, weight='bold')
+    ax.legend()
+
+    # Save the plot.
+    save_plot(fig, save_path, 'logl_ratios')
+
+def _calc_logl_ratios(pt_thick, times, angle_splits, save_path):
+    save_path = os.path.join(save_path, 'YIG_sample')
+    file_path = os.path.join(save_path, 'logl_ratios_{}.csv'.format(pt_thick))
+    
+    # Create a .txt file to save the results to.
+    with open(file_path, 'w') as file:
+        # Iterate over each time being considered.
+        for total_time in times:
+            ratios = []
+            for _ in range(100):
+                # Define the number of points and counting times for each angle.
+                angle_times = [(angle, points, split*total_time)
+                               for angle, points, split in angle_splits]
+                
+                # Simulate data for the YIG sample with a 1 uB/atom magnetic
+                # moment in the platinum layer.
+                sample = SampleYIG()
+                sample.pt_mag.value = 0.01638
+                
+                structure = sample.using_conditions(pt_thick=pt_thick)
+                models, datasets = simulate_magnetic(structure, angle_times,
+                                                     scale=1, bkg=5e-7, dq=2,
+                                                     pp=True, pm=False,
+                                                     mp=False, mm=True)
+                
+                # Extract the probes for the simulated "up" and "down" spin states
+                # and combine into a single probe.
+                mm = models[0].probe.xs[0]
+                pp = models[1].probe.xs[3]
+                probe = refl1d.probe.PolarizedQProbe(xs=(mm, None, None, pp), name='')
+                
+                # Calculate the log-evidence from nested sampling on the simulated
+                # data with a model containing the platinum layer magnetic moment.
+                experiment = refl1d.experiment.Experiment(sample=structure, probe=probe)
+                logl_1 = -experiment.nllf()
+                
+                sample.pt_mag.value = 0
+                experiment = refl1d.experiment.Experiment(sample=structure, probe=probe)
+                logl_2 = -experiment.nllf()
+                
+                ratio = logl_1-logl_2
+                ratios.append(ratio)
+                
+            ratios.sort()
+            iqm_ratio = np.mean(ratios[len(ratios)//4:len(ratios)*3//4])
+            file.write('{0},{1}\n'.format(total_time, iqm_ratio))
+            print(iqm_ratio)
 
 if __name__ == '__main__':
-    _magnetism_results()
+    save_path = './results'
+    
+    _magnetism_results_visualise(save_path)
+    _magnetism_results_optimise(save_path)
+    _magnetism_results_logl(save_path)

@@ -96,7 +96,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         self.pt_sld.range(5, 6)
         self.pt_thick.range(2, 30)
         self.pt_rough.range(0, 9)
-        self.pt_mag.range(0, 0.2)
+        self.pt_mag.range(0, 0.1)
 
         self.intermediary_sld.range(4.5, 5.5)
         self.intermediary_thick.range(0, 25)
@@ -105,7 +105,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         self.yig_sld.range(5, 6)
         self.yig_thick.range(100, 900)
         self.yig_rough.range(0, 70)
-        self.yig_mag.range(0, 0.6)
+        self.yig_mag.range(0.2, 0.5)
 
         self.yag_sld.range(4.5, 5.5)
         self.yag_rough.range(20, 30)
@@ -287,7 +287,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
             save_path (str): path to directory to save profile to.
 
         """
-        fig = plt.figure()
+        fig = plt.figure(figsize=(6,7))
         ax = fig.add_subplot(111)
 
         colours = ['b', 'g']
