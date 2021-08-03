@@ -3,20 +3,19 @@ plt.rcParams['figure.figsize'] = (9,7)
 plt.rcParams['figure.dpi'] = 600
 
 import numpy as np
-import os, sys, time
+import os, sys
 # Add the models directory to the system path.
 # Add the current directory to the path to avoid issues with threading.
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 sys.path.append(os.path.join(os.path.dirname(__file__)))
 
-import refl1d.material, refl1d.magnetism, refl1d.experiment, bumps.fitproblem
+import refl1d.material, refl1d.magnetism, refl1d.experiment
 
 from scipy.optimize import differential_evolution
 
 from magnetic import SampleYIG
-from optimise import Optimiser
 from simulate import simulate_magnetic
-from utils import save_plot, Sampler
+from utils import save_plot
 
 def _magnetism_results_visualise(save_path):
     """Visualises the choice of YIG and Pt layer thicknesses for the 
