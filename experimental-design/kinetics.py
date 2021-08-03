@@ -123,7 +123,7 @@ def _kinetics_results_optimise(save_path):
 
     # Bounds for optimisation function variables.
     bounds = [angle_bounds, contrast_bounds]
-    # Arguments for optimisation function
+    # Arguments for optimisation function.
     args = [apm_range, points, time]
 
     # Optimise both the hydrogenated and deuterated tailgroup models.

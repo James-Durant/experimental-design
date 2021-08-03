@@ -255,6 +255,6 @@ if __name__ == '__main__':
     dppg_monolayer = MonolayerDPPG()
     dppg_monolayer.sld_profile(save_path)
     dppg_monolayer.reflectivity_profile(save_path)
-    
+
     # Close the plots.
     plt.close('all')
