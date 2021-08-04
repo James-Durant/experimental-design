@@ -18,7 +18,7 @@ from simulate import simulate_magnetic
 from utils import save_plot
 
 def _magnetism_results_visualise(save_path):
-    """Visualises the choice of YIG and Pt layer thicknesses for the 
+    """Visualises the choice of YIG and Pt layer thicknesses for the
        magnetic YIG sample.
 
     Args:
@@ -26,17 +26,17 @@ def _magnetism_results_visualise(save_path):
 
     """
     sample = SampleYIG()
-    
+
     # Number of points and counting times for each angle to simulate.
     angle_times = [(0.5, 100, 20),
                    (1.0, 100, 40),
                    (2.0, 100, 80)]
-    
+
     # Range of YIG and Pt layer thicknesses to calculate over.
     yig_thick_range = np.linspace(400, 900, 75)
     pt_thick_range = np.concatenate((np.linspace(21.5, 30, 50),
                                      np.linspace(30, 100, 50)))
-    
+
     # Iterate over each YIG and Pt layer thickness being considered.
     x, y, infos = [], [], []
     n = len(pt_thick_range)*len(yig_thick_range) # Number of calculations.
@@ -46,17 +46,17 @@ def _magnetism_results_visualise(save_path):
             print('>>> {0}/{1}'.format(i*len(pt_thick_range), n))
 
         for pt_thick in pt_thick_range:
-            # Calculate the Fisher information using the thicknesses.
+            # Calculate the Fisher information using current thicknesses.
             g = sample.underlayer_info(angle_times, yig_thick, pt_thick)
 
             infos.append(g[0,0])
             x.append(yig_thick)
             y.append(pt_thick)
-            
+
     # Create plot of YIG and Pt layer thicknesses versus Fisher information.
     fig = plt.figure(figsize=[10,8])
     ax = fig.add_subplot(111, projection='3d')
-    
+
     # Create the surface plot and add colour bar.
     surface = ax.plot_trisurf(x, y, infos, cmap='plasma')
     fig.colorbar(surface, fraction=0.046, pad=0.04)
@@ -73,7 +73,7 @@ def _magnetism_results_visualise(save_path):
     # Save the plot.
     save_path = os.path.join(save_path, sample.name)
     save_plot(fig, save_path, 'underlayer_choice')
-    
+
     # Save different views of the 3D plot.
     # Iterate from 0 to 360 degrees in increments of 10.
     save_path = os.path.join(save_path, 'underlayer_choice')
@@ -88,7 +88,7 @@ def _magnetism_results_visualise(save_path):
     return x[maximum], y[maximum]
 
 def _magnetism_results_optimise(save_path):
-    """Optimises the choice of YIG and Pt layer thicknesses for the 
+    """Optimises the choice of YIG and Pt layer thicknesses for the
        magnetic YIG sample.
 
     Args:
@@ -101,7 +101,7 @@ def _magnetism_results_optimise(save_path):
     angle_times = [(0.5, 100, 20),
                    (1.0, 100, 40),
                    (2.0, 100, 80)]
-    
+
     # Itervals of YIG and Pt layer thicknesses to optimise over.
     yig_thick_bounds = (200, 900)
     pt_thick_bounds = (21.1, 100)
@@ -109,7 +109,7 @@ def _magnetism_results_optimise(save_path):
 
     # Arguments for optimisation function.
     args = [sample, angle_times]
-    
+
     # Optimise the YIG and Pt layer thicknesses and save the results.
     save_path = os.path.join(save_path, sample.name)
     file_path = os.path.join(save_path, 'optimised_underlayers.txt')
@@ -151,8 +151,8 @@ def _optimisation_func(x, sample, angle_times):
     g = sample.underlayer_info(angle_times, x[0], x[1])
     return -g[0,0]
 
-def _magnetism_results_logl(save_path):
-    """Calculates ratio of log-likelihoods between two models, one with an
+def _magnetism_results_ratios(save_path):
+    """Calculates log ratio of likelihoods between two models, one with an
       induced moment in the YIG sample Pt layer and one with no moment, as
       a function of measurement time, to determine what level of statistics
       are required for a differentiable difference between the two models.
@@ -166,40 +166,41 @@ def _magnetism_results_logl(save_path):
     """
     # Define the range of times to consider (1 to 100 hours here).
     times = np.linspace(40, 4000, 150)
-    
+
     # Number of points for each angle and split of the total counting time
     # for each angle to simulate.
     angle_splits = [(0.5, 100, 1/7),
                     (1.0, 100, 2/7),
                     (2.0, 100, 4/7)]
-    
-    # Calculate the log-likelihood ratios with optimal and sub-optimal designs.
-    #_calc_logl_ratios(26, times, angle_splits, save_path)
-    #_calc_logl_ratios(80, times, angle_splits, save_path)
 
-    # Create the plot of counting time versus log-likelihood ratio.
+    # Calculate log ratio of likelihoods with optimal and sub-optimal designs.
+    #_calc_log_ratios(26, times, angle_splits, save_path)
+    #_calc_log_ratios(80, times, angle_splits, save_path)
+
+    # Create the plot of counting time versus log ratio of likelihoods.
     fig = plt.figure(figsize=(6,7))
     ax = fig.add_subplot(111)
 
     # Iterate over the results for the two designs.
     save_path = os.path.join(save_path, 'YIG_sample')
     for pt_thick in [26, 80]:
-        file_path = os.path.join(save_path, 'logl_ratios_{}.csv'.format(pt_thick))
-        
+        file_path = os.path.join(save_path, 'log_ratios_{}.csv'.format(pt_thick))
+
         # Load and plot the calculated ratios.
         data = np.loadtxt(file_path, delimiter=',')
         times, factors = data[:,0], data[:,1]
+
         ax.plot(1.5*times, factors, label='{}Å Pt Thickness'.format(pt_thick))
 
     ax.set_xlabel('Counting Time (min.)', fontsize=11, weight='bold')
-    ax.set_ylabel('Log Likelihood Ratio', fontsize=11, weight='bold')
+    ax.set_ylabel('Log Ratio of Likelihoods', fontsize=11, weight='bold')
     ax.legend()
 
     # Save the plot.
-    save_plot(fig, save_path, 'logl_ratios')
+    save_plot(fig, save_path, 'log_ratios')
 
-def _calc_logl_ratios(pt_thick, times, angle_splits, save_path):
-    """Calculates ratio of log-likelihoods between two models, one with an
+def _calc_log_ratios(pt_thick, times, angle_splits, save_path):
+    """Calculates log ratio of likelihoods between two models, one with an
       induced moment in the YIG sample Pt layer and one with no moment, as
       a function of measurement time.
 
@@ -212,7 +213,7 @@ def _calc_logl_ratios(pt_thick, times, angle_splits, save_path):
     """
     # Create a .txt file to save the results to.
     save_path = os.path.join(save_path, 'YIG_sample')
-    file_path = os.path.join(save_path, 'logl_ratios_{}.csv'.format(pt_thick))
+    file_path = os.path.join(save_path, 'log_ratios_{}.csv'.format(pt_thick))
     with open(file_path, 'w') as file:
         # Iterate over each time being considered.
         for total_time in times:
@@ -251,11 +252,11 @@ def _calc_logl_ratios(pt_thick, times, angle_splits, save_path):
                 sample.pt_mag.value = 0
                 experiment = refl1d.experiment.Experiment(sample=structure, probe=probe)
                 logl_2 = -experiment.nllf()
-                
-                # Record the ratio of the likelihood.
+
+                # Record the ratio of likelihoods.
                 ratio = logl_1-logl_2
                 ratios.append(ratio)
-            
+
             # Calculate and save the interquartile mean.
             ratios.sort()
             iqm_ratio = np.mean(ratios[len(ratios)//4:len(ratios)*3//4])
@@ -267,4 +268,4 @@ if __name__ == '__main__':
 
     _magnetism_results_visualise(save_path)
     _magnetism_results_optimise(save_path)
-    _magnetism_results_logl(save_path)
+    _magnetism_results_ratios(save_path)
