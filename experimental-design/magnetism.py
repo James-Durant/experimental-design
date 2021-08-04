@@ -14,7 +14,7 @@ import refl1d.material, refl1d.magnetism, refl1d.experiment
 from scipy.optimize import differential_evolution
 
 from magnetic import SampleYIG
-from simulate import simulate_magnetic
+from simulate import simulate_magnetic, reflectivity
 from utils import save_plot
 
 def _magnetism_results_visualise(save_path):
@@ -165,7 +165,7 @@ def _magnetism_results_ratios(save_path):
 
     """
     # Define the range of times to consider (1 to 100 hours here).
-    times = np.linspace(40, 4000, 150)
+    times = np.linspace(40, 4000, 250)
 
     # Number of points for each angle and split of the total counting time
     # for each angle to simulate.
@@ -174,8 +174,8 @@ def _magnetism_results_ratios(save_path):
                     (2.0, 100, 4/7)]
 
     # Calculate log ratio of likelihoods with optimal and sub-optimal designs.
-    #_calc_log_ratios(26, times, angle_splits, save_path)
-    #_calc_log_ratios(80, times, angle_splits, save_path)
+    _calc_log_ratios(26, times, angle_splits, save_path)
+    _calc_log_ratios(80, times, angle_splits, save_path)
 
     # Create the plot of counting time versus log ratio of likelihoods.
     fig = plt.figure(figsize=(6,7))
@@ -235,33 +235,52 @@ def _calc_log_ratios(pt_thick, times, angle_splits, save_path):
                                                      pp=True, pm=False,
                                                      mp=False, mm=True)
 
-                # Extract the probes for the simulated "up" and "down" spin
-                # states and combine into a single probe.
-                mm = models[0].probe.xs[0]
-                pp = models[1].probe.xs[3]
-                probes = (mm, None, None, pp)
-                probe = refl1d.probe.PolarizedQProbe(xs=probes, name='')
-
                 # Calculate the log-likelihood of a model containing the
                 # Pt layer magnetic moment.
-                experiment = refl1d.experiment.Experiment(sample=structure, probe=probe)
-                logl_1 = -experiment.nllf()
+                logl_1 = _logl(models)
 
                 # Calculate the log-likelihood of a model without the
                 # Pt layer magnetic moment.
                 sample.pt_mag.value = 0
-                experiment = refl1d.experiment.Experiment(sample=structure, probe=probe)
-                logl_2 = -experiment.nllf()
+                logl_2 = _logl(models)
 
                 # Record the ratio of likelihoods.
                 ratio = logl_1-logl_2
                 ratios.append(ratio)
 
-            # Calculate and save the interquartile mean.
-            ratios.sort()
-            iqm_ratio = np.mean(ratios[len(ratios)//4:len(ratios)*3//4])
-            file.write('{0},{1}\n'.format(total_time, iqm_ratio))
-            print(iqm_ratio)
+            # Calculate and save median ratio.
+            median_ratio = np.median(ratios)
+            file.write('{0},{1}\n'.format(total_time, median_ratio))
+            print(median_ratio)
+
+def _logl(models):
+    """Calculates the log-likelihood for a given list of `models`
+       corresponding to simulated spin states.
+
+    Args:
+        models (list): models to calculate log-likelihood for.
+
+    Returns:
+        float: log-likelihood of given `models`.
+
+    """
+    # Extract the Q, R, dR and model R for the simulated spin states.
+    q, r, dr, r_model = [], [] , [], []
+    for model in models:
+        probe = model.probe.xs[model.probe.spin_state]
+        q.append(probe.Q)
+        r.append(probe.R)
+        dr.append(probe.dR)
+        r_model.append(reflectivity(probe.Q, model))
+
+    # Combine the data from each spin state.
+    q = np.concatenate(q)
+    r = np.concatenate(r)
+    dr = np.concatenate(dr)
+    r_model = np.concatenate(r_model)
+
+    # Calculate the log-likelihood over all the models.
+    return -0.5*np.sum(((r-r_model)/dr)**2 + np.log(2*np.pi*dr**2))
 
 if __name__ == '__main__':
     save_path = './results'
