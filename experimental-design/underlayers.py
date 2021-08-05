@@ -81,11 +81,29 @@ def _underlayer_results_optimise(save_path):
         val = -np.linalg.eigvalsh(g)[0]
         val = np.format_float_positional(val, precision=4, unique=False,
                                          fractional=False, trim='k')
-
-        # Write the results to the .txt file.
-        file.write('----------- No Underlayers -----------\n')
+        file.write('------------ No Underlayer ------------\n')
         file.write('Thicknesses: {}\n'.format([]))
         file.write('SLDs: {}\n'.format([]))
+        file.write('Objective value: {}\n\n'.format(val))
+
+        # Calculate the objective value using a 100 thick gold underlayer.
+        g = optimiser.sample.underlayer_info(angle_times, contrasts, [(120, 4.7)])
+        val = -np.linalg.eigvalsh(g)[0]
+        val = np.format_float_positional(val, precision=4, unique=False,
+                                         fractional=False, trim='k')
+        file.write('------------ Au Underlayer ------------\n')
+        file.write('Thicknesses: {}\n'.format([100]))
+        file.write('SLDs: {}\n'.format([4.7]))
+        file.write('Objective value: {}\n\n'.format(val))
+
+        # Calculate the objective value using a 100 thick Permalloy underlayer.
+        g = optimiser.sample.underlayer_info(angle_times, contrasts, [(80, 8.4)])
+        val = -np.linalg.eigvalsh(g)[0]
+        val = np.format_float_positional(val, precision=4, unique=False,
+                                         fractional=False, trim='k')
+        file.write('--------- Permalloy Underlayer --------\n')
+        file.write('Thicknesses: {}\n'.format([100]))
+        file.write('SLDs: {}\n'.format([8.4]))
         file.write('Objective value: {}\n\n'.format(val))
 
         # Optimise the experiment using 1-4 contrasts.
@@ -107,7 +125,7 @@ def _underlayer_results_optimise(save_path):
                                              fractional=False, trim='k')
 
             # Save the conditions, objective value and computation time.
-            file.write('----------- {} Underlayers -----------\n'.format(num_underlayers))
+            file.write('------------ {} Underlayers ------------\n'.format(num_underlayers))
             file.write('Thicknesses: {}\n'.format(list(np.round(thicknesses, 1))))
             file.write('SLDs: {}\n'.format(list(np.round(slds, 2))))
             file.write('Objective value: {}\n'.format(val))

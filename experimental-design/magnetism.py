@@ -9,8 +9,6 @@ import os, sys
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 sys.path.append(os.path.join(os.path.dirname(__file__)))
 
-import refl1d.material, refl1d.magnetism, refl1d.experiment
-
 from scipy.optimize import differential_evolution
 
 from magnetic import SampleYIG
