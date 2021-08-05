@@ -86,8 +86,10 @@ def _underlayer_results_optimise(save_path):
         file.write('SLDs: {}\n'.format([]))
         file.write('Objective value: {}\n\n'.format(val))
 
-        # Calculate the objective value using a 100 thick gold underlayer.
-        g = optimiser.sample.underlayer_info(angle_times, contrasts, [(120, 4.7)])
+        # Calculate the objective value using a gold underlayer.
+        underlayer = [(130, 4.7)]
+        #underlayer = [(75, 4.7)]
+        g = optimiser.sample.underlayer_info(angle_times, contrasts, underlayer)
         val = -np.linalg.eigvalsh(g)[0]
         val = np.format_float_positional(val, precision=4, unique=False,
                                          fractional=False, trim='k')
@@ -96,8 +98,10 @@ def _underlayer_results_optimise(save_path):
         file.write('SLDs: {}\n'.format([4.7]))
         file.write('Objective value: {}\n\n'.format(val))
 
-        # Calculate the objective value using a 100 thick Permalloy underlayer.
-        g = optimiser.sample.underlayer_info(angle_times, contrasts, [(80, 8.4)])
+        # Calculate the objective value using a Permalloy underlayer.
+        underlayer = [(120, 8.4)]
+        #underlayer = [(80, 8.4)]
+        g = optimiser.sample.underlayer_info(angle_times, contrasts, underlayer)
         val = -np.linalg.eigvalsh(g)[0]
         val = np.format_float_positional(val, precision=4, unique=False,
                                          fractional=False, trim='k')

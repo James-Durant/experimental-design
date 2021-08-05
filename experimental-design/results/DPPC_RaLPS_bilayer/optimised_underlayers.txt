@@ -6,12 +6,12 @@ Objective value: -0.001312
 ------------ Au Underlayer ------------
 Thicknesses: [100]
 SLDs: [4.7]
-Objective value: -0.004377
+Objective value: -0.002813
 
 --------- Permalloy Underlayer --------
 Thicknesses: [100]
 SLDs: [8.4]
-Objective value: -0.0106
+Objective value: -0.01059
 
 ------------ 1 Underlayers ------------
 Thicknesses: [76.5]
