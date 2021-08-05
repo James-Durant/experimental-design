@@ -275,7 +275,7 @@ class BilayerDPPC(BaseLipid):
         self.pc_hg_sld = 1.98
         self.dppc_tg_sld = 7.45
         self.lps_tg_sld = -0.37
-        self.core_d2o_sld = 4.2
+        self.core_d2o_sld = 4.20
         self.core_h2o_sld = 2.01
 
         # Define the varying parameters of the model.

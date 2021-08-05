@@ -4,7 +4,7 @@ plt.rcParams['figure.dpi'] = 600
 
 import os, sys
 # Add parent directory to system path to access simulate.py and utils.py
-sys.path.append(os.path.join(__file__, '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from abc import ABC, abstractmethod
 import refnx.dataset, refnx.reflect, refnx.analysis

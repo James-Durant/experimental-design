@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
+plt.rcParams['figure.dpi'] = 600
+
 import numpy as np
 import os
-plt.rcParams['figure.dpi'] = 600
 
 import refnx.dataset, refnx.reflect, refnx.analysis
 from base import BaseLipid
@@ -24,9 +25,7 @@ class MonolayerDPPG(BaseLipid):
         lipid_apm (refnx.analysis.Parameter): lipid area per molecule.
         hg_waters (refnx.analysis.Parameter): amount of headgroup bound water.
         monolayer_rough (refnx.analysis.Parameter): monolayer roughness.
-        non_lipid_vf (refnx.analysis.Parameter): non-lipid volume fraction.
-        protein_tg (refnx.analysis.Parameter): protein tailgroup volume fraction.
-        protein_hg (refnx.analysis.Parameter): protein headgroup volume fraction.
+        lipid_vf (refnx.analysis.Parameter): lipid hydration.
         protein_thick (refnx.analysis.Parameter): protein thickness.
         protein_vfsolv (refnx.analysis.Parameter): protein hydration.
         water_rough (refnx.analysis.Parameter): protein/water roughness.
@@ -49,16 +48,14 @@ class MonolayerDPPG(BaseLipid):
         self.dq = 3
 
         # Define the varying parameters of the model.
-        self.air_tg_rough    = refnx.analysis.Parameter( 5.0000, 'Air/Tailgroup Roughness',   ( 5, 8))
-        self.lipid_apm       = refnx.analysis.Parameter(54.1039, 'Lipid Area Per Molecule',   (30, 80))
-        self.hg_waters       = refnx.analysis.Parameter( 6.6874, 'Headgroup Bound Waters',    ( 0, 20))
-        self.monolayer_rough = refnx.analysis.Parameter( 2.0233, 'Monolayer Roughness',       ( 0, 10))
-        self.non_lipid_vf    = refnx.analysis.Parameter( 0.0954, 'Non-lipid Volume Fraction', ( 0, 1))
-        self.protein_tg      = refnx.analysis.Parameter( 0.9999, 'Protein Tails',             ( 0, 1))
-        self.protein_hg      = refnx.analysis.Parameter( 1.0000, 'Protein Headgroup',         ( 0, 1))
-        self.protein_thick   = refnx.analysis.Parameter(32.6858, 'Protein Thickness',         ( 0, 80))
-        self.protein_vfsolv  = refnx.analysis.Parameter( 0.5501, 'Protein Hydration',         ( 0, 100))
-        self.water_rough     = refnx.analysis.Parameter( 3.4590, 'Protein/Water Roughness',   ( 0, 15))
+        self.air_tg_rough    = refnx.analysis.Parameter( 5.0000, 'Air/Tailgroup Roughness', ( 5, 8))
+        self.lipid_apm       = refnx.analysis.Parameter(54.1039, 'Lipid Area Per Molecule', (30, 80))
+        self.hg_waters       = refnx.analysis.Parameter( 6.6874, 'Headgroup Bound Waters',  ( 0, 20))
+        self.monolayer_rough = refnx.analysis.Parameter( 2.0233, 'Monolayer Roughness',     ( 0, 10))
+        self.lipid_vfsolv    = refnx.analysis.Parameter( 0.9046, 'Lipid Hydration',         ( 0, 1))
+        self.protein_thick   = refnx.analysis.Parameter(32.6858, 'Protein Thickness',       ( 0, 80))
+        self.protein_vfsolv  = refnx.analysis.Parameter( 0.5501, 'Protein Hydration',       ( 0, 100))
+        self.water_rough     = refnx.analysis.Parameter( 3.4590, 'Protein/Water Roughness', ( 0, 15))
 
         # We are only interested in the lipid APM.
         self.params = [self.lipid_apm]
@@ -141,46 +138,42 @@ class MonolayerDPPG(BaseLipid):
         deuterium_sl  =  0.6671e-4
 
         # Calculate the total scattering length in each fragment.
-        COO  = 1*carbon_sl     + 2*oxygen_sl
-        GLYC = 3*carbon_sl     + 5*hydrogen_sl
-        CH3  = 1*carbon_sl     + 3*hydrogen_sl
-        PO4  = 1*phosphorus_sl + 4*oxygen_sl
-        CH2  = 1*carbon_sl     + 2*hydrogen_sl
-        H2O  = 2*hydrogen_sl   + 1*oxygen_sl
-        D2O  = 2*deuterium_sl  + 1*oxygen_sl
-        CD3  = 1*carbon_sl     + 3*deuterium_sl
-        CD2  = 1*carbon_sl     + 2*deuterium_sl
+        ch2_sl  = 1*carbon_sl     + 2*hydrogen_sl
+        ch3_sl  = 1*carbon_sl     + 3*hydrogen_sl
+        co2_sl  = 1*carbon_sl     + 2*oxygen_sl
+        c3h5_sl = 3*carbon_sl     + 5*hydrogen_sl
+        po4_sl  = 1*phosphorus_sl + 4*oxygen_sl
+        h2o_sl  = 2*hydrogen_sl   + 1*oxygen_sl
+        d2o_sl  = 2*deuterium_sl  + 1*oxygen_sl
+        cd2_sl  = 1*carbon_sl     + 2*deuterium_sl
+        cd3_sl  = 1*carbon_sl     + 3*deuterium_sl
 
         # Volumes of each fragment.
-        vCH3  = 52.7/2
-        vCH2  = 28.1
-        vCOO  = 39.0
-        vGLYC = 68.8
-        vPO4  = 53.7
-        vWAT  = 30.4
+        ch2_vol   = 28.1
+        ch3_vol   = 52.7/2
+        co2_vol   = 39.0
+        c3h5_vol  = 68.8
+        po4_vol   = 53.7
+        water_vol = 30.4
 
         # Calculate volumes from components.
-        hg_vol = vPO4 + 2*vGLYC + 2* vCOO
-        tg_vol = 28*vCH2 + 2*vCH3
+        hg_vol = po4_vol + 2*c3h5_vol + 2*co2_vol
+        tg_vol = 28*ch2_vol + 2*ch3_vol
 
         # Calculate mole fraction of D2O from the bulk SLD.
-        d2o_molfr = (contrast_sld - h2o_sld) / (d2o_sld - h2o_sld)
+        x = (contrast_sld - h2o_sld) / (d2o_sld - h2o_sld)
 
-        # Calculate 'average' scattering length sum per water molecule in bulk.
-        sl_sum_water = d2o_molfr*D2O + (1-d2o_molfr)*H2O
+        # Calculate 'average' scattering length sum per water molecule.
+        sl_sum_water = x*d2o_sl + (1-x)*h2o_sl
 
         # Calculate scattering length sums for the other fragments.
-        sl_sum_hg = PO4 + 2*GLYC + 2*COO
-        sl_sum_tg_h = 28*CH2 + 2*CH3
-        sl_sum_tg_d = 28*CD2 + 2*CD3
+        sl_sum_hg = po4_sl + 2*c3h5_sl + 2*co2_sl
+        sl_sum_tg_h = 28*ch2_sl + 2*ch3_sl
+        sl_sum_tg_d = 28*cd2_sl + 2*cd3_sl
 
-        # Need to include the number of hydrating water molecules in headgroup
-        # scattering length sum and headgroup volume.
-        lipid_total_sl_sum = sl_sum_water * self.hg_waters
-        lipid_total_vol = vWAT * self.hg_waters
-
-        hg_vol = hg_vol + lipid_total_vol
-        sl_sum_hg = sl_sum_hg + lipid_total_sl_sum
+        # Need to include number of hydrating water molecules in headgroup.
+        hg_vol += water_vol*self.hg_waters
+        sl_sum_hg += sl_sum_water*self.hg_waters
 
         hg_sld = sl_sum_hg / hg_vol
 
@@ -190,22 +183,15 @@ class MonolayerDPPG(BaseLipid):
 
         # If including the protein in the model.
         if protein:
-            # Contrast_point calculation.
-            contrast_point = (contrast_sld - h2o_sld) / (d2o_sld - h2o_sld)
-
             # Calculated SLD of protein and hydration
-            protein_sld = (contrast_point * protein_d2o_sld) + ((1-contrast_point) * protein_h2o_sld)
-
-            # Bulk-in is 0 SLD so no extra terms.
-            protein_tg_sld = self.protein_tg * protein_sld
-            protein_hg_sld = self.protein_hg * protein_sld
-
-            hg_sld = (1-self.non_lipid_vf)*hg_sld + self.non_lipid_vf*protein_hg_sld
-
-            tg_h_sld = (1-self.non_lipid_vf)*tg_h_sld + self.non_lipid_vf*protein_tg_sld
-            tg_d_sld = (1-self.non_lipid_vf)*tg_d_sld + self.non_lipid_vf*protein_tg_sld
+            protein_sld = x*protein_d2o_sld + (1-x)*protein_h2o_sld
 
             protein = refnx.reflect.SLD(protein_sld*1e6, name='Protein')(self.protein_thick, self.monolayer_rough, self.protein_vfsolv)
+
+            hg_sld = self.lipid_vfsolv*hg_sld + (1-self.lipid_vfsolv)*protein_sld
+
+            tg_h_sld = self.lipid_vfsolv*tg_h_sld + (1-self.lipid_vfsolv)*protein_sld
+            tg_d_sld = self.lipid_vfsolv*tg_d_sld + (1-self.lipid_vfsolv)*protein_sld
 
         # Tailgroup and headgroup thicknesses.
         tg_thick = tg_vol / self.lipid_apm
