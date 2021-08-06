@@ -230,7 +230,7 @@ class BilayerDPPC(BaseLipid):
         dq (float): instrument resolution.
         si_sld (float): SLD of silicon substrate.
         sio2_sld (float): SLD of silicon oxide.
-        pc_hg_sld (float): pc headgroup SLD.
+        dppc_hg_sld (float): deuterated DPPC headgroup SLD.
         dppc_tg (float): deuterated DPPC tailgroup SLD.
         lps_tg (float): hydrogenated Ra LPS tailgroup SLD.
         core_d2o (float): core SLD in D2O.
@@ -272,7 +272,7 @@ class BilayerDPPC(BaseLipid):
         # Define known values.
         self.si_sld = 2.07
         self.sio2_sld = 3.41
-        self.pc_hg_sld = 1.98
+        self.dppc_hg_sld = 1.98
         self.dppc_tg_sld = 7.45
         self.lps_tg_sld = -0.37
         self.core_d2o_sld = 4.20
@@ -370,9 +370,9 @@ class BilayerDPPC(BaseLipid):
         # Define the layers of the model.
         substrate = refnx.reflect.SLD(self.si_sld)
 
-        inner_hg = refnx.reflect.Slab(self.inner_hg_thick, self.pc_hg_sld, self.sio2_rough,    vfsolv=self.inner_hg_solv)
-        inner_tg = refnx.reflect.Slab(self.inner_tg_thick, inner_tg_sld,   self.bilayer_rough, vfsolv=self.tg_solv)
-        outer_tg = refnx.reflect.Slab(self.outer_tg_thick, outer_tg_sld,   self.bilayer_rough, vfsolv=self.tg_solv)
+        inner_hg = refnx.reflect.Slab(self.inner_hg_thick, self.dppc_hg_sld, self.sio2_rough, vfsolv=self.inner_hg_solv)
+        inner_tg = refnx.reflect.Slab(self.inner_tg_thick, inner_tg_sld, self.bilayer_rough, vfsolv=self.tg_solv)
+        outer_tg = refnx.reflect.Slab(self.outer_tg_thick, outer_tg_sld, self.bilayer_rough, vfsolv=self.tg_solv)
 
         core = refnx.reflect.Slab(self.core_thick, core_sld, self.bilayer_rough, vfsolv=self.core_solv)
 
