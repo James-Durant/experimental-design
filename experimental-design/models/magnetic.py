@@ -61,7 +61,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         self.pt_sld = bumps.parameter.Parameter(5.646, name='Pt SLD')
         self.pt_thick = bumps.parameter.Parameter(21.08, name='Pt Thickness')
         self.pt_rough = bumps.parameter.Parameter(8.211, name='Air/Pt Roughness')
-        self.pt_mag = bumps.parameter.Parameter(0.0128, name='Pt Magnetic SLD')
+        self.pt_mag = bumps.parameter.Parameter(0, name='Pt Magnetic SLD')
 
         self.intermediary_sld = bumps.parameter.Parameter(4.678, name='Intermediary SLD')
         self.intermediary_thick = bumps.parameter.Parameter(19.67, name='Intermediary Thickness')

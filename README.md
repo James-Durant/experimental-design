@@ -47,7 +47,7 @@ James Durant - james.durant@warwick.ac.uk \
 Lucas Wilkins - lucas@lucaswilkins.com
 
 ## Acknowledgements
-To do
+We thank Luke Clifton for his assistance and expertise in fitting the lipid monolayer and lipid bilayer data sets.
 
 ## License
 Distributed under the GPL-3.0 License. See [license](/LICENSE) for more information.

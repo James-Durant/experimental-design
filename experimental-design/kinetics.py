@@ -27,7 +27,7 @@ def _kinetics_results_visualise(save_path):
     monolayer = MonolayerDPPG(deuterated=False)
 
     # Angles, contrasts and lipid area per molecule values to consider.
-    angle_range = np.linspace(0.2, 4, 75)
+    angle_range = np.linspace(0.2, 4.0, 75)
     contrast_range = np.linspace(-0.56, 6.36, 75)
     apm_range = np.linspace(54.1039, 500, 20)
 
@@ -179,5 +179,6 @@ def _optimisation_func(x, sample, apm_range, points, time):
 
 if __name__ == '__main__':
     save_path = './results'
+    
     _kinetics_results_visualise(save_path)
     _kinetics_results_optimise(save_path)
