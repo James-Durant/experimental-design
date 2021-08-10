@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 plt.rcParams['figure.dpi'] = 600
+plt.rcParams['figure.figsize'] = (9,7)
 
 import numpy as np
 import os
@@ -40,7 +41,7 @@ class MonolayerDPPG(BaseLipid):
                                       'DPPG_monolayer')
 
         self.labels = ['hDPPG-D2O', 'dDPPG-NRW', 'hDPPG-NRW']
-        self.distances = np.linspace(-25, 90, 500)
+        self.distances = None #np.linspace(-25, 90, 500)
         self.deuterated = deuterated
 
         self.scales = [1.8899, 1.8832, 1.8574]
@@ -225,14 +226,12 @@ class MonolayerDPPG(BaseLipid):
 
         """
         # Plot the SLD profile without the protein.
-        plt.rcParams['figure.figsize'] = (4.5,7)
         self._create_objectives(protein=False)
-        super().sld_profile(save_path, 'sld_profile_no_protein', ylim=(-0.6, 7.5), legend=False)
+        super().sld_profile(save_path, 'sld_profile_no_protein', ylim=(-0.6, 7.5))
 
         # Plot the SLD profile with the protein.
         self._create_objectives(protein=True)
-        super().sld_profile(save_path, 'sld_profile_protein', ylim=(-0.6, 7.5), legend=False)
-        plt.rcParams['figure.figsize'] = (9,7)
+        super().sld_profile(save_path, 'sld_profile_protein', ylim=(-0.6, 7.5))
 
 if __name__ == '__main__':
     save_path = '../results'

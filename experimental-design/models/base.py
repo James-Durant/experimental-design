@@ -174,7 +174,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
 
         # Add a legend if specified.
         if legend:
-            ax.legend(self.labels)
+            ax.legend(self.labels, loc='upper left')
 
         # Save the plot.
         save_path = os.path.join(save_path, self.name)
