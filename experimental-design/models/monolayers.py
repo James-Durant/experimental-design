@@ -184,13 +184,12 @@ class MonolayerDPPG(BaseLipid):
 
         # If including the protein in the model.
         if protein:
-            # Calculated SLD of protein and hydration
+            # Calculate the SLD of the protein.
             protein_sld = x*protein_d2o_sld + (1-x)*protein_h2o_sld
-
             protein = refnx.reflect.SLD(protein_sld*1e6, name='Protein')(self.protein_thick, self.monolayer_rough, self.protein_vfsolv)
 
-            hg_sld = self.lipid_vfsolv*hg_sld + (1-self.lipid_vfsolv)*protein_sld
-
+            # Adjust headgroup and tailgroup SLDs by lipid hydration.
+            hg_sld   = self.lipid_vfsolv*hg_sld   + (1-self.lipid_vfsolv)*protein_sld
             tg_h_sld = self.lipid_vfsolv*tg_h_sld + (1-self.lipid_vfsolv)*protein_sld
             tg_d_sld = self.lipid_vfsolv*tg_d_sld + (1-self.lipid_vfsolv)*protein_sld
 
