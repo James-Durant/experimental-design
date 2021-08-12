@@ -5,7 +5,7 @@ import refnx.reflect
 import refl1d.model, refl1d.probe, refl1d.experiment
 
 def simulate_magnetic(sample, angle_times, scale=1, bkg=5e-7, dq=2,
-                      mm=True, mp=True, pm=True, pp=True, angle_scale=0.5,
+                      mm=True, mp=True, pm=True, pp=True, angle_scale=0.7,
                       directbeam_path=None):
     """Simulates an experiment of a given magnetic `sample` measured
        over a number of angles.
@@ -36,7 +36,7 @@ def simulate_magnetic(sample, angle_times, scale=1, bkg=5e-7, dq=2,
                                        'data',
                                        'directbeams',
                                        'OFFSPEC_polarised.dat')
-        angle_scale = 0.5
+        angle_scale = 0.7
 
     # Simulate the "minus minus" spin state if requested.
     if mm:
@@ -69,7 +69,7 @@ def simulate_magnetic(sample, angle_times, scale=1, bkg=5e-7, dq=2,
     return models, datasets
 
 def simulate(sample, angle_times, scale=1, bkg=5e-6, dq=2, directbeam_path=None,
-             angle_scale=0.3, spin_state=None):
+             angle_scale=0.7, spin_state=None):
     """Simulates an experiment of a `sample` measured over a number of angles.
 
     Args:
@@ -96,8 +96,8 @@ def simulate(sample, angle_times, scale=1, bkg=5e-6, dq=2, directbeam_path=None,
         directbeam_path = os.path.join(os.path.dirname(__file__),
                                        'data',
                                        'directbeams',
-                                       'OFFSPEC_non-polarised.dat')
-        angle_scale = 0.3
+                                       'OFFSPEC_non_polarised.dat')
+        angle_scale = 0.7
 
     # Iterate over each angle to simulate.
     q, r, dr, counts = [], [], [], []
