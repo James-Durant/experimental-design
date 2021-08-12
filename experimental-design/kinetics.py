@@ -179,6 +179,6 @@ def _optimisation_func(x, sample, apm_range, points, time):
 
 if __name__ == '__main__':
     save_path = './results'
-    
+
     _kinetics_results_visualise(save_path)
     _kinetics_results_optimise(save_path)
