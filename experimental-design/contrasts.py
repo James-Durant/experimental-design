@@ -30,7 +30,7 @@ def _contrast_results_visualise(save_path):
     contrast_choice_single(bilayer, contrast_range, [], angle_times, save_path, 'initial')
     contrast_choice_single(bilayer, contrast_range, [6.36], angle_times, save_path, 'D2O')
     contrast_choice_single(bilayer, contrast_range, [-0.56], angle_times, save_path, 'H2O')
-    contrast_choice_single(bilayer, contrast_range, [-0.56, 6.36], angle_times, save_path, 'H2O_D2O')
+    contrast_choice_single(bilayer, contrast_range, [-0.56, 6.36], angle_times, save_path, 'D2O_H2O')
 
     # Investigate contrast pair choices assuming no prior measurement.
     contrast_range = np.linspace(-0.56, 6.36, 75)

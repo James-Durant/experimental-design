@@ -24,6 +24,7 @@ def _magnetism_results_visualise(save_path):
 
     """
     sample = SampleYIG()
+    sample.pt_mag.value = 0.01638
 
     # Number of points and counting times for each angle to simulate.
     angle_times = [(0.5, 100, 20),
@@ -94,6 +95,7 @@ def _magnetism_results_optimise(save_path):
 
     """
     sample = SampleYIG()
+    sample.pt_mag.value = 0.01638
 
     # Number of points and counting times for each angle to simulate.
     angle_times = [(0.5, 100, 20),
@@ -186,9 +188,9 @@ def _magnetism_results_ratios(save_path):
 
         # Load and plot the calculated ratios.
         data = np.loadtxt(file_path, delimiter=',')
-        times, factors = data[:,0], data[:,1]
+        times, ratios = data[:,0], data[:,1]
 
-        ax.plot(1.5*times, factors, label='{}Å Pt Thickness'.format(pt_thick))
+        ax.plot(1.5*times, ratios, label='{}Å Pt Thickness'.format(pt_thick))
 
     ax.set_xlabel('Counting Time (min.)', fontsize=11, weight='bold')
     ax.set_ylabel('Log Ratio of Likelihoods', fontsize=11, weight='bold')
