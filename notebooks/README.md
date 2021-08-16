@@ -1,5 +1,5 @@
-## Examples
-The following examples are intended to provide simplified interfaces into the Fisher information framework. To apply the framework to your own experimental design problems, you can modify the example models in the following [Jupyter](https://jupyter.org) notebooks.
+## Notebooks
+The following notebooks are intended to provide simplified interfaces into the Fisher information framework. To apply the framework to your own experimental design problems, you can modify the example models in the following [Jupyter](https://jupyter.org) notebooks.
 
 Tutorial notebooks:
 * [angle.ipynb](/examples/angle.ipynb) - Angle choice(s) for a simple sample with thin layers.
