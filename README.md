@@ -8,21 +8,17 @@ Please refer to the [examples](/examples) directory for an introduction.
 
 ### Citation
 Please cite the following article if you intend on including elements of this work in your own publications:
-> To do.
+> Durant, J. H., Wilkins, L. and Cooper, J. F. K. Optimising experimental design in neutron reflectometry. arXiv:2108.05605 (2021).
 
 Or with BibTeX as:
 ```
-@article{Durant2021,
-   author  = {Durant, J. H. and Wilkins, L. and Cooper, J. F. K.},
-   doi     = {},
-   journal = {},
-   month   = {},
-   number  = {},
-   pages   = {},
-   title   = {},
-   url     = {},
-   volume  = {},
-   year    = {}
+@misc{Durant2021,
+   title         = {Optimising experimental design in neutron reflectometry}, 
+   author        = {Durant, J. H. and Wilkins, L. and Cooper, J. F. K.},
+   year          = {2021},
+   eprint        = {2108.05605},
+   archivePrefix = {arXiv},
+   primaryClass  = {physics.data-an}
 }
 ```
 
