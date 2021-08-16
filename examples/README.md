@@ -4,4 +4,4 @@ The following examples are intended to provide simplified interfaces into the Fi
 * [contrast.ipynb](/examples/contrast.ipynb) - Contrast choice(s) for a 1,2-dimyristoyl-sn-glycero-3-phosphocholine (DMPC) bilayer model.
 * [simulation.ipynb](/examples/simulation.ipynb) - Simulating an experiment for a simple sample using [refnx](https://refnx.readthedocs.io/en/latest/) and [Refl1D](https://refl1d.readthedocs.io/en/latest/).
 
-To run an example, you can call the file from the command line (e.g., ```jupyter notebook angle.py```) and the outputs will be saved to [results](/examples/results).
+To run an example, you can call the file from the command line (e.g., ```jupyter notebook angle.py```).

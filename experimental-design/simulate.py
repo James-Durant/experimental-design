@@ -35,8 +35,8 @@ def simulate_magnetic(sample, angle_times, scale=1, bkg=5e-7, dq=2,
         directbeam_path = os.path.join(os.path.dirname(__file__),
                                        'data',
                                        'directbeams',
-                                       'OFFSPEC_polarised.dat')
-        angle_scale = 0.7
+                                       'OFFSPEC_polarised_old.dat')
+        angle_scale = 0.3
 
     # Simulate the "minus minus" spin state if requested.
     if mm:
@@ -96,8 +96,8 @@ def simulate(sample, angle_times, scale=1, bkg=5e-6, dq=2, directbeam_path=None,
         directbeam_path = os.path.join(os.path.dirname(__file__),
                                        'data',
                                        'directbeams',
-                                       'OFFSPEC_non_polarised.dat')
-        angle_scale = 0.7
+                                       'OFFSPEC_non_polarised_old.dat')
+        angle_scale = 0.3
 
     # Iterate over each angle to simulate.
     q, r, dr, counts = [], [], [], []
