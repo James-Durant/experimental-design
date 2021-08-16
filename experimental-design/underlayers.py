@@ -43,10 +43,10 @@ def _underlayer_results_visualise(save_path):
 
     # Use nested sampling to validate the improvements.
     bilayer.nested_sampling([-0.56, 6.36], angle_times, save_path,
-                            'H2O_without_underlayer', underlayers=[])
+                            'D2O_H2O_without_underlayer', underlayers=[])
 
     bilayer.nested_sampling([-0.56, 6.36], angle_times, save_path,
-                            'H2O_with_underlayer', underlayers=underlayers)
+                            'D2O_H2O_with_underlayer', underlayers=underlayers)
 
 def _underlayer_results_optimise(save_path):
     """Optimises choice of underlayer thickness and SLD for a bilayer sample.
@@ -108,7 +108,7 @@ def _underlayer_results_optimise(save_path):
         file.write('SLDs: {}\n'.format([underlayer[0][1]]))
         file.write('Objective value: {}\n\n'.format(val))
 
-        # Optimise the experiment using 1-4 contrasts.
+        # Optimise the experiment using 1-4 underlayers.
         for i, num_underlayers in enumerate([1, 2, 3]):
             # Display progress.
             print('>>> {0}/{1}'.format(i, 3))
