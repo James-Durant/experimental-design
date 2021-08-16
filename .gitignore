@@ -1,6 +1,6 @@
 /.spyproject
-/examples/results
-/examples/.ipynb_checkpoints
+/notebooks/results
+/notebooks/.ipynb_checkpoints
 /experimental-design/__pycache__
 /experimental-design/models/__pycache__
 /experimental-design/results/DMPC_bilayer/contrast_choice_double

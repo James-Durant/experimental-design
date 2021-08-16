@@ -4,7 +4,7 @@
 
 Using the Fisher information (FI), the design of neutron reflectometry experiments can be optimised, leading to greater confidence in parameters of interest and better use of experimental time. This repository contains the [code](/experimental-design), [data](/experimental-design/data) and [results](/experimental-design/results) for optimising the design of a wide range of reflectometry experiments.
 
-Please refer to the [examples](/examples) directory for an introduction.
+Please refer to the [notebooks](/notebooks) directory for an introduction.
 
 ### Citation
 Please cite the following article if you intend on including elements of this work in your own publications:
@@ -22,7 +22,7 @@ Or with BibTeX as:
 }
 ```
 
-For the figures presented in this article, see [figures](/figures).
+For the results presented in this article, see [notebooks](/notebooks), and for the figures, see [figures](/figures).
 
 ## Installation
 1. To replicate the development environment with the [Anaconda](https://www.anaconda.com/products/individual) distribution, first create an empty conda environment by running: <br /> ```conda create --name experimental-design python=3.8.3```
