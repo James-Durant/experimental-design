@@ -167,8 +167,7 @@ def _magnetism_results_ratios(save_path):
     # Define the range of times to consider (1 to 100 hours here).
     times = np.linspace(40, 4000, 250)
 
-    # Number of points for each angle and split of the total counting time
-    # for each angle to simulate.
+    # Points and split of total counting time for each angle to simulate.
     angle_splits = [(0.5, 100, 1/7),
                     (1.0, 100, 2/7),
                     (2.0, 100, 4/7)]
