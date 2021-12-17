@@ -10,7 +10,7 @@ Please refer to the [notebooks](/notebooks) directory for an introduction.
 
 ### Citation
 Please cite the following article if you intend on including elements of this work in your own publications:
-> Durant, J. H., Wilkins, L. and Cooper, J. F. K. Optimising experimental design in neutron reflectometry. arXiv:2108.05605 (2021).
+> Durant, J. H., Wilkins, L. and Cooper, J. F. K. Optimising experimental design in neutron reflectometry. J. Appl. Cryst., 54, p1100-1110 (2021).
 
 Or with BibTeX as:
 ```
