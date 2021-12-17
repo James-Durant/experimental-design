@@ -9,7 +9,7 @@ Using the Fisher information (FI), the design of neutron reflectometry experimen
 Please refer to the [notebooks](/notebooks) directory for an introduction.
 
 ### Citation
-Please cite the following article if you intend on including elements of this work in your own publications:
+Please cite the following [article](https://arxiv.org/abs/2108.05605) if you intend on including elements of this work in your own publications:
 > Durant, J. H., Wilkins, L. and Cooper, J. F. K. Optimising experimental design in neutron reflectometry. arXiv:2108.05605 (2021).
 
 Or with BibTeX as:
