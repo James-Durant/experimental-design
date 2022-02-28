@@ -6,7 +6,235 @@ import numpy as np
 import os
 
 import refnx.dataset, refnx.reflect, refnx.analysis
+import periodictable as pt
+from parsing import parse_formula
 from base import BaseLipid
+
+
+def neutron_scattering_length(formula: str):
+    """
+    Determine the neutron scattering length for a chemical formula.
+
+    :param formula: Chemical formula.
+    :return: Real and imaginary descriptors for the scattering length in angstrom.
+    """
+    formula_as_dict = parse_formula(formula)
+    scattering_length = 0 + 0j
+    for key, value in formula_as_dict.items():
+        scattering_length += (pt.elements.symbol(key).neutron.b_c * value)
+        if pt.elements.symbol(key).neutron.b_c_i:
+            inc = pt.elements.symbol(key).neutron.b_c_i
+        else:
+            inc = 0
+            scattering_length += inc * 1j * value
+    return scattering_length * 1e-5
+
+
+class BilayerPOPC(BaseLipid):
+    """Defines a model describing a POPC bilayer.
+
+    Attributes:
+        name (str): name of the bilayer sample.
+        data_path (str): path to directory containing measured data.
+        labels (list): label for each measured contrast.
+        distances (numpy.ndarray): SLD profile x-axis range.
+        scales (list): experimental scale factor for each measured contrast.
+        bkgs (list): level of instrument background noise for each contrast.
+        dq (float): instrument resolution.
+        si_sld (float): SLD of silicon substrate.
+        sio2_sld (float): SLD of silicon oxide.
+        popc_hg_vol (float): headgroup volume of POPC bilayer.
+        popc_tg_vol (float): tailgroup volume of POPC bilayer.
+        popc_hg_sl (float): headgroup scattering length of POPC bilayer.
+        popc_tg_sl (float): tailgroup scattering length of POPC bilayer.
+        water_vol (float): water volume of measured system.
+        tg_sld (float): tailgroup SLD of POPC bilayer.
+        si_rough (refnx.analysis.Parameter): silicon substrate roughness.
+        sio2_thick (refnx.analysis.Parameter): silicon oxide thickness.
+        sio2_rough (refnx.analysis.Parameter): silicon oxide roughness.
+        sio2_solv (refnx.analysis.Parameter): silicon oxide hydration.
+        popc_apm (refnx.analysis.Parameter): POPC area per molecule.
+        bilayer_rough (refnx.analysis.Parameter): bilayer roughness.
+        bilayer_solv (refnx.analysis.Parameter): bilayer hydration.
+        hg_waters (refnx.analysis.Parameter): amount of headgroup bound water.
+        params (list): varying model parameters.
+        underlayer_params (list): model parameters when underlayers are added.
+        structures (list): structures corresponding to each measured contrast.
+        objectives (list): objectives corresponding to each measured contrast.
+
+    """
+    def __init__(self):
+        self.name = 'POPC_bilayer'
+        self.data_path = os.path.join(os.path.dirname(__file__),
+                                      '..',
+                                      'data',
+                                      'POPC_bilayer')
+
+        self.labels = ['Si-D2O', 'Si-POPC-D2O', 'Si-POPC-H2O']
+        self.distances = np.linspace(-20, 95, 500)
+        self.scales = [0.677763, 0.645217, 0.667776]
+        self.bkgs = [3.20559e-06, 2.05875e-06, 2.80358e-06]
+        self.dq = 2
+
+        # Define known values.
+        self.si_sld      = 2.073
+        self.sio2_sld    = 3.41
+        self.popc_hg_vol = 320.9
+        self.popc_tg_vol = 881.64
+        self.popc_hg_sl  = neutron_scattering_length('C10H18NO8P').real
+        self.popc_tg_sl  = neutron_scattering_length('C32H64').real
+        self.water_vol   = 30.4
+
+        # Calculate the SLD of the tails.
+        self.tg_sld = (self.popc_tg_sl / self.popc_tg_vol) * 1e6
+
+        # Define the varying parameters of the model.
+        self.si_rough      = refnx.analysis.Parameter(2,     'Si/SiO2 Roughness',      (1,8))
+        self.sio2_thick    = refnx.analysis.Parameter(14.7,  'SiO2 Thickness',         (5,20))
+        self.sio2_rough    = refnx.analysis.Parameter(2,     'SiO2/POPC Roughness',    (1,8))
+        self.sio2_solv     = refnx.analysis.Parameter(0.245, 'SiO2 Hydration',         (0,1))
+        self.popc_apm      = refnx.analysis.Parameter(49.9,  'POPC Area Per Molecule', (30,60))
+        self.bilayer_rough = refnx.analysis.Parameter(6.57,  'Bilayer Roughness',      (1,8))
+        self.bilayer_solv  = refnx.analysis.Parameter(0.074, 'Bilayer Hydration',      (0,1))
+        self.hg_waters     = refnx.analysis.Parameter(3.59,  'Headgroup Bound Waters', (0,20))
+
+        self.params = [self.si_rough,
+                       self.sio2_thick,
+                       self.sio2_rough,
+                       self.sio2_solv,
+                       self.popc_apm,
+                       self.bilayer_rough,
+                       self.bilayer_solv,
+                       self.hg_waters]
+
+        self.underlayer_params = [self.si_rough,
+                                  self.sio2_thick,
+                                  self.popc_apm,
+                                  self.bilayer_rough,
+                                  self.bilayer_solv,
+                                  self.hg_waters]
+
+        # Vary all of the parameters defined above.
+        for param in self.params:
+            param.vary=True
+
+        # Call the BaseLipid constructor.
+        super().__init__()
+
+    def _create_objectives(self):
+        """Creates objectives corresponding to each measured contrast."""
+        # Define scattering lengths and densities of D2O and H2O.
+        d2o_sl  = 2e-4
+        d2o_sld = 6.19
+        h2o_sl  = -1.64e-5
+        h2o_sld = -0.5227
+
+        D2O = refnx.reflect.SLD(d2o_sld)
+        H2O = refnx.reflect.SLD(h2o_sld)
+
+        # Relate headgroup bound waters to scattering lengths and volumes.
+        hg_water_d2o_sl = self.hg_waters * d2o_sl
+        hg_water_h2o_sl = self.hg_waters * h2o_sl
+        hg_water_vol    = self.hg_waters * self.water_vol
+
+        # Add to the headgroup volumes and scattering lengths in both contrast.
+        vol_hg = self.popc_hg_vol + hg_water_vol
+
+        popc_hg_sl_d2o = self.popc_hg_sl + hg_water_d2o_sl
+        popc_hg_sl_h2o = self.popc_hg_sl + hg_water_h2o_sl
+
+        # Calculate the SLD of the headgroup in both contrast cases
+        sld_hg_d2o = (popc_hg_sl_d2o / vol_hg) * 1e6 # SLD = sum b / v
+        sld_hg_h2o = (popc_hg_sl_h2o / vol_hg) * 1e6
+
+        # Calculate thickness from headgroup volume over lipid APM.
+        hg_thick = vol_hg / self.popc_apm # Thickness = v / APM
+
+        # Calculate the thickness of the tailgroup
+        tg_thick = self.popc_tg_vol / self.popc_apm
+
+        # Define the layers of the structure.
+        substrate = refnx.reflect.SLD(self.si_sld)
+        sio2 = refnx.reflect.Slab(self.sio2_thick, self.sio2_sld, self.si_rough, vfsolv=self.sio2_solv)
+
+        inner_hg_d2o = refnx.reflect.Slab(hg_thick, sld_hg_d2o, self.sio2_rough,    vfsolv=self.bilayer_solv)
+        outer_hg_d2o = refnx.reflect.Slab(hg_thick, sld_hg_d2o, self.bilayer_rough, vfsolv=self.bilayer_solv)
+        inner_hg_h2o = refnx.reflect.Slab(hg_thick, sld_hg_d2o, self.sio2_rough,    vfsolv=self.bilayer_solv)
+        outer_hg_h2o = refnx.reflect.Slab(hg_thick, sld_hg_h2o, self.bilayer_rough, vfsolv=self.bilayer_solv)
+
+        tg = refnx.reflect.Slab(tg_thick, self.tg_sld, self.bilayer_rough, vfsolv=self.bilayer_solv)
+
+        # Structure corresponding to measuring the Si/D2O interface.
+        si_D2O_structure = substrate | sio2 | D2O(rough=self.sio2_rough)
+
+        # Two structures corresponding to each measured contrast.
+        si_POPC_D2O_structure = substrate | sio2 | inner_hg_d2o | tg | tg | outer_hg_d2o | D2O(rough=self.bilayer_rough)
+        si_POPC_H2O_structure = substrate | sio2 | inner_hg_h2o | tg | tg | outer_hg_h2o | H2O(rough=self.bilayer_rough)
+
+        self.structures = [si_D2O_structure,
+                           si_POPC_D2O_structure,
+                           si_POPC_H2O_structure]
+
+        # Iterate over each measured structure.
+        self.objectives = []
+        for i, structure in enumerate(self.structures):
+            # Define the model.
+            model = refnx.reflect.ReflectModel(structure,
+                                               scale=self.scales[i],
+                                               bkg=self.bkgs[i],
+                                               dq=self.dq)
+            # Load the measured data.
+            filename = '{}.dat'.format(self.labels[i])
+            file_path = os.path.join(self.data_path, filename)
+            data = refnx.dataset.ReflectDataset(file_path)
+
+            # Combine model and data into an objective that can be fitted.
+            self.objectives.append(refnx.analysis.Objective(model, data))
+
+    def _using_conditions(self, contrast_sld, underlayers=None):
+        """Creates a structure representing the bilayer measured using
+           given measurement conditions.
+
+        Args:
+            contrast_sld (float): SLD of contrast to simulate.
+            underlayers (list): thickness and SLD of each underlayer to add.
+
+        Returns:
+            refnx.reflect.Structure: bilayer using measurement conditions.
+
+        """
+        # Calculate the SLD of the headgroup with the given contrast SLD.
+        hg_sld = contrast_sld*0.27 + 1.98*0.73
+
+        # Calculate the headgroup and tailgroup thicknesses.
+        vol_hg = self.popc_hg_vol + self.hg_waters*self.water_vol
+        hg_thick = vol_hg / self.popc_apm
+        tg_thick = self.popc_tg_vol / self.popc_apm
+
+        # Define the layer structure.
+        substrate = refnx.reflect.SLD(self.si_sld)
+        solution = refnx.reflect.SLD(contrast_sld)(rough=self.bilayer_rough)
+
+        inner_hg = refnx.reflect.Slab(hg_thick, hg_sld, self.sio2_rough, vfsolv=self.bilayer_solv)
+        outer_hg = refnx.reflect.Slab(hg_thick, hg_sld, self.bilayer_rough, vfsolv=self.bilayer_solv)
+        tg = refnx.reflect.Slab(tg_thick, self.tg_sld, self.bilayer_rough, vfsolv=self.bilayer_solv)
+
+        # Add underlayers if specified.
+        if underlayers is None:
+            sio2 = refnx.reflect.Slab(self.sio2_thick, self.sio2_sld, self.si_rough, vfsolv=self.sio2_solv)
+            return substrate | sio2 | inner_hg | tg | tg | outer_hg | solution
+        else:
+            # Use 0% hydration for the SiO2 layer.
+            sio2 = refnx.reflect.Slab(self.sio2_thick, self.sio2_sld, self.si_rough, vfsolv=0)
+            structure = substrate | sio2
+
+            # Add each underlayer with given thickness and SLD.
+            for thick, sld in underlayers:
+                underlayer = refnx.reflect.SLD(sld)(thick, 2) # Default 2 roughness.
+                structure |= underlayer
+
+            return structure | inner_hg | tg | tg | outer_hg | solution
+
 
 class BilayerDMPC(BaseLipid):
     """Defines a model describing a 1,2-dimyristoyl-sn-glycero-3-phosphocholine
@@ -396,6 +624,11 @@ class BilayerDPPC(BaseLipid):
 
 if __name__ == '__main__':
     save_path = '../results'
+
+    # Save the SLD and reflectivity profiles of the POPC bilayer.
+    dmpc_bilayer = BilayerPOPC()
+    dmpc_bilayer.sld_profile(save_path)
+    dmpc_bilayer.reflectivity_profile(save_path)
 
     # Save the SLD and reflectivity profiles of the DMPC bilayer.
     dmpc_bilayer = BilayerDMPC()
