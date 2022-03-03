@@ -4,3 +4,4 @@
 * [magnetic.py](/experimental-design/models/magnetic.py) - Defines the magnetic YIG sample.
 * [monolayers.py](/experimental-design/models/monolayers.py) - Defines the DPPG monolayer model.
 * [samples.py](/experimental-design/models/samples.py) - Defines a selection of "standard" layer models of varying complexity.
+* [parsing.py](/experimental-design/models/parsing.py) - Contains code for translating chemical formulae into a dictionary of elements contained within the formula.
