@@ -162,7 +162,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
 
         # Plot the SLD profile for each measured contrast.
         for structure in self.structures:
-            ax.plot(*structure.sld_profile(self.distances))
+            ax.plot(*structure.sld_profile())
 
         x_label = '$\mathregular{Distance\ (\AA)}$'
         y_label = '$\mathregular{SLD\ (10^{-6} \AA^{-2})}$'
@@ -271,3 +271,35 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         # Save the sampling corner plot.
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'nested_sampling_'+filename)
+
+    def analyze(self, n_step=1000, n_burn=500):
+        """Performs differential evolution fitting and Markov chain Monte Carlo
+        sampling on the objectives. 
+
+        Args:
+            n_step (int): Number of MCMC sampling steps. 
+            n_burn (int): Number of MCMC burn-in steps.
+        
+        Returns:
+            tuple(refnx.analysis.GlobalObjective, np.ndarray): A tuple with the global 
+                objective object and the MCMC chain with the burn-in steps removed. 
+        """
+        self._create_objectives()
+        global_objective = refnx.analysis.GlobalObjective(self.objectives)
+        for obj in global_objective.objectives:
+            obj.model.bkg.setp(obj.data.y.min())
+        fitter = refnx.analysis.CurveFitter(global_objective)
+        fitter.fit('differential_evolution')
+        fitter.sample(n_step+n_burn)
+        return global_objective, fitter.chain[n_burn:]
+
+    def update_data(self, folder_name):
+        """Allows the data path to be updated.
+        
+        Args:
+            folder_name (str): Name of the folder to use as data in the 
+                data directory."""
+        self.data_path = os.path.join(os.path.dirname(__file__),
+                                      '..',
+                                      'data',
+                                      folder_name)
