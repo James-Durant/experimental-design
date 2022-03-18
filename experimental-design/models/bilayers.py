@@ -124,13 +124,14 @@ class BilayerPOPC(BaseLipid):
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
         # Define scattering lengths and densities of D2O and H2O.
-        d2o_sl  = 2e-4
         d2o_sld = 6.19
-        h2o_sl  = -1.64e-5
         h2o_sld = -0.5227
-
         D2O = refnx.reflect.SLD(d2o_sld)
         H2O = refnx.reflect.SLD(h2o_sld)
+
+        d2o_sl = D2O.real / 30950
+        h2o_sl = H2O.real / 31871
+        print(d2o_sl, 'HELPP')
 
         # Relate headgroup bound waters to scattering lengths and volumes.
         hg_water_d2o_sl = self.hg_waters * d2o_sl
@@ -331,14 +332,14 @@ class BilayerDMPC(BaseLipid):
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
         # Define scattering lengths and densities of D2O and H2O.
-        d2o_sl  = 2e-4
         d2o_sld = 6.19
-        h2o_sl  = -1.64e-5
         h2o_sld = -0.5227
-
         D2O = refnx.reflect.SLD(d2o_sld)
         H2O = refnx.reflect.SLD(h2o_sld)
 
+        d2o_sl = D2O.real / 30950
+        h2o_sl = H2O.real / 31871
+ 
         # Relate headgroup bound waters to scattering lengths and volumes.
         hg_water_d2o_sl = self.hg_waters * d2o_sl
         hg_water_h2o_sl = self.hg_waters * h2o_sl
