@@ -8,6 +8,9 @@ Using the Fisher information (FI), the design of neutron reflectometry experimen
 
 Please refer to the [notebooks](/notebooks) directory for an introduction.
 
+
+This repository is named after Lancelot Hogben, whose relentless opposition of eugenics (and vocal criticism of Ronald Fisher's views on it) we applaud.
+
 ### Citation
 Please cite the following [article](https://arxiv.org/abs/2108.05605) if you intend on including elements of this work in your own publications:
 > Durant, J. H., Wilkins, L. and Cooper, J. F. K. Optimising experimental design in neutron reflectometry. arXiv:2108.05605 (2021).
