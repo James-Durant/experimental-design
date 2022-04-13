@@ -1,6 +1,6 @@
 [![DOI](https://zenodo.org/badge/366323997.svg)](https://zenodo.org/badge/latestdoi/366323997)
 
-# experimental-design
+# HOGBEN
 ## About the Project
 **For the original repository that this work is based on, see [fisher-information](https://github.com/James-Durant/fisher-information)**.
 
