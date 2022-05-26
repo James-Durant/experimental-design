@@ -3,6 +3,9 @@
 # HOGBEN
 **H**olistic **O**ptimization for **G**enerating **B**etter **E**xperimental **N**eutrons
 
+
+'pip install HOGBEN'
+
 ## About the Project
 **For the original repository that this work is based on, see [fisher-information](https://github.com/James-Durant/fisher-information)**.
 
