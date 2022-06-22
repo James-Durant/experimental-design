@@ -1,8 +1,0 @@
--------------- Unoptimised  --------------
-Fisher Information: 3022.0199360662928
-
--------------- Optimised --------------
-YIG Thickness: 242.0
-Pt Thickness: 26.5
-Fisher Information: 3145.4033713809836
-
