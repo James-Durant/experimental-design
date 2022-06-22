@@ -3,11 +3,6 @@
 /src/notebooks/.ipynb_checkpoints
 /src/hogben/__pycache__
 /src/hogben/models/__pycache__
-/src/hogben/results/DMPC_bilayer/contrast_choice_double
-/src/hogben/results/DMPC_bilayer/underlayer_choice
-/src/hogben/results/DPPC_RaLPS_bilayer/contrast_choice_double
-/src/hogben/results/DPPC_RaLPS_bilayer/underlayer_choice
-/src/hogben/results/DPPG_monolayer/angle_contrast_choice
-/src/hogben/results/YIG_sample/underlayer_choice
+/src/hogben/results/
 /dist
 /src/hogben/HOGBEN.egg-info
