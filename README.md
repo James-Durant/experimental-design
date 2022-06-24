@@ -9,18 +9,23 @@ Using the Fisher information (FI), the design of neutron reflectometry experimen
 Please refer to the [notebooks](/notebooks) directory for an introduction.
 
 ### Citation
-Please cite the following [article](https://arxiv.org/abs/2108.05605) if you intend on including elements of this work in your own publications:
-> Durant, J. H., Wilkins, L. and Cooper, J. F. K. Optimising experimental design in neutron reflectometry. arXiv:2108.05605 (2021).
+Please cite the following article if you intend on including elements of this work in your own publications:
+> Durant, J. H., Wilkins, L. and Cooper, J. F. K. Optimizing experimental design in neutron reflectometry. _J. Appl. Cryst_. **55** (2021).
 
 Or with BibTeX as:
 ```
-@misc{Durant2021,
-   title         = {Optimising experimental design in neutron reflectometry}, 
-   author        = {Durant, J. H. and Wilkins, L. and Cooper, J. F. K.},
-   year          = {2021},
-   eprint        = {2108.05605},
-   archivePrefix = {arXiv},
-   primaryClass  = {physics.data-an}
+@article{Durant2022,
+   author    = {Durant, J. H. and Wilkins, L. and Cooper, J. F. K.},
+   doi       = {10.1107/S1600576722003831},
+   journal   = {Journal of Applied Crystallography},
+   month     = {Aug},
+   number    = {4},
+   pages     = {},
+   publisher = {International Union of Crystallography ({IUCr})},
+   title     = {{Optimizing experimental design in neutron reflectometry}},
+   url       = {https://doi.org/10.1107/S1600576722003831},
+   volume    = {55},
+   year      = {2022}
 }
 ```
 
