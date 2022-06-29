@@ -1,2 +1,0 @@
-global-include *.dat *.md
-global-exclude *.png *.txt
