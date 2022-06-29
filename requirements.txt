@@ -1,0 +1,7 @@
+corner==2.1.0
+dynesty==1.0.1
+matplotlib==3.2.2
+numpy==1.20.1
+refl1d==0.8.14
+refnx==0.1.19
+tqdm==4.64.0
