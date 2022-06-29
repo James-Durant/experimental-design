@@ -11,7 +11,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__)))
 
 from scipy.optimize import differential_evolution
 
-from magnetic import SampleYIG
+from models.magnetic import SampleYIG
 from simulate import simulate_magnetic, reflectivity
 from utils import save_plot
 

@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import importlib_resources
 
 import refnx.reflect
 import refl1d.model
@@ -96,10 +97,12 @@ def simulate(sample, angle_times, scale=1, bkg=5e-6, dq=2, directbeam_path=None,
 
     # Default path to directbeam file for OFFSPEC when non-polarised.
     if directbeam_path is None:
-        directbeam_path = os.path.join(os.path.dirname(__file__),
-                                       'data',
-                                       'directbeams',
-                                       'OFFSPEC_non_polarised_old.dat')
+        directbeam_path = importlib_resources.files('data.directbeams').joinpath('OFFSPEC_non_polarised.dat')
+        print(directbeam_path)
+        '''os.path.join(os.path.dirname(__file__),
+       'data',
+       'directbeams',
+       'OFFSPEC_non_polarised_old.dat')'''
         angle_scale = 0.3
 
     # Iterate over each angle to simulate.

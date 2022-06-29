@@ -17,7 +17,7 @@ def _contrast_results_visualise(save_path):
         save_path (str): path to directory to save results to.
 
     """
-    from bilayers import BilayerDMPC, BilayerDPPC
+    from models.bilayers import BilayerDMPC, BilayerDPPC
 
     # Choose sample here.
     bilayer = BilayerDMPC()

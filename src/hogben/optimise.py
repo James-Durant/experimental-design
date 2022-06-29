@@ -6,7 +6,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 sys.path.append(os.path.dirname(__file__))
 
 from scipy.optimize import differential_evolution, NonlinearConstraint
-from base import VariableAngle, VariableContrast, VariableUnderlayer
+from models.base import VariableAngle, VariableContrast, VariableUnderlayer
 
 class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.

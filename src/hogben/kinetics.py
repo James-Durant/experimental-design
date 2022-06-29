@@ -11,7 +11,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__)))
 
 from scipy.optimize import differential_evolution
 
-from monolayers import MonolayerDPPG
+from models.monolayers import MonolayerDPPG
 from utils import save_plot
 
 def _kinetics_results_visualise(save_path):

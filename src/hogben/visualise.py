@@ -11,7 +11,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from itertools import combinations
 
 from utils import save_plot
-from base import VariableAngle, VariableContrast, VariableUnderlayer
+from models.base import VariableAngle, VariableContrast, VariableUnderlayer
 
 def angle_choice(sample, initial_angle_times, angle_range, points_new,
                  time_new, save_path, filename, contrasts=[]):

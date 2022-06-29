@@ -16,11 +16,11 @@ def _angle_results_visualise(save_path):
         save_path (str): path to directory to save results to.
 
     """
-    from samples import similar_sld_sample_1, similar_sld_sample_2
-    from samples import thin_layer_sample_1, thin_layer_sample_2
-    from samples import simple_sample, many_param_sample
-    from bilayers import BilayerDMPC, BilayerDPPC
-    from magnetic import SampleYIG
+    from models.samples import similar_sld_sample_1, similar_sld_sample_2
+    from models.samples import thin_layer_sample_1, thin_layer_sample_2
+    from models.samples import simple_sample, many_param_sample
+    from models.bilayers import BilayerDMPC, BilayerDPPC
+    from models.magnetic import SampleYIG
 
     # Choose sample here.
     sample = simple_sample()
@@ -51,11 +51,11 @@ def _angle_results_optimise(save_path):
         save_path (str): path to directory to save results to.
 
     """
-    from samples import similar_sld_sample_1, similar_sld_sample_2
-    from samples import thin_layer_sample_1, thin_layer_sample_2
-    from samples import simple_sample, many_param_sample
-    from bilayers import BilayerDMPC, BilayerDPPC
-    from magnetic import SampleYIG
+    from models.samples import similar_sld_sample_1, similar_sld_sample_2
+    from models.samples import thin_layer_sample_1, thin_layer_sample_2
+    from models.samples import simple_sample, many_param_sample
+    from models.bilayers import BilayerDMPC, BilayerDPPC
+    from models.magnetic import SampleYIG
 
     # Choose sample here.
     sample = simple_sample()

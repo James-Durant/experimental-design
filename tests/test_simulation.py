@@ -45,6 +45,6 @@ class Test_Simulate(unittest.TestCase):
         """
         angle_times = [(0.3, 100, 1000)]
         _, simulated_datapoints = simulate(self.sample_1, angle_times, self.scale, self.bkg, self.dq, self.ref)
-
+        #print(simulated_datapoints[:, 3])
         np.testing.assert_array_less(np.zeros(len(simulated_datapoints)), simulated_datapoints[:,1])  # reflectivity
         np.testing.assert_array_less(np.zeros(len(simulated_datapoints)), simulated_datapoints[:, 3])  # counts
