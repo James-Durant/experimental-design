@@ -1,0 +1,24 @@
+----------- 1 Angles -----------
+Angles: [4.0]
+Splits (%): [100.0]
+Objective value: -0.0006438
+Computation time: 14.1
+
+----------- 2 Angles -----------
+Angles: [4.0, 4.0]
+Splits (%): [87.3, 12.7]
+Objective value: -0.0006438
+Computation time: 67.9
+
+----------- 3 Angles -----------
+Angles: [0.66, 3.89, 4.0]
+Splits (%): [17.1, 0.5, 82.4]
+Objective value: -0.0008340
+Computation time: 80.3
+
+----------- 4 Angles -----------
+Angles: [0.67, 0.85, 3.95, 4.0]
+Splits (%): [16.7, 0.0, 0.3, 82.9]
+Objective value: -0.0008341
+Computation time: 166.3
+
