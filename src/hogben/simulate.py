@@ -97,12 +97,7 @@ def simulate(sample, angle_times, scale=1, bkg=5e-6, dq=2, directbeam_path=None,
 
     # Default path to directbeam file for OFFSPEC when non-polarised.
     if directbeam_path is None:
-        directbeam_path = importlib_resources.files('data.directbeams').joinpath('OFFSPEC_non_polarised.dat')
-        print(directbeam_path)
-        '''os.path.join(os.path.dirname(__file__),
-       'data',
-       'directbeams',
-       'OFFSPEC_non_polarised_old.dat')'''
+        directbeam_path = importlib_resources.files('hogben.data.directbeams').joinpath('OFFSPEC_non_polarised.dat')
         angle_scale = 0.3
 
     # Iterate over each angle to simulate.
@@ -184,10 +179,10 @@ def _run_experiment(sample, angle, points, time, scale, bkg, dq,
     """
     # Load the directbeam file.
     direct_beam = np.loadtxt(directbeam_path, delimiter=',')
-    wavelengths = direct_beam[:,0] # First column is wavelength, second is flux.
+    wavelengths = direct_beam[:, 0]  # First column is wavelength, second is flux.
 
     # Adjust flux by measurement angle.
-    direct_flux = direct_beam[:,1] * pow(angle/angle_scale, 2)
+    direct_flux = direct_beam[:, 1] * pow(angle/angle_scale, 2)
 
     # Calculate Q values.
     q = 4*np.pi*np.sin(np.radians(angle)) / wavelengths

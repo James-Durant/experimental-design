@@ -5,3 +5,4 @@ numpy==1.20.1
 refl1d==0.8.14
 refnx==0.1.19
 tqdm==4.64.0
+importlib_resources==5.8.0

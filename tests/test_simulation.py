@@ -1,4 +1,6 @@
 import unittest
+import pytest
+
 import numpy as np
 import importlib_resources
 from refnx.reflect import SLD
@@ -18,7 +20,7 @@ def sample_structure():
 
 
 class Test_Simulate(unittest.TestCase):
-    ref = importlib_resources.files('data.directbeams').joinpath('OFFSPEC_non_polarised.dat')
+    ref = importlib_resources.files('hogben.data.directbeams').joinpath('OFFSPEC_non_polarised.dat')
     angle_times = [(0.7, 100, 5), (2.0, 100, 20)]  # (Angle, Points, Time)
     scale = 1
     bkg = 1e-6
@@ -26,6 +28,16 @@ class Test_Simulate(unittest.TestCase):
     instrument = 'OFFSPEC'
     sample_1 = sample_structure()
     model_1, data_1 = simulate(sample_1, angle_times, scale, bkg, dq, ref)
+
+    def test_data_streaming(self):
+        """Tests that without an input for the datafile, the correct one is picked up"""
+        angle_times = [(0.3, 100, 1000)]
+        _, simulated_datapoints = simulate(self.sample_1, angle_times, self.scale, self.bkg, self.dq, self.ref)
+        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)), simulated_datapoints[:, 3])  # counts
+
+        _, simulated_datapoints = simulate(self.sample_1, angle_times, self.scale, self.bkg, self.dq)
+        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)), simulated_datapoints[:, 3])  # counts
+
 
     def test_refnx_simulate_model(self):
         """
@@ -45,6 +57,6 @@ class Test_Simulate(unittest.TestCase):
         """
         angle_times = [(0.3, 100, 1000)]
         _, simulated_datapoints = simulate(self.sample_1, angle_times, self.scale, self.bkg, self.dq, self.ref)
-        #print(simulated_datapoints[:, 3])
+
         np.testing.assert_array_less(np.zeros(len(simulated_datapoints)), simulated_datapoints[:,1])  # reflectivity
         np.testing.assert_array_less(np.zeros(len(simulated_datapoints)), simulated_datapoints[:, 3])  # counts
