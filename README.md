@@ -10,7 +10,7 @@ Please refer to the [notebooks](/notebooks) directory for an introduction.
 
 ### Citation
 Please cite the following article if you intend on including elements of this work in your own publications:
-> Durant, J. H., Wilkins, L. and Cooper, J. F. K. Optimizing experimental design in neutron reflectometry. _J. Appl. Cryst_. **55** (2021).
+> Durant, J. H., Wilkins, L. and Cooper, J. F. K. Optimizing experimental design in neutron reflectometry. _J. Appl. Cryst_. **55**, 769-781 (2021).
 
 Or with BibTeX as:
 ```
@@ -20,7 +20,7 @@ Or with BibTeX as:
    journal   = {Journal of Applied Crystallography},
    month     = {Aug},
    number    = {4},
-   pages     = {},
+   pages     = {769--781},
    publisher = {International Union of Crystallography ({IUCr})},
    title     = {{Optimizing experimental design in neutron reflectometry}},
    url       = {https://doi.org/10.1107/S1600576722003831},
