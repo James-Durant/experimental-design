@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/366323997.svg)](https://zenodo.org/badge/latestdoi/366323997)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5642675.svg)](https://doi.org/10.5281/zenodo.5642675)
 
 # experimental-design
 ## About the Project
