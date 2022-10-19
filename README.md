@@ -1,7 +1,7 @@
 [![DOI](https://zenodo.org/badge/366323997.svg)](https://zenodo.org/badge/latestdoi/366323997)
 
 # HOGBEN
-**H**olistic **O**ptimization for **G**enerating **B**etter **E**xperimental **N**eutrons
+**H**olistic **O**ptimization for **G**aining **B**etter **E**vidence from **N**eutrons
 
 ## About the Project
 **For the original repositories that this work is based on, see [fisher-information](https://github.com/James-Durant/fisher-information) and [experimental-design](https://github.com/James-Durant/experimental-design)**.
