@@ -1,5 +1,4 @@
 import numpy as np
-import os
 import importlib_resources
 
 import refnx.reflect
@@ -36,10 +35,7 @@ def simulate_magnetic(sample, angle_times, scale=1, bkg=5e-7, dq=2,
 
     # Default path to the directbeam file for OFFSPEC when polarised.
     if directbeam_path is None:
-        directbeam_path = os.path.join(os.path.dirname(__file__),
-                                       'data',
-                                       'directbeams',
-                                       'OFFSPEC_polarised_old.dat')
+        directbeam_path = importlib_resources.files('hogben.data.directbeams').joinpath('OFFSPEC_polarised_old.dat')
         angle_scale = 0.3
 
     # Simulate the "minus minus" spin state if requested.
