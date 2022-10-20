@@ -1,14 +1,19 @@
+import os
+import sys
+import time
+
 import matplotlib.pyplot as plt
 import numpy as np
-import os, sys, time
+
+from hogben.optimise import Optimiser
+from hogben.visualise import contrast_choice_single, contrast_choice_double
+from hogben.utils import save_plot
+
 # Add the models directory to the system path.
 # Add the current directory to the path to avoid issues with threading.
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'models'))
 sys.path.append(os.path.join(os.path.dirname(__file__)))
 
-from optimise import Optimiser
-from visualise import contrast_choice_single, contrast_choice_double
-from utils import save_plot
 
 def _contrast_results_visualise(save_path):
     """Visualises the choice of contrasts for a bilayer sample.

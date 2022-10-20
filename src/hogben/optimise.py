@@ -1,12 +1,17 @@
+import os
+import sys
+
 import numpy as np
-import os, sys
+
+from scipy.optimize import differential_evolution, NonlinearConstraint
+
+from hogben.models.base import VariableAngle, VariableContrast, VariableUnderlayer
+
 # Add the models directory to the system path.
 # Add the current directory to the path to avoid issues with threading.
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 sys.path.append(os.path.dirname(__file__))
 
-from scipy.optimize import differential_evolution, NonlinearConstraint
-from models.base import VariableAngle, VariableContrast, VariableUnderlayer
 
 class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.
