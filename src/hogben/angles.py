@@ -1,12 +1,17 @@
+import os
+import sys
+import time
+
 import numpy as np
-import os, sys, time
+
+from hogben.optimise import Optimiser
+from hogben.visualise import angle_choice, angle_choice_with_time
+
 # Add the current directory to the system path to avoid issues with threading.
 # Add the models directory to the system path to access example samples.
 sys.path.append(os.path.join(os.path.dirname(__file__)))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 
-from optimise import Optimiser
-from visualise import angle_choice, angle_choice_with_time
 
 def _angle_results_visualise(save_path):
     """Visualises the initial angle choice for a sample and how the choice of

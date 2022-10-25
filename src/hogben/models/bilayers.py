@@ -1,14 +1,20 @@
-import matplotlib.pyplot as plt
-plt.rcParams['figure.figsize'] = (9,7)
-plt.rcParams['figure.dpi'] = 600
-
-import numpy as np
 import os
 
-import refnx.dataset, refnx.reflect, refnx.analysis
+import matplotlib.pyplot as plt
+
+import numpy as np
+
+import refnx.dataset
+import refnx.reflect
+import refnx.analysis
+
 import periodictable as pt
-from parsing import parse_formula
-from base import BaseLipid
+
+from hogben.models.parsing import parse_formula
+from hogben.models.base import BaseLipid
+
+plt.rcParams['figure.figsize'] = (9, 7)
+plt.rcParams['figure.dpi'] = 600
 
 
 def neutron_scattering_length(formula: str):

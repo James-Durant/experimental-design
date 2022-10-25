@@ -1,10 +1,11 @@
-import numpy as np
 import importlib_resources
 
 import refnx.reflect
 import refl1d.model
 import refl1d.probe
 import refl1d.experiment
+
+import numpy as np
 
 
 def simulate_magnetic(sample, angle_times, scale=1, bkg=5e-7, dq=2,
