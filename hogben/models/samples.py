@@ -1,20 +1,33 @@
+import os
+import sys
+
 import matplotlib.pyplot as plt
-plt.rcParams['figure.figsize'] = (9,7)
-plt.rcParams['figure.dpi'] = 600
 
 import numpy as np
-import os, sys
+
+import refnx.dataset
+import refnx.reflect
+import refnx.analysis
+
+import refl1d.material
+import refl1d.model
+import refl1d.probe
+import refl1d.experiment
+import refl1d.magnetism
+
+import bumps.parameter
+import bumps.fitproblem
+
+from hogben.simulate import simulate, refl1d_experiment, reflectivity
+from hogben.utils import fisher, Sampler, save_plot
+from hogben.models.base import BaseSample
+
 # Add parent directory to system path to access simulate.py and utils.py
 sys.path.append(os.path.join(__file__, '..'))
 
-import refnx.dataset, refnx.reflect, refnx.analysis
+plt.rcParams['figure.figsize'] = (9,7)
+plt.rcParams['figure.dpi'] = 600
 
-import refl1d.material, refl1d.model, refl1d.probe, refl1d.experiment, refl1d.magnetism
-import bumps.parameter, bumps.fitproblem
-
-from simulate import simulate, refl1d_experiment, reflectivity
-from utils import fisher, Sampler, save_plot
-from base import BaseSample
 
 class Sample(BaseSample):
     """Wrapper class for a standard refnx or Refl1D reflectometry sample.

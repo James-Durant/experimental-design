@@ -1,19 +1,23 @@
 import matplotlib.pyplot as plt
-plt.rcParams['figure.figsize'] = (9,7)
-plt.rcParams['figure.dpi'] = 600
+import os
+import sys
 
 import numpy as np
-import os, sys
+
+from scipy.optimize import differential_evolution
+
+from hogben.models.magnetic import SampleYIG
+from hogben.simulate import simulate_magnetic, reflectivity
+from hogben.utils import save_plot
+
 # Add the models directory to the system path.
 # Add the current directory to the path to avoid issues with threading.
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 sys.path.append(os.path.join(os.path.dirname(__file__)))
 
-from scipy.optimize import differential_evolution
+plt.rcParams['figure.figsize'] = (9, 7)
+plt.rcParams['figure.dpi'] = 600
 
-from models.magnetic import SampleYIG
-from simulate import simulate_magnetic, reflectivity
-from utils import save_plot
 
 def _magnetism_results_visualise(save_path):
     """Visualises the choice of YIG and Pt layer thicknesses for the

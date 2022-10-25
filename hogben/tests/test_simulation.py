@@ -1,8 +1,8 @@
 import unittest
+import importlib_resources
 import pytest
 
 import numpy as np
-import importlib_resources
 from refnx.reflect import SLD
 
 from hogben.simulate import simulate, reflectivity

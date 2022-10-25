@@ -1,12 +1,16 @@
-import matplotlib.pyplot as plt
-plt.rcParams['figure.dpi'] = 600
-plt.rcParams['figure.figsize'] = (9,7)
-
-import numpy as np
 import os
 
-import refnx.dataset, refnx.reflect, refnx.analysis
-from base import BaseLipid
+import matplotlib.pyplot as plt
+
+import refnx.dataset
+import refnx.reflect
+import refnx.analysis
+
+from hogben.models.base import BaseLipid
+
+plt.rcParams['figure.dpi'] = 600
+plt.rcParams['figure.figsize'] = (9, 7)
+
 
 class MonolayerDPPG(BaseLipid):
     """Defines a model describing puroindoline-a (Pin-a) proteins bound to

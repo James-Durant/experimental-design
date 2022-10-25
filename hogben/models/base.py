@@ -1,16 +1,23 @@
-import matplotlib.pyplot as plt
-plt.rcParams['figure.figsize'] = (9,7)
-plt.rcParams['figure.dpi'] = 600
+import os
+import sys
 
-import os, sys
+from abc import ABC, abstractmethod
+
+import matplotlib.pyplot as plt
+
+import refnx.dataset
+import refnx.reflect
+import refnx.analysis
+
+from hogben.simulate import simulate
+from hogben.utils import fisher, Sampler, save_plot
+
 # Add parent directory to system path to access simulate.py and utils.py
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from abc import ABC, abstractmethod
-import refnx.dataset, refnx.reflect, refnx.analysis
+plt.rcParams['figure.figsize'] = (9, 7)
+plt.rcParams['figure.dpi'] = 600
 
-from simulate import simulate
-from utils import fisher, Sampler, save_plot
 
 class VariableAngle(ABC):
     """Abstract class representing whether the measurement angle of a sample

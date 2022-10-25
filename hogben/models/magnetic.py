@@ -1,18 +1,29 @@
+import os
+import sys
+
 import matplotlib.pyplot as plt
-plt.rcParams['figure.figsize'] = (9,7)
-plt.rcParams['figure.dpi'] = 600
 
 import numpy as np
-import os, sys
+
+import refl1d.material
+import refl1d.model
+import refl1d.probe
+import refl1d.experiment
+import refl1d.magnetism
+
+import bumps.parameter
+import bumps.fitproblem
+
+from hogben.models.base import BaseSample, VariableUnderlayer
+from hogben.simulate import simulate_magnetic
+from hogben.utils import fisher, Sampler, save_plot
+
 # Add parent directory to system path to access simulate.py and utils.py
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-import refl1d.material, refl1d.model, refl1d.probe, refl1d.experiment, refl1d.magnetism
-import bumps.parameter, bumps.fitproblem
+plt.rcParams['figure.figsize'] = (9, 7)
+plt.rcParams['figure.dpi'] = 600
 
-from base import BaseSample, VariableUnderlayer
-from simulate import simulate_magnetic
-from utils import fisher, Sampler, save_plot
 
 class SampleYIG(BaseSample, VariableUnderlayer):
     """Defines a magnetic model describing yttrium iron garnet (YIG) film

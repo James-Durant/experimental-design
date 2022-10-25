@@ -1,14 +1,18 @@
-import numpy as np
 import os
+
+import numpy as np
 
 from dynesty import NestedSampler, DynamicNestedSampler
 from dynesty import plotting as dyplot
 from dynesty import utils as dyfunc
 
-import refnx.reflect, refnx.analysis
-import bumps.parameter, bumps.fitproblem
+import refnx.reflect
+import refnx.analysis
+import bumps.parameter
+import bumps.fitproblem
 
-from simulate import reflectivity
+from hogben.simulate import reflectivity
+
 
 class Sampler:
     """Contains code for running nested sampling on refnx and Refl1D models.

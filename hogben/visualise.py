@@ -1,17 +1,20 @@
-import matplotlib.pyplot as plt
-plt.rcParams['figure.figsize'] = (9,7)
-plt.rcParams['figure.dpi'] = 600
-
+import os
+import sys
 import numpy as np
-import os, sys
-# Add the models directory to the system path.
-sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
+import matplotlib.pyplot as plt
 
 from matplotlib.animation import FuncAnimation, PillowWriter
 from itertools import combinations
 
-from utils import save_plot
-from models.base import VariableAngle, VariableContrast, VariableUnderlayer
+from hogben.utils import save_plot
+from hogben.models.base import VariableAngle, VariableContrast, VariableUnderlayer
+
+# Add the models directory to the system path.
+sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
+
+plt.rcParams['figure.figsize'] = (9, 7)
+plt.rcParams['figure.dpi'] = 600
+
 
 def angle_choice(sample, initial_angle_times, angle_range, points_new,
                  time_new, save_path, filename, contrasts=[]):
