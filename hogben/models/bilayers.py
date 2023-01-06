@@ -629,12 +629,12 @@ class BilayerDPPC(BaseLipid):
             return structure | inner_hg | inner_tg | outer_tg | core | solution
 
 if __name__ == '__main__':
-    save_path = '../results'
+    save_path = './results'
 
     # Save the SLD and reflectivity profiles of the POPC bilayer.
-    dmpc_bilayer = BilayerPOPC()
-    dmpc_bilayer.sld_profile(save_path)
-    dmpc_bilayer.reflectivity_profile(save_path)
+    #dmpc_bilayer = BilayerPOPC()
+    #dmpc_bilayer.sld_profile(save_path)
+    #dmpc_bilayer.reflectivity_profile(save_path)
 
     # Save the SLD and reflectivity profiles of the DMPC bilayer.
     dmpc_bilayer = BilayerDMPC()

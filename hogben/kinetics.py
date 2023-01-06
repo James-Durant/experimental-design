@@ -9,11 +9,6 @@ from scipy.optimize import differential_evolution
 from hogben.models.monolayers import MonolayerDPPG
 from hogben.utils import save_plot
 
-# Add the models directory to the system path.
-# Add the current directory to the path to avoid issues with threading.
-sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
-sys.path.append(os.path.join(os.path.dirname(__file__)))
-
 plt.rcParams['figure.figsize'] = (6, 4)
 plt.rcParams['figure.dpi'] = 600
 

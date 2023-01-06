@@ -7,11 +7,6 @@ import numpy as np
 from hogben.optimise import Optimiser
 from hogben.visualise import underlayer_choice
 
-# Add the models directory to the system path.
-# Add the current directory to the path to avoid issues with threading.
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'models'))
-sys.path.append(os.path.join(os.path.dirname(__file__)))
-
 
 def _underlayer_results_visualise(save_path):
     """Visualises choice of underlayer thickness and SLD for a bilayer sample.

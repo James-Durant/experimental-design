@@ -18,9 +18,6 @@ from hogben.models.base import BaseSample, VariableUnderlayer
 from hogben.simulate import simulate_magnetic
 from hogben.utils import fisher, Sampler, save_plot
 
-# Add parent directory to system path to access simulate.py and utils.py
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
 

@@ -22,9 +22,6 @@ from hogben.simulate import simulate, refl1d_experiment, reflectivity
 from hogben.utils import fisher, Sampler, save_plot
 from hogben.models.base import BaseSample
 
-# Add parent directory to system path to access simulate.py and utils.py
-sys.path.append(os.path.join(__file__, '..'))
-
 plt.rcParams['figure.figsize'] = (9,7)
 plt.rcParams['figure.dpi'] = 600
 
