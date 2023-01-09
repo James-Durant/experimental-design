@@ -26,8 +26,8 @@ def _kinetics_results_visualise(save_path):
     monolayer = MonolayerDPPG(deuterated=False)
 
     # Angles, contrasts and lipid area per molecule values to consider.
-    angle_range = np.linspace(0.2, 4.0, 75)
-    contrast_range = np.linspace(-0.56, 6.36, 75)
+    angle_range = np.linspace(0.2, 4.0, 15)
+    contrast_range = np.linspace(-0.56, 6.36, 15)
     apm_range = np.linspace(54.1039, 500, 20)
 
     # Number of points and measurement time to use when simulating data.
@@ -88,7 +88,7 @@ def _kinetics_results_visualise(save_path):
     # Save different views of the 3D plot.
     # Iterate from 0 to 360 degrees in increments of 10.
     save_path = os.path.join(save_path, 'angle_contrast_choice', tg_type)
-    for i in range(0, 360, 10):
+    for i in range(0, 360, 120):
         # Set the "camera" view for the 3D plot.
         ax.view_init(elev=40, azim=i)
 
