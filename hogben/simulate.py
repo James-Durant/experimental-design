@@ -11,10 +11,12 @@ import numpy as np
 
 
 def DB_path(instrument: str, polarised: bool = False) -> str:
-    """Returns the filepath of the correct direct beam file for the instrument being used
+    """Returns the filepath of the correct direct beam file for the instrument
+    being used
 
     Args:
-        instrument: The name of the instrument the experiement will be performed on
+        instrument: The name of the instrument the experiement will be
+        performed on
         polarised: If the experiment will be polarised
 
     Returns:
@@ -23,18 +25,24 @@ def DB_path(instrument: str, polarised: bool = False) -> str:
 
     non_pol_instr = {'OFFSPEC': 'OFFSPEC_non_polarised_old.dat',
                      'SURF': 'SURF_non_polarised.dat',
-                     'POLREF': 'POLREF_non_polarised.dat'}.get(instrument, 'OFFSPEC_non_polarised_old.dat')
+                     'POLREF': 'POLREF_non_polarised.dat'
+                     }.get(instrument, 'OFFSPEC_non_polarised_old.dat')
 
-    pol_instr = {'OFFSPEC': 'OFFSPEC_polarised_old.dat'}.get(instrument, 'OFFSPEC_polarised_old.dat')
+    pol_instr = {'OFFSPEC': 'OFFSPEC_polarised_old.dat'
+                 }.get(instrument, 'OFFSPEC_polarised_old.dat')
     if not polarised:
-        path = importlib_resources.files('hogben.data.directbeams').joinpath(non_pol_instr)
+        path = importlib_resources.files('hogben.data.directbeams'
+                                         ).joinpath(non_pol_instr)
     else:
-        path = importlib_resources.files('hogben.data.directbeams').joinpath(pol_instr)
+        path = importlib_resources.files('hogben.data.directbeams'
+                                         ).joinpath(pol_instr)
     return path
 
 
-def simulate_magnetic(sample, angle_times: np.ndarray, scale: float = 1.0, bkg: float = 5e-7, dq: float = 2,
-                      mm: bool = True, mp: bool = True, pm: bool = True, pp: bool = True, angle_scale: float = 0.3,
+def simulate_magnetic(sample, angle_times: np.ndarray, scale: float = 1.0,
+                      bkg: float = 5e-7, dq: float = 2, mm: bool = True,
+                      mp: bool = True, pm: bool = True, pp: bool = True,
+                      angle_scale: float = 0.3,
                       instrument: str = None) -> tuple:
     """Simulates an experiment of a given magnetic `sample` measured
        over a number of angles.
@@ -91,8 +99,9 @@ def simulate_magnetic(sample, angle_times: np.ndarray, scale: float = 1.0, bkg: 
     return models, datasets
 
 
-def simulate(sample, angle_times: np.ndarray, scale: float = 1.0, bkg: float = 5e-6, dq: float = 2,
-             instrument: str = None, angle_scale: float = 0.3, spin_state: int = None) -> tuple:
+def simulate(sample, angle_times: np.ndarray, scale: float = 1.0,
+             bkg: float = 5e-6, dq: float = 2, instrument: str = None,
+             angle_scale: float = 0.3, spin_state: int = None) -> tuple:
     """Simulates an experiment of a `sample` measured over a number of angles.
 
     Args:
@@ -173,8 +182,9 @@ def simulate(sample, angle_times: np.ndarray, scale: float = 1.0, bkg: float = 5
     return model, data
 
 
-def _run_experiment(sample, angle: float, points: int, time: float, scale: float, bkg: float, dq: float,
-                    directbeam_path: str, angle_scale: float, spin_state: int) -> tuple:
+def _run_experiment(sample, angle: float, points: int, time: float,
+                    scale: float, bkg: float, dq: float, directbeam_path: str,
+                    angle_scale: float, spin_state: int) -> tuple:
     """Simulates a single angle measurement of a given `sample`.
 
     Args:
@@ -196,7 +206,7 @@ def _run_experiment(sample, angle: float, points: int, time: float, scale: float
     """
     # Load the directbeam file.
     direct_beam = np.loadtxt(directbeam_path, delimiter=',')
-    wavelengths = direct_beam[:, 0]  # First column is wavelength, second is flux.
+    wavelengths = direct_beam[:, 0]  # 1st column is wavelength, 2nd is flux.
 
     # Adjust flux by measurement angle.
     direct_flux = direct_beam[:, 1] * pow(angle/angle_scale, 2)
@@ -204,7 +214,7 @@ def _run_experiment(sample, angle: float, points: int, time: float, scale: float
     # Calculate Q values.
     q = 4*np.pi*np.sin(np.radians(angle)) / wavelengths
 
-    # Bin Q values in equally geometrically-spaced bins using flux as weighting.
+    # Bin Q's' in equally geometrically-spaced bins using flux as weighting.
     q_bin_edges = np.geomspace(min(q), max(q), points+1)
     flux_binned, _ = np.histogram(q, q_bin_edges, weights=direct_flux)
 
@@ -220,7 +230,8 @@ def _run_experiment(sample, angle: float, points: int, time: float, scale: float
 
     elif isinstance(sample, refl1d.model.Stack):
         # Create a Refl1D experiment if the sample was defined in Refl1D.
-        experiment = refl1d_experiment(sample, q_binned, scale, bkg, dq, spin_state)
+        experiment = refl1d_experiment(sample, q_binned, scale,
+                                       bkg, dq, spin_state)
         r_model = reflectivity(q_binned, experiment)
 
     # Otherwise the given sample must be invalid.
@@ -290,8 +301,8 @@ def reflectivity(q: np.ndarray, model) -> np.ndarray:
             return experiment.reflectivity()[1]
 
 
-def refl1d_experiment(sample, q_array: np.ndarray, scale: float, bkg: float, dq: float,
-                      spin_state: Optional[int] = None):
+def refl1d_experiment(sample, q_array: np.ndarray, scale: float, bkg: float,
+                      dq: float, spin_state: Optional[int] = None):
     """Creates a Refl1D experiment for a given `sample` and `q_array`.
 
     Args:
