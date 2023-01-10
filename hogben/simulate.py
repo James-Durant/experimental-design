@@ -1,45 +1,48 @@
-from typing import Optional
+from typing import Optional, Union
 
 import importlib_resources
+import numpy as np
 
 import refnx.reflect
 import refl1d.model
 import refl1d.probe
 import refl1d.experiment
 
-import numpy as np
 
-
-def DB_path(instrument: str, polarised: bool = False) -> str:
+def direct_beam_path(instrument: str = 'OFFSPEC',
+                     polarised: bool = False) -> str:
     """Returns the filepath of the correct direct beam file for the instrument
     being used
 
     Args:
         instrument: The name of the instrument the experiement will be
-        performed on
-        polarised: If the experiment will be polarised
+        performed on. Valid options are ['OFFSPEC','SURF', 'POLREF'] for
+        unpolarised, and ['OFFSPEC'] for polarised. Defaults to 'OFFSPEC'
+        polarised: If the experiment is polarised. Defaults to False
 
     Returns:
-        str: The filepath of the correct direct beam file
+        str: The hogben internal path of the correct direct beam file
     """
 
     non_pol_instr = {'OFFSPEC': 'OFFSPEC_non_polarised_old.dat',
                      'SURF': 'SURF_non_polarised.dat',
                      'POLREF': 'POLREF_non_polarised.dat'
-                     }.get(instrument, 'OFFSPEC_non_polarised_old.dat')
+                     }
 
     pol_instr = {'OFFSPEC': 'OFFSPEC_polarised_old.dat'
-                 }.get(instrument, 'OFFSPEC_polarised_old.dat')
+                 }
     if not polarised:
         path = importlib_resources.files('hogben.data.directbeams'
-                                         ).joinpath(non_pol_instr)
+                                         ).joinpath(non_pol_instr[instrument])
     else:
         path = importlib_resources.files('hogben.data.directbeams'
-                                         ).joinpath(pol_instr)
+                                         ).joinpath(pol_instr[instrument])
     return path
 
 
-def simulate_magnetic(sample, angle_times: np.ndarray, scale: float = 1.0,
+def simulate_magnetic(sample: Union[refnx.reflect.Stucture,
+                                    refl1d.model.Stack],
+                      angle_times: np.ndarray, scale: float = 1.0,
                       bkg: float = 5e-7, dq: float = 2, mm: bool = True,
                       mp: bool = True, pm: bool = True, pp: bool = True,
                       angle_scale: float = 0.3,
@@ -48,18 +51,19 @@ def simulate_magnetic(sample, angle_times: np.ndarray, scale: float = 1.0,
        over a number of angles.
 
     Args:
-        sample (refnx.reflect.Stucture or
-                refld1d.model.Stack): sample to simulate.
-        angle_times (list): points and times for each angle to simulate.
-        scale (float): experimental scale factor.
-        bkg (float): level of instrument background noise.
-        dq (float): instrument resolution.
-        pp (bool): whether to simulate "plus plus" spin state.
-        pm (bool): whether to simulate "plus minus" spin state.
-        mp (bool): whether to simulate "minus plus" spin state.
-        mm (bool): whether to simulate "minus minus" spin state.
-        angle_scale (float): angle to use when scaling directbeam flux.
-        instrument (str): path to directbeam file to simulate with.
+        sample: sample structure to simulate.
+        angle_times: array of angle, number of data points and time to measure
+        for each angle to simulate. e.g. [(0.7, 100, 5), (2.0, 100, 20)]
+        scale: experimental scale factor.
+        scale: experimental scale factor.
+        bkg: level of instrument background noise.
+        dq: instrument resolution.
+        pp: whether to simulate "plus plus" spin state.
+        pm: whether to simulate "plus minus" spin state.
+        mp: whether to simulate "minus plus" spin state.
+        mm: whether to simulate "minus minus" spin state.
+        angle_scale: angle to use when scaling directbeam flux.
+        instrument: path to directbeam file to simulate with.
 
     Returns:
         tuple: model and simulated data for the given `sample`.
@@ -67,7 +71,7 @@ def simulate_magnetic(sample, angle_times: np.ndarray, scale: float = 1.0,
     """
     models, datasets = [], []
 
-    instrument_DB = DB_path(instrument, polarised=True)
+    instrument_DB = direct_beam_path(instrument, polarised=True)
     # Simulate the "minus minus" spin state if requested.
     if mm:
         model, data = simulate(sample, angle_times, scale, bkg, dq,
@@ -99,21 +103,22 @@ def simulate_magnetic(sample, angle_times: np.ndarray, scale: float = 1.0,
     return models, datasets
 
 
-def simulate(sample, angle_times: np.ndarray, scale: float = 1.0,
+def simulate(sample: Union[refnx.reflect.Stucture, refl1d.model.Stack],
+             angle_times: np.ndarray, scale: float = 1.0,
              bkg: float = 5e-6, dq: float = 2, instrument: str = None,
              angle_scale: float = 0.3, spin_state: int = None) -> tuple:
     """Simulates an experiment of a `sample` measured over a number of angles.
 
     Args:
-        sample (refnx.reflect.Stucture or
-                refld1d.model.Stack): sample to simulate an experiment for.
-        angle_times (list): points and times for each angle to simulate.
-        scale (float): experimental scale factor.
-        bkg (float): level of instrument background noise.
-        dq (float): instrument resolution.
-        instrument (str): path to directbeam file to simulate with.
-        angle_scale (float): angle to use when scaling directbeam flux.
-        spin_state (int): spin state to simulate if given a magnetic sample.
+        sample: sample to simulate an experiment for.
+        angle_times: array of angle, number of data points and time to measure
+        for each angle to simulate. e.g. [(0.7, 100, 5), (2.0, 100, 20)]
+        scale: experimental scale factor.
+        bkg: level of instrument background noise.
+        dq: instrument resolution.
+        instrument: path to directbeam file to simulate with.
+        angle_scale: angle to use when scaling directbeam flux.
+        spin_state: spin state to simulate if given a magnetic sample.
 
     Returns:
         tuple: model and simulated data for the given `sample`.
@@ -123,7 +128,7 @@ def simulate(sample, angle_times: np.ndarray, scale: float = 1.0,
     if not angle_times:
         return None, np.zeros((0, 4))
 
-    instrument_DB = DB_path(instrument, polarised=False)
+    instrument_DB = direct_beam_path(instrument, polarised=False)
 
     # Iterate over each angle to simulate.
     q, r, dr, counts = [], [], [], []
@@ -182,23 +187,23 @@ def simulate(sample, angle_times: np.ndarray, scale: float = 1.0,
     return model, data
 
 
-def _run_experiment(sample, angle: float, points: int, time: float,
+def _run_experiment(sample: Union[refnx.reflect.Stucture, refl1d.model.Stack],
+                    angle: float, points: int, time: float,
                     scale: float, bkg: float, dq: float, directbeam_path: str,
                     angle_scale: float, spin_state: int) -> tuple:
     """Simulates a single angle measurement of a given `sample`.
 
     Args:
-        sample (refnx.reflect.Stucture or
-                refld1d.model.Stack): sample to simulate.
-        angle (float): angle to simulate.
-        points (int): number of points to use for simulated data.
-        time (float): counting time for simulation.
-        scale (float): experimental scale factor.
-        bkg (float): level of instrument background noise.
-        dq (float): instrument resolution.
-        directbeam_path (str): path to directbeam file to simulate with.
-        angle_scale (float): angle to use when scaling directbeam flux.
-        spin_state (int): spin state to simulate if given a magnetic sample.
+        sample: sample to simulate.
+        angle: angle to simulate.
+        points: number of points to use for simulated data.
+        time: counting time for simulation.
+        scale: experimental scale factor.
+        bkg: level of instrument background noise.
+        dq: instrument resolution.
+        directbeam_path: path to directbeam file to simulate with.
+        angle_scale: angle to use when scaling directbeam flux.
+        spin_state: spin state to simulate if given a magnetic sample.
 
     Returns:
         tuple: simulated Q, R, dR data and incident neutron counts.
@@ -258,13 +263,14 @@ def _run_experiment(sample, angle: float, points: int, time: float,
     return q_binned, r_noisy, r_error, counts_incident
 
 
-def reflectivity(q: np.ndarray, model) -> np.ndarray:
+def reflectivity(q: np.ndarray, model: Union[refnx.reflect.ReflectModel,
+                                             refl1d.experiment.Experiment]
+                 ) -> np.ndarray:
     """Calculates the reflectance of a `model` at given `q` points.
 
     Args:
-        q (numpy.ndarray): Q points to calculate reflectance at.
-        model (refnx.reflect.ReflectModel or
-               refl1d.experiment.Experiment): model to calculate reflectivity.
+        q: Q points to calculate reflectance at.
+        model: model structure to calculate reflectivity from.
 
     Returns:
         numpy.ndarray: reflectivity for each Q point.
@@ -301,16 +307,18 @@ def reflectivity(q: np.ndarray, model) -> np.ndarray:
             return experiment.reflectivity()[1]
 
 
-def refl1d_experiment(sample, q_array: np.ndarray, scale: float, bkg: float,
-                      dq: float, spin_state: Optional[int] = None):
+def refl1d_experiment(sample: refl1d.model.stack, q_array: np.ndarray,
+                      scale: float, bkg: float, dq: float,
+                      spin_state: Optional[int] = None)\
+                     -> refl1d.experiment.Experiment:
     """Creates a Refl1D experiment for a given `sample` and `q_array`.
 
     Args:
-        sample (structures.Sample): sample to create an experiment for.
-        q_array (numpy.ndarray): Q points to use in the experiment.
-        scale (float): experimental scale factor.
-        bkg (float): level of instrument background noise.
-        dq (float): instrument resolution.
+        sample: sample to create an experiment for.
+        q_array: Q points to use in the experiment.
+        scale: experimental scale factor.
+        bkg: level of instrument background noise.
+        dq: instrument resolution.
         spin_state: spin state to simulate if given a magnetic sample.
 
     Returns:
@@ -326,7 +334,7 @@ def refl1d_experiment(sample, q_array: np.ndarray, scale: float, bkg: float,
                                 intensity=scale, background=bkg)
     probe.dq = dq
 
-    # Adjust probe calculation for constant resolution.
+    # Adjust probe calculation for constant dQ/Q resolution.
     argmin, argmax = np.argmin(q_array), np.argmax(q_array)
     probe.calc_Qo = np.linspace(q_array[argmin] - 3.5*dq_array[argmin],
                                 q_array[argmax] + 3.5*dq_array[argmax],
