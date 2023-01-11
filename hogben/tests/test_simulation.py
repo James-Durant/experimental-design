@@ -20,7 +20,7 @@ def sample_structure():
 
 
 class Test_Simulate(unittest.TestCase):
-    ref = importlib_resources.files('hogben.data.directbeams').joinpath('OFFSPEC_non_polarised.dat')
+    ref = 'OFFSPEC'
     angle_times = [(0.7, 100, 5), (2.0, 100, 20)]  # (Angle, Points, Time)
     scale = 1
     bkg = 1e-6

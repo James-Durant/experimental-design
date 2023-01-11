@@ -9,19 +9,21 @@ import refl1d.probe
 import refl1d.experiment
 
 
-def direct_beam_path(instrument: str = 'OFFSPEC',
-                     polarised: bool = False) -> str:
+def direct_beam_path(inst_or_path: str = 'OFFSPEC',
+                     polarised: bool = False) -> Union[str, None]:
     """Returns the filepath of the correct direct beam file for the instrument
     being used
 
     Args:
-        instrument: The name of the instrument the experiement will be
-        performed on. Valid options are ['OFFSPEC','SURF', 'POLREF'] for
-        unpolarised, and ['OFFSPEC'] for polarised. Defaults to 'OFFSPEC'
+        inst_or_path: Either a local filepath or the name of the instrument the
+        experiement will be performed on. Valid options are ['OFFSPEC','SURF',
+        'POLREF'] for unpolarised, and ['OFFSPEC'] for polarised.
+        Defaults to 'OFFSPEC'
         polarised: If the experiment is polarised. Defaults to False
 
     Returns:
-        str: The hogben internal path of the correct direct beam file
+        str or None: A string of the hogben internal path of the correct direct
+        beam file or None
     """
 
     non_pol_instr = {'OFFSPEC': 'OFFSPEC_non_polarised_old.dat',
@@ -31,22 +33,29 @@ def direct_beam_path(instrument: str = 'OFFSPEC',
 
     pol_instr = {'OFFSPEC': 'OFFSPEC_polarised_old.dat'
                  }
-    if not polarised:
+
+    # Check if the key isn't in the dictionary and assume
+    # a local filepath has been loaded
+    if inst_or_path not in (non_pol_instr or pol_instr):
+        return None
+
+    path = importlib_resources.files('hogben.data.directbeams').joinpath(
+        non_pol_instr[inst_or_path])
+
+    if polarised:
         path = importlib_resources.files('hogben.data.directbeams'
-                                         ).joinpath(non_pol_instr[instrument])
-    else:
-        path = importlib_resources.files('hogben.data.directbeams'
-                                         ).joinpath(pol_instr[instrument])
+                                         ).joinpath(pol_instr[inst_or_path])
+
     return path
 
 
-def simulate_magnetic(sample: Union[refnx.reflect.Stucture,
-                                    refl1d.model.Stack],
+def simulate_magnetic(sample: Union['refnx.reflect.Stucture',
+                                    'refl1d.model.Stack'],
                       angle_times: np.ndarray, scale: float = 1.0,
                       bkg: float = 5e-7, dq: float = 2, mm: bool = True,
                       mp: bool = True, pm: bool = True, pp: bool = True,
                       angle_scale: float = 0.3,
-                      instrument: str = None) -> tuple:
+                      inst_or_path: str = 'OFFSPEC') -> tuple:
     """Simulates an experiment of a given magnetic `sample` measured
        over a number of angles.
 
@@ -63,7 +72,8 @@ def simulate_magnetic(sample: Union[refnx.reflect.Stucture,
         mp: whether to simulate "minus plus" spin state.
         mm: whether to simulate "minus minus" spin state.
         angle_scale: angle to use when scaling directbeam flux.
-        instrument: path to directbeam file to simulate with.
+        inst_or_path: dictionary entry of direct beam stored in hogben or
+        filepath of directbeam file to simulate with..
 
     Returns:
         tuple: model and simulated data for the given `sample`.
@@ -71,42 +81,50 @@ def simulate_magnetic(sample: Union[refnx.reflect.Stucture,
     """
     models, datasets = [], []
 
-    instrument_DB = direct_beam_path(instrument, polarised=True)
+    direct_beam = direct_beam_path(inst_or_path, polarised=False)
+
+    if not direct_beam:  # Local filepath provided so direct_beam_path==None
+        direct_beam = inst_or_path
+
     # Simulate the "minus minus" spin state if requested.
     if mm:
         model, data = simulate(sample, angle_times, scale, bkg, dq,
-                               instrument_DB, angle_scale, 0)
+                               direct_beam, angle_scale, 0)
         models.append(model)
         datasets.append(data)
 
     # Simulate the "minus plus" spin state if requested.
     if mp:
         model, data = simulate(sample, angle_times, scale, bkg, dq,
-                               instrument_DB, angle_scale, 1)
+                               direct_beam, angle_scale, 1)
         models.append(model)
         datasets.append(data)
 
     # Simulate the "plus minus" spin state if requested.
     if pm:
         model, data = simulate(sample, angle_times, scale, bkg, dq,
-                               instrument_DB, angle_scale, 2)
+                               direct_beam, angle_scale, 2)
         models.append(model)
         datasets.append(data)
 
     # Simulate the "plus plus" spin state if requested.
     if pp:
         model, data = simulate(sample, angle_times, scale, bkg, dq,
-                               instrument_DB, angle_scale, 3)
+                               direct_beam, angle_scale, 3)
         models.append(model)
         datasets.append(data)
 
     return models, datasets
 
 
-def simulate(sample: Union[refnx.reflect.Stucture, refl1d.model.Stack],
-             angle_times: np.ndarray, scale: float = 1.0,
-             bkg: float = 5e-6, dq: float = 2, instrument: str = None,
-             angle_scale: float = 0.3, spin_state: int = None) -> tuple:
+def simulate(sample: Union['refnx.reflect.Stucture', 'refl1d.model.Stack'],
+             angle_times: np.ndarray,
+             scale: float = 1.0,
+             bkg: float = 5e-6,
+             dq: float = 2,
+             inst_or_path: str = 'OFFSPEC',
+             angle_scale: float = 0.3,
+             spin_state: Optional[str] = None) -> tuple:
     """Simulates an experiment of a `sample` measured over a number of angles.
 
     Args:
@@ -115,8 +133,9 @@ def simulate(sample: Union[refnx.reflect.Stucture, refl1d.model.Stack],
         for each angle to simulate. e.g. [(0.7, 100, 5), (2.0, 100, 20)]
         scale: experimental scale factor.
         bkg: level of instrument background noise.
-        dq: instrument resolution.
-        instrument: path to directbeam file to simulate with.
+        dq: instrument resolution in percentage dQ/Q.
+        inst_or_path: dictionary entry of direct beam stored in hogben or
+        filepath of directbeam file to simulate with.
         angle_scale: angle to use when scaling directbeam flux.
         spin_state: spin state to simulate if given a magnetic sample.
 
@@ -128,7 +147,10 @@ def simulate(sample: Union[refnx.reflect.Stucture, refl1d.model.Stack],
     if not angle_times:
         return None, np.zeros((0, 4))
 
-    instrument_DB = direct_beam_path(instrument, polarised=False)
+    direct_beam = direct_beam_path(inst_or_path, polarised=False)
+
+    if not direct_beam:  # Local filepath provided so direct_beam_path==None
+        direct_beam = inst_or_path
 
     # Iterate over each angle to simulate.
     q, r, dr, counts = [], [], [], []
@@ -138,7 +160,7 @@ def simulate(sample: Union[refnx.reflect.Stucture, refl1d.model.Stack],
         total_points += points
         simulated = _run_experiment(sample, angle, points, time,
                                     scale, bkg, dq,
-                                    instrument_DB, angle_scale, spin_state)
+                                    direct_beam, angle_scale, spin_state)
 
         # Combine the data for the angle with the data from previous angles.
         q.append(simulated[0])
@@ -187,7 +209,7 @@ def simulate(sample: Union[refnx.reflect.Stucture, refl1d.model.Stack],
     return model, data
 
 
-def _run_experiment(sample: Union[refnx.reflect.Stucture, refl1d.model.Stack],
+def _run_experiment(sample: Union['refnx.reflect.Stucture', 'refl1d.model.Stack'],
                     angle: float, points: int, time: float,
                     scale: float, bkg: float, dq: float, directbeam_path: str,
                     angle_scale: float, spin_state: int) -> tuple:
@@ -210,7 +232,12 @@ def _run_experiment(sample: Union[refnx.reflect.Stucture, refl1d.model.Stack],
 
     """
     # Load the directbeam file.
-    direct_beam = np.loadtxt(directbeam_path, delimiter=',')
+    try:
+        direct_beam = np.loadtxt(directbeam_path, delimiter=',')
+    except (FileNotFoundError, ValueError):
+        msg = "Please provide an instrument name or a valid local filepath"
+        raise FileNotFoundError(str(msg))
+
     wavelengths = direct_beam[:, 0]  # 1st column is wavelength, 2nd is flux.
 
     # Adjust flux by measurement angle.
@@ -263,8 +290,8 @@ def _run_experiment(sample: Union[refnx.reflect.Stucture, refl1d.model.Stack],
     return q_binned, r_noisy, r_error, counts_incident
 
 
-def reflectivity(q: np.ndarray, model: Union[refnx.reflect.ReflectModel,
-                                             refl1d.experiment.Experiment]
+def reflectivity(q: np.ndarray, model: Union['refnx.reflect.ReflectModel',
+                                             'refl1d.experiment.Experiment']
                  ) -> np.ndarray:
     """Calculates the reflectance of a `model` at given `q` points.
 
@@ -307,7 +334,7 @@ def reflectivity(q: np.ndarray, model: Union[refnx.reflect.ReflectModel,
             return experiment.reflectivity()[1]
 
 
-def refl1d_experiment(sample: refl1d.model.stack, q_array: np.ndarray,
+def refl1d_experiment(sample: 'refl1d.model.stack', q_array: np.ndarray,
                       scale: float, bkg: float, dq: float,
                       spin_state: Optional[int] = None)\
                      -> refl1d.experiment.Experiment:
