@@ -209,7 +209,8 @@ def simulate(sample: Union['refnx.reflect.Stucture', 'refl1d.model.Stack'],
     return model, data
 
 
-def _run_experiment(sample: Union['refnx.reflect.Stucture', 'refl1d.model.Stack'],
+def _run_experiment(sample: Union['refnx.reflect.Stucture',
+                                  'refl1d.model.Stack'],
                     angle: float, points: int, time: float,
                     scale: float, bkg: float, dq: float, directbeam_path: str,
                     angle_scale: float, spin_state: int) -> tuple:
