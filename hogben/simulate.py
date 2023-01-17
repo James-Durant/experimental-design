@@ -1,3 +1,4 @@
+import os.path
 from typing import Optional, Union
 
 import importlib_resources
@@ -23,7 +24,7 @@ def direct_beam_path(inst_or_path: str = 'OFFSPEC',
 
     Returns:
         str or None: A string of the hogben internal path of the correct direct
-        beam file or None
+        beam file or the local path
     """
 
     non_pol_instr = {'OFFSPEC': 'OFFSPEC_non_polarised_old.dat',
@@ -35,9 +36,13 @@ def direct_beam_path(inst_or_path: str = 'OFFSPEC',
                  }
 
     # Check if the key isn't in the dictionary and assume
-    # a local filepath has been loaded
+    # a local filepath
     if inst_or_path not in (non_pol_instr or pol_instr):
-        return None
+        if os.path.isfile(inst_or_path):
+            return inst_or_path
+        else:
+            msg = "Please provide an instrument name or a valid local filepath"
+            raise FileNotFoundError(str(msg))
 
     path = importlib_resources.files('hogben.data.directbeams').joinpath(
         non_pol_instr[inst_or_path])
@@ -63,7 +68,6 @@ def simulate_magnetic(sample: Union['refnx.reflect.Stucture',
         sample: sample structure to simulate.
         angle_times: array of angle, number of data points and time to measure
         for each angle to simulate. e.g. [(0.7, 100, 5), (2.0, 100, 20)]
-        scale: experimental scale factor.
         scale: experimental scale factor.
         bkg: level of instrument background noise.
         dq: instrument resolution.
@@ -149,9 +153,6 @@ def simulate(sample: Union['refnx.reflect.Stucture', 'refl1d.model.Stack'],
 
     direct_beam = direct_beam_path(inst_or_path, polarised=False)
 
-    if not direct_beam:  # Local filepath provided so direct_beam_path==None
-        direct_beam = inst_or_path
-
     # Iterate over each angle to simulate.
     q, r, dr, counts = [], [], [], []
     total_points = 0
@@ -233,11 +234,7 @@ def _run_experiment(sample: Union['refnx.reflect.Stucture',
 
     """
     # Load the directbeam file.
-    try:
-        direct_beam = np.loadtxt(directbeam_path, delimiter=',')
-    except (FileNotFoundError, ValueError):
-        msg = "Please provide an instrument name or a valid local filepath"
-        raise FileNotFoundError(str(msg))
+    direct_beam = np.loadtxt(directbeam_path, delimiter=',')
 
     wavelengths = direct_beam[:, 0]  # 1st column is wavelength, 2nd is flux.
 
