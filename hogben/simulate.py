@@ -11,7 +11,7 @@ import refl1d.experiment
 
 
 def direct_beam_path(inst_or_path: str = 'OFFSPEC',
-                     polarised: bool = False) -> Union[str, None]:
+                     polarised: bool = False) -> str:
     """Returns the filepath of the correct direct beam file for the instrument
     being used
 
