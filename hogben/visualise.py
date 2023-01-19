@@ -9,9 +9,6 @@ from itertools import combinations
 from hogben.utils import save_plot
 from hogben.models.base import VariableAngle, VariableContrast, VariableUnderlayer
 
-# Add the models directory to the system path.
-sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
-
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
 
