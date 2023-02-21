@@ -1,11 +1,10 @@
 import unittest
-import importlib_resources
 import pytest
 
 import numpy as np
 from refnx.reflect import SLD
 
-from hogben.simulate import simulate, reflectivity
+from hogben.simulate import simulate, simulate_magnetic, reflectivity
 
 
 def sample_structure():
@@ -19,7 +18,7 @@ def sample_structure():
     return sample_1
 
 
-class Test_Simulate(unittest.TestCase):
+class Test_Simulate():
     ref = 'OFFSPEC'
     angle_times = [(0.7, 100, 5), (2.0, 100, 20)]  # (Angle, Points, Time)
     scale = 1
@@ -41,8 +40,8 @@ class Test_Simulate(unittest.TestCase):
 
     def test_refnx_simulate_model(self):
         """
-        Checks that a model reflectivity from refnx generated through hogben.simulate
-        is always greater than zero.
+        Checks that a model reflectivity from refnx generated through
+        hogben.simulate is always greater than zero.
         """
         q = self.data_1[:, 0]
         r_model = reflectivity(q, self.model_1)
@@ -51,12 +50,57 @@ class Test_Simulate(unittest.TestCase):
 
     def test_refnx_simulate_data(self):
         """
-        Checks that simulated reflectivity data points and simulated neutron counts
-        generated through hogben.simulate are always greater than
+        Checks that simulated reflectivity data points and simulated neutron
+        counts generated through hogben.simulate are always greater than
         zero (given a long count time).
         """
         angle_times = [(0.3, 100, 1000)]
-        _, simulated_datapoints = simulate(self.sample_1, angle_times, self.scale, self.bkg, self.dq, self.ref)
+        _, simulated_datapoints = simulate(self.sample_1, angle_times,
+                                           self.scale, self.bkg, self.dq,
+                                           self.ref)
 
-        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)), simulated_datapoints[:,1])  # reflectivity
-        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)), simulated_datapoints[:, 3])  # counts
+        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
+                                     simulated_datapoints[:,1])  # reflectivity
+        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
+                                     simulated_datapoints[:, 3])  # counts
+
+    @pytest.mark.parametrize('instrument',
+                             ('OFFSPEC',
+                              'POLREF',
+                              'SURF',
+                              'INTER'))
+    def test_simulation_instruments(self, instrument):
+        """
+        Tests that all of the instruments are able to simulate a model and
+        counts data.
+        """
+        angle_times = [(0.3, 100, 1000)]
+        _, simulated_datapoints = simulate(self.sample_1, angle_times,
+                                           self.scale, self.bkg, self.dq,
+                                           inst_or_path=instrument)
+        # reflectivity
+        np.testing.assert_array_less(np.zeros(angle_times[0][1]),
+                                     simulated_datapoints[:, 1])
+        np.testing.assert_array_less(np.zeros(angle_times[0][1]),
+                                     simulated_datapoints[:, 3])  # counts
+
+    @pytest.mark.parametrize('instrument',
+                             ('OFFSPEC',
+                             'POLREF'))
+    def test_simulation_magnetic_instruments(self, instrument):
+        """
+        Tests that all of the instruments are able to simulate a model and
+        counts data.
+        """
+        angle_times = [(0.3, 100, 1000)]
+        _, simulated_datapoints = simulate_magnetic(self.sample_1, angle_times,
+                                           self.scale, self.bkg, self.dq,
+                                           inst_or_path=instrument)
+
+        for i in range(4):
+            # reflectivity
+            np.testing.assert_array_less(np.zeros(angle_times[0][1]),
+                                         simulated_datapoints[i][:, 1])
+            # counts
+            np.testing.assert_array_less(np.zeros(angle_times[0][1]),
+                                         simulated_datapoints[i][:, 3])
