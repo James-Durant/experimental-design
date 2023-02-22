@@ -18,7 +18,7 @@ def direct_beam_path(inst_or_path: str = 'OFFSPEC',
     Args:
         inst_or_path: Either a local filepath or the name of the instrument the
         experiement will be performed on. Valid options are ['OFFSPEC','SURF',
-        'POLREF'] for unpolarised, and ['OFFSPEC'] for polarised.
+        'POLREF'] for unpolarised, and ['OFFSPEC', 'POLREF'] for polarised.
         Defaults to 'OFFSPEC'
         polarised: If the experiment is polarised. Defaults to False
 
@@ -29,10 +29,12 @@ def direct_beam_path(inst_or_path: str = 'OFFSPEC',
 
     non_pol_instr = {'OFFSPEC': 'OFFSPEC_non_polarised_old.dat',
                      'SURF': 'SURF_non_polarised.dat',
-                     'POLREF': 'POLREF_non_polarised.dat'
+                     'POLREF': 'POLREF_non_polarised.dat',
+                     'INTER': 'INTER_non_polarised.dat'
                      }
 
-    pol_instr = {'OFFSPEC': 'OFFSPEC_polarised_old.dat'
+    pol_instr = {'OFFSPEC': 'OFFSPEC_polarised_old.dat',
+                 'POLREF': 'POLREF_polarised.dat'
                  }
 
     # Check if the key isn't in the dictionary and assume
