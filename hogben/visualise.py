@@ -249,7 +249,7 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path):
     # Save different views of the 3D plot.
     # Iterate from 0 to 360 degrees in increments of 10.
     save_path = os.path.join(save_path, 'contrast_choice_double')
-    for i in range(0, 360, 10):
+    for i in range(0, 360, 60):
         # Set the "camera" view for the 3D plot.
         ax.view_init(elev=40, azim=i)
 
