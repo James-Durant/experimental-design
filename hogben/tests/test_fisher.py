@@ -33,7 +33,7 @@ class Test_Fisher():
     @pytest.fixture(autouse=True)
     def get_fisher_information(self, sample, model):
         """Obtains the fisher matrix, and defines the used model parameters"""
-        self.xi = [sample[1].thick, sample[2].thick, sample[1].rough]
+        self.xi = [sample[1].thick, sample[2].thick, sample[1].rough, sample[2].rough]
         self.g = fisher(self.qs, self.xi, self.counts, [model])
 
     def test_elements_greater_than_zero(self):
