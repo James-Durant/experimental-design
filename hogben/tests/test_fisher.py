@@ -50,7 +50,7 @@ def get_mock_reflectivity(data_points):
     Mocks the reflectivity values in the calculation, values are changed between each call
     to mimic a changing parameter in the model. Value should always be between 0 and 1.
     """
-    r = [i / data_points for i in range(data_points+1)]  # Create reflectivity values from 0 to 1
+    r = [i / data_points for i in range(data_points)]  # Create reflectivity values from 0 to approx. 1
     while True:
         r = [abs(value - 0.43) for value in r]  # Change reflectivity after each call
         yield r
