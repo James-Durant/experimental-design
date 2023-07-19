@@ -143,9 +143,9 @@ def fisher(qs, xi, counts, models, step=0.005):
        containing parameters `xi`.
 
     Args:
-        qs (list): Q points for each model.
+        qs (list[list]): Q points for each model.
         xi (list): varying model parameters.
-        counts (list): incident neutron counts corresponding to each Q value.
+        counts (list[list]): incident neutron counts corresponding to each Q value.
         models (list): models to calculate gradients with.
         step (float): step size to take when calculating gradient.
 
@@ -165,19 +165,21 @@ def fisher(qs, xi, counts, models, step=0.005):
     # for every model data point.
     for i in range(m):
         parameter = xi[i]
-        old = parameter.value
+        original = parameter.value
 
         # Calculate reflectance for each model for first part of gradient.
-        x1 = parameter.value = old*(1-step)
+        parameter.value = original*(1-step)
+        x1 = parameter.value
         y1 = np.concatenate([reflectivity(q, model)
                              for q, model in list(zip(qs, models))])
 
         # Calculate reflectance for each model for second part of gradient.
-        x2 = parameter.value = old*(1+step)
+        parameter.value = original*(1+step)
+        x2 = parameter.value
         y2 = np.concatenate([reflectivity(q, model)
                              for q, model in list(zip(qs, models))])
 
-        parameter.value = old # Reset the parameter.
+        parameter.value = original # Reset the parameter.
 
         J[:,i] = (y2-y1) / (x2-x1) # Calculate the gradient.
 
