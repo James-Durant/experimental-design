@@ -1,48 +1,83 @@
+import bumps
 import numpy as np
 import pytest
+import refnx
 
 from hogben.simulate import simulate
 from hogben.utils import fisher
-from refnx.reflect import SLD
+from refnx.reflect import SLD as SLD_refnx
+from refl1d.material import SLD as SLD_refl1d
 from unittest.mock import patch
 
 
 @pytest.fixture
-def model_fixture():
+def refl1d_model():
     """Define a bilayer sample, and return the associated refnx model"""
     # Define sample
-    air = SLD(0, name='Air')
-    layer1 = SLD(4, name='Layer 1')(thick=60, rough=8)
-    layer2 = SLD(8, name='Layer 2')(thick=150, rough=2)
-    substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
+    air = SLD_refl1d(rho=0, name='Air')
+    layer1 = SLD_refl1d(rho=4, name='Layer 1')(thickness=60, interface=8)
+    layer2 = SLD_refl1d(rho=8, name='Layer 2')(thickness=150, interface=2)
+    layer1.thickness.pmp(10)  # Set 10% interval on bounds
+    layer2.thickness.pmp(10)
+    layer1.interface.pmp(10)
+    layer2.interface.pmp(10)
+    substrate = SLD_refl1d(rho=2.047, name='Substrate')(thickness=0, interface=2)
+    sample = substrate | layer2 | layer1 | air
+    # Define model
+    angle_times = [(0.7, 100, 5), (2.0, 100, 20)]  # (Angle, Points, Time)
+    model, _ = simulate(sample, angle_times)
+    model.xi = [layer1.interface, layer2.interface, layer1.thickness,
+                layer2.thickness]
+    return model
+
+
+@pytest.fixture
+def refnx_model():
+    """Define a bilayer sample, and return the associated refl1d model"""
+    # Define sample
+    air = SLD_refnx(0, name='Air')
+    layer1 = SLD_refnx(4, name='Layer 1')(thick=60, rough=8)
+    layer2 = SLD_refnx(8, name='Layer 2')(thick=150, rough=2)
+    substrate = SLD_refnx(2.047, name='Substrate')(thick=0, rough=2)
     layer1.thick.bounds = (40, 70)
     layer2.thick.bounds = (100, 180)
     layer1.rough.bounds = (6, 10)
     layer2.rough.bounds = (1, 3)
     sample = air | layer1 | layer2 | substrate
-
+    model = refnx.reflect.ReflectModel(sample, scale=1, bkg=5e-6, dq=2)
     # Define model
-    angle_times = [(0.7, 100, 5), (2.0, 100, 20)]  # (Angle, Points, Time)
-    model, _ = simulate(sample, angle_times)
+    model.xi = [layer1.rough, layer2.rough, layer1.thick, layer2.thick]  # Default free model parameters
     return model
 
 
-@patch('hogben.utils.reflectivity')
-def get_fisher_information(model_fixture, mock_reflectivity, qs=None, xi=None):
+# @patch('hogben.utils.reflectivity')
+def get_fisher_information(model, qs=None, xi=None):
     """Obtains the Fisher matrix, and defines the used model parameters"""
     if qs is None:
-        qs = [[0.1, 0.2, 0.4, 0.6, 0.8]]  # Define default array of qs
+        qs = np.array([[0.1, 0.2, 0.4, 0.6, 0.8]])  # Define default array of qs
     counts = [np.ones(len(qs[0])) * 500]  # Define 500 counts at each q point
 
-    layer1 = model_fixture.structure.components[1]
-    layer2 = model_fixture.structure.components[2]
-
     if xi is None:
-        xi = [layer1.rough, layer2.rough, layer1.thick, layer2.thick]  # Default free model parameters
-
+        xi = model.xi
     # Mock reflectivity from generator function
-    mock_reflectivity.side_effect = get_mock_reflectivity(len(qs[0]))
-    return fisher(qs, xi, counts, [model_fixture])
+    # mock_reflectivity.side_effect = get_mock_reflectivity(len(qs[0]))
+    return fisher(qs, xi, counts, [model])
+
+
+def get_mock_gradient():
+    J = np.array([
+        [-5.87611034e-06, -2.46556006e-06, 6.56536184e-06, 1.15624487e-05],
+        [-5.03318979e-07, -2.70908563e-07, -9.58739168e-08, -9.68534364e-07],
+        [-1.14779246e-09, -7.63379972e-08, 6.49875368e-10, -1.13648353e-08],
+        [5.89149394e-13, -9.48860785e-09, 1.12113531e-13, 5.61867272e-09],
+        [8.51268112e-18, -2.63926011e-10, 5.95746506e-19, 3.20599288e-10]]
+    )
+    return J
+
+
+def get_mock_bounds():
+    yield np.array([6.0, 1.0, 40, 100])
+    yield np.array([10, 3, 70, 100])
 
 
 def get_mock_reflectivity(data_points):
@@ -50,45 +85,71 @@ def get_mock_reflectivity(data_points):
     Mocks the reflectivity values in the calculation, values are changed between each call
     to mimic a changing parameter in the model. Value should always be between 0 and 1.
     """
-    r = [i / data_points for i in range(data_points)]  # Create reflectivity values from 0 to approx. 1
+    r = list(np.arange(1, 0, -1 / data_points))  # Decaying reflectivity from 1 to 0
     while True:
         r = [abs(value - 0.43) for value in r]  # Change reflectivity after each call
         yield r
 
-
 class Test_Fisher():
-    def test_fisher_information_values(self, model_fixture):
+    def test_fisher_information_values_refnx(self, refnx_model):
         """
         Tests that all the calculated Fisher information matrix returns the expected values
         for a given set of parameters
         """
-        g = get_fisher_information(model_fixture)
-        expected_fisher = [[2.59014803e+04, 2.07211842e+05, 4.60470761e+02, 6.90706141e+01],
-                           [2.07211842e+05, 1.65769474e+06, 3.68376609e+03, 5.52564913e+02],
-                           [4.60470761e+02, 3.68376609e+03, 8.18614686e+00, 1.22792203e+00],
-                           [6.90706141e+01, 5.52564913e+02, 1.22792203e+00, 1.84188304e-01]]
+        g = get_fisher_information(refnx_model)
+        expected_fisher = [[6.47130383e-06, 5.60447670e-06, -8.37036590e-07, -4.94928881e-07],
+                           [5.60447670e-06, 5.02797639e-06, -6.98112513e-07, -3.98228927e-07],
+                           [-8.37036590e-07, -6.98112513e-07, 1.27921607e-07, 8.59517503e-08],
+                           [-4.94928881e-07, -3.98228927e-07, 8.59517503e-08, 6.23346359e-08]]
         np.testing.assert_allclose(g, expected_fisher, rtol=1e-08, atol=0)
 
+    def test_fisher_information_values_ref1d(self, refl1d_model):
+        """
+        Tests that all the calculated Fisher information matrix returns the expected values
+        for a given set of parameters
+        """
+        g = get_fisher_information(refl1d_model)
+        expected_fisher = [[3.58042704e-05, 6.49102395e-05, -4.40696428e-06, -2.83582010e-06],
+                           [6.49102395e-05, 1.22021923e-04, -7.66739810e-06, -4.72522420e-06],
+                           [-4.40696428e-06, -7.66739810e-06, 6.26586892e-07, 4.56331772e-07],
+                           [-2.83582010e-06, -4.72522420e-06, 4.56331772e-07, 3.61390847e-07]]
+        np.testing.assert_allclose(g, expected_fisher, rtol=1e-08, atol=0)
+
+    @patch('hogben.utils.reflectivity')
+    @patch('hogben.utils.get_gradient')
+    @patch('hogben.utils.get_bounds')
+    def test_fisher_mock(self, mock_bounds, mock_gradient, mock_reflectivity, refnx_model):
+        qs = [[0.1, 0.2, 0.4, 0.6, 0.8]]
+        counts = [np.ones(len(qs[0])) * 500]  # Define 500 counts at each q point
+        mock_reflectivity.side_effect = get_mock_reflectivity(len(qs[0]))
+        mock_gradient.return_value = get_mock_gradient()
+        mock_bounds.return_value = get_mock_bounds()
+        g = fisher(qs, [[],[]], counts, [[]])
+
     @pytest.mark.parametrize('model_params', (1, 2, 3, 4))
-    def test_fisher_shape(self, model_fixture, model_params):
+    def test_fisher_shape(self, refnx_model, model_params):
         """
         Tests whether the shape of the Fisher information matrix remains correct when changing the
         amount of parameters
         """
-        layer1 = model_fixture.structure.components[1]
-        layer2 = model_fixture.structure.components[2]
-        xi_all = [layer1.rough, layer2.rough, layer1.thick, layer2.thick]
+        xi_all = refnx_model.xi
         xi = xi_all[:model_params]
         expected_shape = (len(xi), len(xi))
-        g = get_fisher_information(model_fixture, xi=xi)
+
+        g = get_fisher_information(refnx_model, xi=xi)
         np.testing.assert_array_equal(g.shape, expected_shape)
 
     @pytest.mark.parametrize('qs',
-                             ([[i / 1 for i in range(1)]],
-                              [[i / 24 for i in range(25)]],
-                              [[i / 49 for i in range(50)]],
-                              [[i / 149 for i in range(150)]]))
-    def test_fisher_diagonal_positive(self, model_fixture, qs):
+                             (np.arange(0.001, 1.0, 0.25),
+                              np.arange(0.001, 1.0, 0.10),
+                              np.arange(0.001, 1.0, 0.05),
+                              np.arange(0.001, 1.0, 0.01)))
+    def test_fisher_diagonal_positive(self, refnx_model, qs):
         """Tests whether the diagonal values in the Fisher information matrix are positively valued"""
-        g = get_fisher_information(model_fixture, qs=qs)
+        qs = [0.1, 0.2, 0.4, 0.6, 0.8]
+        g = get_fisher_information(refnx_model)
         np.testing.assert_array_less(np.zeros(len(g)), np.diag(g))
+
+    def test_no_data(self, refnx_model):
+        g = get_fisher_information(refnx_model, qs=[[]])
+        np.testing.assert_equal(g, np.zeros((4, 4)))
