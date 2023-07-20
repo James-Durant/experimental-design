@@ -15,20 +15,6 @@ class MockXi:
 
     def __getitem__(self, index):
         return self._elements[index]
-
-    def __getattr__(self, name):
-        if name == "value":
-            return [element.value for element in self._elements]
-
-    def __setattr__(self, name, value):
-        if name == "value":
-            if len(value) != len(self._elements):
-                raise ValueError("Length of new values must match the original array length.")
-            for element, new_value in zip(self._elements, value):
-                element.value = new_value
-        else:
-            super().__setattr__(name, value)
-
     def __len__(self):
         return len(self._elements)
 
