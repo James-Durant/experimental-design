@@ -163,7 +163,7 @@ def fisher(qs, xi, counts, models, step=0.005):
 
     # Calculate the gradient of model reflectivity with every model parameter
     # for every model data point.
-    for i in range(m):
+    for i, parameter in enumerate(xi):
         parameter = xi[i]
         original = parameter.value
 
