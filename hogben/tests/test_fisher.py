@@ -9,6 +9,40 @@ from refnx.reflect import SLD as SLD_refnx
 from refl1d.material import SLD as SLD_refl1d
 from unittest.mock import patch
 
+class MockXi:
+    def __init__(self, values):
+        self._elements = [MockXiElement(value) for value in values]
+
+    def __getitem__(self, index):
+        return self._elements[index]
+
+    def __getattr__(self, name):
+        if name == "value":
+            return [element.value for element in self._elements]
+
+    def __setattr__(self, name, value):
+        if name == "value":
+            if len(value) != len(self._elements):
+                raise ValueError("Length of new values must match the original array length.")
+            for element, new_value in zip(self._elements, value):
+                element.value = new_value
+        else:
+            super().__setattr__(name, value)
+
+    def __len__(self):
+        return len(self._elements)
+
+class MockXiElement:
+    def __init__(self, value):
+        self._value = value
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, new_value):
+        self._value = new_value
 
 @pytest.fixture
 def refl1d_model():
@@ -56,28 +90,25 @@ def get_fisher_information(model, qs=None, xi=None):
     if qs is None:
         qs = np.array([[0.1, 0.2, 0.4, 0.6, 0.8]])  # Define default array of qs
     counts = [np.ones(len(qs[0])) * 500]  # Define 500 counts at each q point
-
     if xi is None:
         xi = model.xi
-    # Mock reflectivity from generator function
-    # mock_reflectivity.side_effect = get_mock_reflectivity(len(qs[0]))
     return fisher(qs, xi, counts, [model])
 
 
-def get_mock_gradient():
-    J = np.array([
-        [-5.87611034e-06, -2.46556006e-06, 6.56536184e-06, 1.15624487e-05],
-        [-5.03318979e-07, -2.70908563e-07, -9.58739168e-08, -9.68534364e-07],
-        [-1.14779246e-09, -7.63379972e-08, 6.49875368e-10, -1.13648353e-08],
-        [5.89149394e-13, -9.48860785e-09, 1.12113531e-13, 5.61867272e-09],
-        [8.51268112e-18, -2.63926011e-10, 5.95746506e-19, 3.20599288e-10]]
-    )
-    return J
-
-
-def get_mock_bounds():
-    yield np.array([6.0, 1.0, 40, 100])
-    yield np.array([10, 3, 70, 100])
+@patch('hogben.utils.reflectivity')
+@patch('hogben.utils.get_bounds')
+def get_fisher_mock(mock_bounds, mock_reflectivity, bounds = None, qs = None, xi = None):
+    if qs == None:
+        qs = [[0.1, 0.2, 0.4, 0.6, 0.8]]
+    if xi is None:
+        xi = MockXi([8, 2, 60 , 150])
+    counts = [np.ones(len(qs[0])) * 500]  # Define 500 counts at each q point
+    mock_reflectivity.side_effect = get_mock_reflectivity(len(qs[0]))
+    if bounds is None:
+        mock_bounds.return_value = np.array([6.0, 1.0, 40, 100]), np.array([10, 3, 70, 180])
+    else:
+        mock_bounds.return_value = bounds[0], bounds[1]
+    return fisher(qs, xi, counts, [[]])
 
 
 def get_mock_reflectivity(data_points):
@@ -85,7 +116,10 @@ def get_mock_reflectivity(data_points):
     Mocks the reflectivity values in the calculation, values are changed between each call
     to mimic a changing parameter in the model. Value should always be between 0 and 1.
     """
-    r = list(np.arange(1, 0, -1 / data_points))  # Decaying reflectivity from 1 to 0
+    if data_points == 0:
+        r = []
+    else:
+        r = list(np.arange(1, 0, -1 / data_points))  # Decaying reflectivity from 1 to 0
     while True:
         r = [abs(value - 0.43) for value in r]  # Change reflectivity after each call
         yield r
@@ -115,28 +149,17 @@ class Test_Fisher():
                            [-2.83582010e-06, -4.72522420e-06, 4.56331772e-07, 3.61390847e-07]]
         np.testing.assert_allclose(g, expected_fisher, rtol=1e-08, atol=0)
 
-    @patch('hogben.utils.reflectivity')
-    @patch('hogben.utils.get_gradient')
-    @patch('hogben.utils.get_bounds')
-    def test_fisher_mock(self, mock_bounds, mock_gradient, mock_reflectivity, refnx_model):
-        qs = [[0.1, 0.2, 0.4, 0.6, 0.8]]
-        counts = [np.ones(len(qs[0])) * 500]  # Define 500 counts at each q point
-        mock_reflectivity.side_effect = get_mock_reflectivity(len(qs[0]))
-        mock_gradient.return_value = get_mock_gradient()
-        mock_bounds.return_value = get_mock_bounds()
-        g = fisher(qs, [[],[]], counts, [[]])
-
     @pytest.mark.parametrize('model_params', (1, 2, 3, 4))
-    def test_fisher_shape(self, refnx_model, model_params):
+    def test_fisher_shape(self, model_params):
         """
         Tests whether the shape of the Fisher information matrix remains correct when changing the
         amount of parameters
         """
-        xi_all = refnx_model.xi
+        xi_all = MockXi([8, 2, 60, 150])
         xi = xi_all[:model_params]
-        expected_shape = (len(xi), len(xi))
-
-        g = get_fisher_information(refnx_model, xi=xi)
+        bounds = [np.array([6.0, 1.0, 40, 100][:model_params]), np.array([10, 3, 70, 180][:model_params])]
+        expected_shape = (model_params, model_params)
+        g = get_fisher_mock(bounds=bounds, xi=xi)
         np.testing.assert_array_equal(g.shape, expected_shape)
 
     @pytest.mark.parametrize('qs',
@@ -144,12 +167,12 @@ class Test_Fisher():
                               np.arange(0.001, 1.0, 0.10),
                               np.arange(0.001, 1.0, 0.05),
                               np.arange(0.001, 1.0, 0.01)))
-    def test_fisher_diagonal_positive(self, refnx_model, qs):
+    def test_fisher_diagonal_positive(self, qs):
         """Tests whether the diagonal values in the Fisher information matrix are positively valued"""
         qs = [0.1, 0.2, 0.4, 0.6, 0.8]
-        g = get_fisher_information(refnx_model)
+        g = get_fisher_mock(qs=[qs])
         np.testing.assert_array_less(np.zeros(len(g)), np.diag(g))
 
-    def test_no_data(self, refnx_model):
-        g = get_fisher_information(refnx_model, qs=[[]])
+    def test_no_data(self):
+        g = get_fisher_mock(qs=[[]])
         np.testing.assert_equal(g, np.zeros((4, 4)))

@@ -155,7 +155,6 @@ def fisher(qs, xi, counts, models, step=0.005):
     """
     J = get_gradient(xi, step, models, qs)
     # Calculate the reflectance for each model for the given Q values.
-    ref1 = reflectivity(qs, models)
     r = np.concatenate([reflectivity(q, model)
                         for q, model in list(zip(qs, models))])
 
@@ -167,7 +166,6 @@ def fisher(qs, xi, counts, models, step=0.005):
     # scale each parameter's information by its "importance".
     if len(xi) > 1:
         lb, ub = get_bounds(xi)
-
         # Using the equations from the paper for the coordinate transform.
         H = np.diag(1/(ub-lb))
         g = np.dot(np.dot(H.T, g), H)
