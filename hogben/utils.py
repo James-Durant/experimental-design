@@ -154,7 +154,7 @@ def fisher(qs: list, xi: list, counts: list, models: list, step: float=0.005):
 
     """
     n = sum(len(q) for q in qs)  # Number of data points.
-    m =  # Number of parameters.
+    m = len(xi)  # Number of parameters.
 
     # There is no information if there is no data.
     if n == 0:
