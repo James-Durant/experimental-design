@@ -216,7 +216,7 @@ def test_fisher_diagonal_positive(qs):
                           MockXi([8, 2]),
                           MockXi([8, 2, 60]),
                           MockXi([8, 2, 60, 150])))
-def test_no_data(xi):
+def test_fisher_no_data(xi):
     """Tests whether a model with zero data points properly returns a
     zero array"""
     qs = []
