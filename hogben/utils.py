@@ -198,7 +198,7 @@ def _get_bounds(xi: list):
     return lb, ub
 
 def _get_gradient_matrix(xi: list, step: float, models: list, qs: list):
-    """Get the bounds from the list of parameters
+    """Get the gradient matrix of the reflectances
     Args:
         xi(list): varying model parameters
         step (float): step size to take when calculating gradient.
