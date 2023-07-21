@@ -10,15 +10,18 @@ from refl1d.material import SLD as SLD_refl1d
 from unittest.mock import patch
 
 class MockXi:
+    """Mock of Xi, list of varying parameters"""
     def __init__(self, values):
         self._elements = [MockXiElement(value) for value in values]
 
     def __getitem__(self, index):
         return self._elements[index]
+
     def __len__(self):
         return len(self._elements)
 
 class MockXiElement:
+    """Mock of the elements in Xi, allows to call for the value attribute"""
     def __init__(self, value):
         self._value = value
 
@@ -29,6 +32,7 @@ class MockXiElement:
     @value.setter
     def value(self, new_value):
         self._value = new_value
+
 
 @pytest.fixture
 def refl1d_model():
@@ -82,8 +86,13 @@ def get_fisher_information(model, qs=None, xi=None):
 
 
 @patch('hogben.utils.reflectivity')
-@patch('hogben.utils.get_bounds')
-def get_fisher_mock(mock_bounds, mock_reflectivity, bounds = None, qs = None, xi = None):
+@patch('hogben.utils._get_bounds')
+def get_fisher_mock(mock_bounds, mock_reflectivity, bounds = None, qs = None,
+                    xi = None):
+    """Obtains a mocked Fisher matrix, without actually calculating the
+    reflectivity or model. Allows for custom inputs on the q values,
+    parameter values and bounds.
+    """
     if qs == None:
         qs = [[0.1, 0.2, 0.4, 0.6, 0.8]]
     if xi is None:
@@ -91,7 +100,8 @@ def get_fisher_mock(mock_bounds, mock_reflectivity, bounds = None, qs = None, xi
     counts = [np.ones(len(qs[0])) * 500]  # Define 500 counts at each q point
     mock_reflectivity.side_effect = get_mock_reflectivity(len(qs[0]))
     if bounds is None:
-        mock_bounds.return_value = np.array([6.0, 1.0, 40, 100]), np.array([10, 3, 70, 180])
+        mock_bounds.return_value = \
+            np.array([6.0, 1.0, 40, 100]), np.array([10, 3, 70, 180])
     else:
         mock_bounds.return_value = bounds[0], bounds[1]
     return fisher(qs, xi, counts, [[]])
@@ -129,21 +139,23 @@ class Test_Fisher():
         for a given set of parameters
         """
         g = get_fisher_information(refl1d_model)
-        expected_fisher = [[3.58042704e-05, 6.49102395e-05, -4.40696428e-06, -2.83582010e-06],
-                           [6.49102395e-05, 1.22021923e-04, -7.66739810e-06, -4.72522420e-06],
-                           [-4.40696428e-06, -7.66739810e-06, 6.26586892e-07, 4.56331772e-07],
-                           [-2.83582010e-06, -4.72522420e-06, 4.56331772e-07, 3.61390847e-07]]
+        expected_fisher = [
+            [3.58042704e-05, 6.49102395e-05, -4.40696428e-06, -2.83582010e-06],
+            [6.49102395e-05, 1.22021923e-04, -7.66739810e-06, -4.72522420e-06],
+            [-4.40696428e-06, -7.66739810e-06, 6.26586892e-07, 4.56331772e-07],
+            [-2.83582010e-06, -4.72522420e-06, 4.56331772e-07, 3.61390847e-07]]
         np.testing.assert_allclose(g, expected_fisher, rtol=1e-08, atol=0)
 
     @pytest.mark.parametrize('model_params', (1, 2, 3, 4))
     def test_fisher_shape(self, model_params):
         """
-        Tests whether the shape of the Fisher information matrix remains correct when changing the
-        amount of parameters
+        Tests whether the shape of the Fisher information matrix remains
+         correct when changing the amount of parameters
         """
         xi_all = MockXi([8, 2, 60, 150])
         xi = xi_all[:model_params]
-        bounds = [np.array([6.0, 1.0, 40, 100][:model_params]), np.array([10, 3, 70, 180][:model_params])]
+        bounds = [np.array([6.0, 1.0, 40, 100][:model_params]),
+                  np.array([10, 3, 70, 180][:model_params])]
         expected_shape = (model_params, model_params)
         g = get_fisher_mock(bounds=bounds, xi=xi)
         np.testing.assert_array_equal(g.shape, expected_shape)
@@ -154,11 +166,21 @@ class Test_Fisher():
                               np.arange(0.001, 1.0, 0.05),
                               np.arange(0.001, 1.0, 0.01)))
     def test_fisher_diagonal_positive(self, qs):
-        """Tests whether the diagonal values in the Fisher information matrix are positively valued"""
+        """Tests whether the diagonal values in the Fisher information matrix
+         are positively valued"""
         qs = [0.1, 0.2, 0.4, 0.6, 0.8]
         g = get_fisher_mock(qs=[qs])
         np.testing.assert_array_less(np.zeros(len(g)), np.diag(g))
 
-    def test_no_data(self):
-        g = get_fisher_mock(qs=[[]])
-        np.testing.assert_equal(g, np.zeros((4, 4)))
+    @pytest.mark.parametrize('xi',
+                             (MockXi([]),
+                              MockXi([8]),
+                              MockXi([8, 2]),
+                              MockXi([8, 2, 60]),
+                              MockXi([8, 2, 60, 150])))
+    def test_no_data(self, xi):
+        """Tests whether a model with zero data points properly returns a
+        zero array"""
+        qs = []
+        g = get_fisher_mock(qs=[qs], xi = xi)
+        np.testing.assert_equal(g, np.zeros((len(xi), len(xi))))
