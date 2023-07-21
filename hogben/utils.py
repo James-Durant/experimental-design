@@ -138,7 +138,7 @@ class Sampler:
         axes[self.ndim-1, self.ndim-1].set_xlabel(self.params[-1].name)
         return fig
 
-def fisher(qs, xi, counts, models, step=0.005):
+def fisher(qs: list, xi: list, counts: list, models: list, step: float=0.005):
     """Calculates the Fisher information matrix for multiple `models`
        containing parameters `xi`.
 
@@ -153,7 +153,14 @@ def fisher(qs, xi, counts, models, step=0.005):
         numpy.ndarray: Fisher information matrix for given models and data.
 
     """
-    J = get_gradient(xi, step, models, qs)
+    n = sum(len(q) for q in qs)  # Number of data points.
+    m =  # Number of parameters.
+
+    # There is no information if there is no data.
+    if n == 0:
+        return np.zeros((m, m))
+
+    J = _get_gradient_matrix(xi, step, models, qs)
     # Calculate the reflectance for each model for the given Q values.
     r = np.concatenate([reflectivity(q, model)
                         for q, model in list(zip(qs, models))])
@@ -165,7 +172,7 @@ def fisher(qs, xi, counts, models, step=0.005):
     # If there are multiple parameters,
     # scale each parameter's information by its "importance".
     if len(xi) > 1:
-        lb, ub = get_bounds(xi)
+        lb, ub = _get_bounds(xi)
         # Using the equations from the paper for the coordinate transform.
         H = np.diag(1/(ub-lb))
         g = np.dot(np.dot(H.T, g), H)
@@ -173,17 +180,33 @@ def fisher(qs, xi, counts, models, step=0.005):
     # Return the Fisher information matrix.
     return g
 
-def get_bounds(xi):
-    if hasattr(xi[0].bounds, "lb"):  # Refnx has lb attribute
+def _get_bounds(xi: list):
+    """Get the bounds from the list of parameters
+    Args:
+        xi(list): varying model parameters
+    Returns:
+        list, list: list of the lower bound and upper bound on each parameter
+        Xi respectively.
+    """
+    if isinstance(xi[0], refnx.analysis.Parameter):
         lb = np.array([param.bounds.lb for param in xi])
         ub = np.array([param.bounds.ub for param in xi])
 
-    elif hasattr(xi[0].bounds, "limits"):  # Refl1d has limits attribute
+    elif isinstance(xi[0], bumps.parameter.Parameter):
         lb = np.array([param.bounds.limits[0] for param in xi])
         ub = np.array([param.bounds.limits[1] for param in xi])
     return lb, ub
 
-def get_gradient(xi, step, models, qs):
+def _get_gradient_matrix(xi: list, step: float, models: list, qs: list):
+    """Get the bounds from the list of parameters
+    Args:
+        xi(list): varying model parameters
+        step (float): step size to take when calculating gradient.
+        qs (list[list]): Q points for each model.
+        models (list): models to calculate gradients with.
+    Returns:
+        numpy.ndarray: Gradient matrix for the parameters in Xi
+    """
     n = sum(len(q) for q in qs) # Number of data points.
     m = len(xi) # Number of parameters.
     J = np.zeros((n, m))
