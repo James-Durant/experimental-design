@@ -138,7 +138,7 @@ class Sampler:
         axes[self.ndim-1, self.ndim-1].set_xlabel(self.params[-1].name)
         return fig
 
-def fisher(qs, xi, counts, models, step=0.005):
+def fisher(qs, xi, counts, models, step=0.005, importance = None):
     """Calculates the Fisher information matrix for multiple `models`
        containing parameters `xi`.
 
@@ -200,8 +200,10 @@ def fisher(qs, xi, counts, models, step=0.005):
             lb = np.array([param.bounds.limits[0] for param in xi])
             ub = np.array([param.bounds.limits[1] for param in xi])
 
+        if importance is None: # Default importance equals one for each param
+            importance = np.ones(len(lb))
         # Using the equations from the paper for the coordinate transform.
-        H = np.diag(1/(ub-lb))
+        H = np.diag(importance/(ub-lb))
         g = np.dot(np.dot(H.T, g), H)
 
     # Return the Fisher information matrix.
