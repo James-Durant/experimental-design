@@ -138,14 +138,14 @@ class Sampler:
         axes[self.ndim-1, self.ndim-1].set_xlabel(self.params[-1].name)
         return fig
 
-def fisher(qs: list, xi: list, counts: list, models: list, step: float=0.005):
+def fisher(qs, xi, counts, models, step=0.005):
     """Calculates the Fisher information matrix for multiple `models`
        containing parameters `xi`.
 
     Args:
-        qs (list[list]): Q points for each model.
+        qs (list): Q points for each model.
         xi (list): varying model parameters.
-        counts (list[list]): incident neutron counts corresponding to each Q value.
+        counts (list): incident neutron counts corresponding to each Q value.
         models (list): models to calculate gradients with.
         step (float): step size to take when calculating gradient.
 
@@ -153,67 +153,17 @@ def fisher(qs: list, xi: list, counts: list, models: list, step: float=0.005):
         numpy.ndarray: Fisher information matrix for given models and data.
 
     """
-    n = sum(len(q) for q in qs)  # Number of data points.
-    m = len(xi)  # Number of parameters.
+    n = sum(len(q) for q in qs) # Number of data points.
+    m = len(xi) # Number of parameters.
+    J = np.zeros((n, m))
 
     # There is no information if there is no data.
     if n == 0:
         return np.zeros((m, m))
 
-    J = _get_gradient_matrix(xi, step, models, qs)
-    # Calculate the reflectance for each model for the given Q values.
-    r = np.concatenate([reflectivity(q, model)
-                        for q, model in list(zip(qs, models))])
-
-    # Calculate the Fisher information matrix using equations from the paper.
-    M = np.diag(np.concatenate(counts) / r, k=0)
-    g = np.dot(np.dot(J.T, M), J)
-
-    # If there are multiple parameters,
-    # scale each parameter's information by its "importance".
-    if len(xi) > 1:
-        lb, ub = _get_bounds(xi)
-        # Using the equations from the paper for the coordinate transform.
-        H = np.diag(1/(ub-lb))
-        g = np.dot(np.dot(H.T, g), H)
-
-    # Return the Fisher information matrix.
-    return g
-
-def _get_bounds(xi: list):
-    """Get the bounds from the list of parameters
-    Args:
-        xi(list): varying model parameters
-    Returns:
-        list, list: list of the lower bound and upper bound on each parameter
-        Xi respectively.
-    """
-    if isinstance(xi[0], refnx.analysis.Parameter):
-        lb = np.array([param.bounds.lb for param in xi])
-        ub = np.array([param.bounds.ub for param in xi])
-
-    elif isinstance(xi[0], bumps.parameter.Parameter):
-        lb = np.array([param.bounds.limits[0] for param in xi])
-        ub = np.array([param.bounds.limits[1] for param in xi])
-    return lb, ub
-
-def _get_gradient_matrix(xi: list, step: float, models: list, qs: list):
-    """Get the gradient matrix of the reflectances
-    Args:
-        xi(list): varying model parameters
-        step (float): step size to take when calculating gradient.
-        qs (list[list]): Q points for each model.
-        models (list): models to calculate gradients with.
-    Returns:
-        numpy.ndarray: Gradient matrix for the parameters in Xi
-    """
-    n = sum(len(q) for q in qs) # Number of data points.
-    m = len(xi) # Number of parameters.
-    J = np.zeros((n, m))
-
     # Calculate the gradient of model reflectivity with every model parameter
     # for every model data point.
-    for i, parameter in enumerate(xi):
+    for i in range(m):
         parameter = xi[i]
         original = parameter.value
         # Calculate reflectance for each model for first part of gradient.
@@ -228,8 +178,35 @@ def _get_gradient_matrix(xi: list, step: float, models: list, qs: list):
         y2 = np.concatenate([reflectivity(q, model)
                              for q, model in list(zip(qs, models))])
         J[:, i] = (y2 - y1) / (x2 - x1)  # Calculate the gradient.
-        parameter.value = original
-    return J
+        parameter.value = original # Reset the parameter
+
+        J[:,i] = (y2-y1) / (x2-x1) # Calculate the gradient.
+
+    # Calculate the reflectance for each model for the given Q values.
+    r = np.concatenate([reflectivity(q, model)
+                        for q, model in list(zip(qs, models))])
+
+    # Calculate the Fisher information matrix using equations from the paper.
+    M = np.diag(np.concatenate(counts) / r, k=0)
+    g = np.dot(np.dot(J.T, M), J)
+
+    # If there are multiple parameters,
+    # scale each parameter's information by its "importance".
+    if len(xi) > 1:
+        if isinstance(xi[0], refnx.analysis.Parameter):
+            lb = np.array([param.bounds.lb for param in xi])
+            ub = np.array([param.bounds.ub for param in xi])
+
+        elif isinstance(xi[0], bumps.parameter.Parameter):
+            lb = np.array([param.bounds.limits[0] for param in xi])
+            ub = np.array([param.bounds.limits[1] for param in xi])
+
+        # Using the equations from the paper for the coordinate transform.
+        H = np.diag(1/(ub-lb))
+        g = np.dot(np.dot(H.T, g), H)
+
+    # Return the Fisher information matrix.
+    return g
 
 def save_plot(fig, save_path, filename):
     """Saves a figure to a given directory.
@@ -237,6 +214,12 @@ def save_plot(fig, save_path, filename):
     Args:
         fig (matplotlib.pyplot.Figure): figure to save.
         save_path (str): path to directory to save figure to.
+        save_path (str): path to directory to save figure to.
+        save_path (str): path to directory to save figure to.
+        save_path (str): path to directory to save figure to.
+        filename (str): name of file to save plot as.
+        filename (str): name of file to save plot as.
+        filename (str): name of file to save plot as.
         filename (str): name of file to save plot as.
 
     """
