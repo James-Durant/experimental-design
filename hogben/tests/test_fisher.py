@@ -4,10 +4,8 @@ import pytest
 import refnx
 import refl1d.experiment
 
-from hogben.simulate import simulate
 from hogben.utils import fisher
 from refnx.reflect import SLD as SLD_refnx
-from refl1d.material import SLD as SLD_refl1d
 from unittest.mock import Mock, patch
 
 Q_VALUES = np.array([[0.1, 0.2, 0.4, 0.6, 0.8]])
