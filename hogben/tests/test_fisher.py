@@ -51,8 +51,7 @@ def refnx_model():
     sample = air | layer1 | layer2 | substrate
     model = refnx.reflect.ReflectModel(sample, scale=1, bkg=5e-6, dq=2)
     # Define model
-    model.xi = [layer1.rough, layer2.rough, layer1.thick,
-                layer2.thick]  # Default free model parameters
+    model.xi = [layer1.rough, layer2.rough, layer1.thick, layer2.thick]
     return model
 
 
@@ -89,9 +88,11 @@ def mock_refl1d_model():
 
 
 def get_fisher_information(model, xi=None, counts=None,
-                           qs=Q_VALUES, step=0.005):
+                           qs=None, step=0.005):
     """Obtains the Fisher matrix, and defines the used model parameters"""
-    # Provide default values for counts and xi
+    # Provide default values for qs, counts and xi
+    if qs is None:
+        qs = Q_VALUES
     if counts is None:
         counts = [np.ones(len(qs[0])) * 100]  # Define 100 counts at each q
     if xi is None:
@@ -103,7 +104,7 @@ def get_reflectivity_given_datapoints(data_points):
     """
     Mocks the reflectivity values in the calculation for an arbitrary
     amount of data points. The value at each data point is changed from the
-    initial value by a total of 0.47, mimicking a changing parameter in the
+    initial value by a total of 0.41, mimicking a changing parameter in the
     model. Value should always remain between 0 and 1.
     """
     r = list(np.linspace(1, 0, num=data_points))  # Reflectivity from 1 to 0
@@ -115,9 +116,8 @@ def get_reflectivity_given_datapoints(data_points):
 
 def get_mock_reflectivity():
     """
-    Mocks the reflectivity values in the calculation, values are changed
-    between each call to mimic a changing parameter in the model. Value
-    should always be between 0 and 1.
+    Mocks the reflectivity values in the calculation, using two lists. The
+    lists are yielded alternating when called.
     """
     r = [[1.0, 0.5, 0.4, 0.2, 0.1], [0.95, 0.45, 0.35, 0.15, 0.05]]
     while True:
@@ -127,8 +127,8 @@ def get_mock_reflectivity():
 
 def test_fisher_workflow_refnx(refnx_model):
     """
-    Tests that all the calculated Fisher information matrix returns the
-    expected values for a given set of parameters
+    Runs the entire fisher workflow for the refnx model, and checks that the
+    corresponding results are consistent with the expected values
     """
     g = get_fisher_information(refnx_model, step=0.005)
     expected_fisher = [
@@ -142,8 +142,8 @@ def test_fisher_workflow_refnx(refnx_model):
 
 def test_fisher_workflow_refl1d(refl1d_model):
     """
-    Tests that all the calculated Fisher information matrix returns the
-    expected values for a given set of parameters
+    Runs the entire fisher workflow for the refl1d model, and checks that the
+    corresponding results are consistent with the expected values
     """
     g = get_fisher_information(refl1d_model, step=0.005)
     expected_fisher = [
@@ -204,7 +204,7 @@ def test_fisher_shape(mock_reflectivity, model_params, model_class, request):
     mock_reflectivity.side_effect = get_mock_reflectivity()
 
     expected_shape = (model_params, model_params)
-    g = get_fisher_information(None, xi=xi)
+    g = get_fisher_information(model, xi=xi)
     np.testing.assert_array_equal(g.shape, expected_shape)
 
 
@@ -229,8 +229,8 @@ def test_fisher_diagonal_positive(mock_reflectivity, qs, model_class, request):
                                          "mock_refnx_model"))
 @pytest.mark.parametrize('model_params', (1, 2, 3, 4))
 def test_fisher_no_data(model_params, model_class, request):
-    """Tests whether a model with zero data points properly returns a
-    zero array"""
+    """Tests whether a model with zero data points properly returns an empty
+    matrix of the correct shape"""
     model = request.getfixturevalue(model_class)
     xi = model.xi[:model_params]
     qs = []
