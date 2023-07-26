@@ -1,4 +1,5 @@
 import os
+from typing import Optional, Union
 
 import numpy as np
 
@@ -6,6 +7,7 @@ from dynesty import NestedSampler, DynamicNestedSampler
 from dynesty import plotting as dyplot
 from dynesty import utils as dyfunc
 
+import refl1d.experiment
 import refnx.reflect
 import refnx.analysis
 import bumps.parameter
@@ -26,18 +28,19 @@ class Sampler:
         sampler_dynamic (dynesty.DynamicNestedSampler): dynamic nested sampler.
 
     """
+
     def __init__(self, objective):
         self.objective = objective
 
         # Determine if the objective is from refnx or Refl1D.
         if isinstance(objective, refnx.analysis.BaseObjective):
-            # Use log-likelihood and prior transform methods of refnx objective.
+            # Use log-likelihood and prior transform methods of refnx objective
             self.params = objective.varying_parameters()
             logl = objective.logl
             prior_transform = objective.prior_transform
 
         elif isinstance(objective, bumps.fitproblem.BaseFitProblem):
-            # Use this class' custom log-likelihood and prior transform methods.
+            # Use this class' custom log-likelihood and prior transform methods
             self.params = self.objective._parameters
             logl = self.logl_refl1d
             prior_transform = self.prior_transform_refl1d
@@ -48,7 +51,8 @@ class Sampler:
 
         self.ndim = len(self.params)
         self.sampler_static = NestedSampler(logl, prior_transform, self.ndim)
-        self.sampler_dynamic = DynamicNestedSampler(logl, prior_transform, self.ndim)
+        self.sampler_dynamic = DynamicNestedSampler(logl, prior_transform,
+                                                    self.ndim)
 
     def logl_refl1d(self, x):
         """Calculates the log-likelihood of given parameter values `x`
@@ -61,8 +65,8 @@ class Sampler:
             float: log-likelihood of parameter values `x`.
 
         """
-        self.objective.setp(x) # Set the parameter values.
-        return -self.objective.model_nllf() # Calculate the log-likelihood.
+        self.objective.setp(x)  # Set the parameter values.
+        return -self.objective.model_nllf()  # Calculate the log-likelihood.
 
     def prior_transform_refl1d(self, u):
         """Calculates the prior transform for a Refl1D FitProblem.
@@ -130,31 +134,40 @@ class Sampler:
         axes = np.reshape(np.array(fig.get_axes()), (self.ndim, self.ndim))
         for i in range(1, self.ndim):
             for j in range(self.ndim):
-                if i == self.ndim-1:
-                    axes[i,j].set_xlabel(self.params[j].name)
+                if i == self.ndim - 1:
+                    axes[i, j].set_xlabel(self.params[j].name)
                 if j == 0:
-                    axes[i,j].set_ylabel(self.params[i].name)
+                    axes[i, j].set_ylabel(self.params[i].name)
 
-        axes[self.ndim-1, self.ndim-1].set_xlabel(self.params[-1].name)
+        axes[self.ndim - 1, self.ndim - 1].set_xlabel(self.params[-1].name)
         return fig
 
-def fisher(qs, xi, counts, models, step=0.005, importance = None):
+
+def fisher(qs: list[list],
+           xi: list[Union['refnx.analysis.Parameter',
+                          'bumps.parameter.Parameter']],
+           counts: list[int],
+           models: list[Union['refnx.reflect.ReflectModel',
+                        'refl1d.experiment.Experiment']],
+           step: float = 0.005,
+           importance: Optional[list[float]] = None) -> np.ndarray:
     """Calculates the Fisher information matrix for multiple `models`
        containing parameters `xi`.
 
     Args:
-        qs (list): Q points for each model.
-        xi (list): varying model parameters.
-        counts (list): incident neutron counts corresponding to each Q value.
-        models (list): models to calculate gradients with.
-        step (float): step size to take when calculating gradient.
+        qs: The Q points for each model.
+        xi: The varying model parameters.
+        counts: incident neutron counts corresponding to each Q value.
+        models: models to calculate gradients with.
+        step: step size to take when calculating gradient.
+        importance: The importance scaling for each parameter in xi
 
     Returns:
         numpy.ndarray: Fisher information matrix for given models and data.
 
     """
-    n = sum(len(q) for q in qs) # Number of data points.
-    m = len(xi) # Number of parameters.
+    n = sum(len(q) for q in qs)  # Number of data points.
+    m = len(xi)  # Number of parameters.
     J = np.zeros((n, m))
 
     # There is no information if there is no data.
@@ -168,18 +181,18 @@ def fisher(qs, xi, counts, models, step=0.005, importance = None):
         old = parameter.value
 
         # Calculate reflectance for each model for first part of gradient.
-        x1 = parameter.value = old*(1-step)
+        x1 = parameter.value = old * (1 - step)
         y1 = np.concatenate([reflectivity(q, model)
                              for q, model in list(zip(qs, models))])
 
         # Calculate reflectance for each model for second part of gradient.
-        x2 = parameter.value = old*(1+step)
+        x2 = parameter.value = old * (1 + step)
         y2 = np.concatenate([reflectivity(q, model)
                              for q, model in list(zip(qs, models))])
 
-        parameter.value = old # Reset the parameter.
+        parameter.value = old  # Reset the parameter.
 
-        J[:,i] = (y2-y1) / (x2-x1) # Calculate the gradient.
+        J[:, i] = (y2 - y1) / (x2 - x1)  # Calculate the gradient.
 
     # Calculate the reflectance for each model for the given Q values.
     r = np.concatenate([reflectivity(q, model)
@@ -200,14 +213,15 @@ def fisher(qs, xi, counts, models, step=0.005, importance = None):
             lb = np.array([param.bounds.limits[0] for param in xi])
             ub = np.array([param.bounds.limits[1] for param in xi])
 
-        if importance is None: # Default importance equals one for each param
-            importance = np.ones(len(lb))
+        if importance is None:  # Default importance equals one for each param
+            importance = np.diag(np.ones(len(xi)))
         # Using the equations from the paper for the coordinate transform.
-        H = np.diag(importance/(ub-lb))
-        g = np.dot(np.dot(H.T, g), H)
+        H = np.diag(1 / (ub - lb))
+        g = np.dot(np.dot(np.dot(H.T, g), H), importance)
 
     # Return the Fisher information matrix.
     return g
+
 
 def save_plot(fig, save_path, filename):
     """Saves a figure to a given directory.
@@ -222,5 +236,5 @@ def save_plot(fig, save_path, filename):
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    file_path = os.path.join(save_path, filename+'.png')
+    file_path = os.path.join(save_path, filename + '.png')
     fig.savefig(file_path, dpi=600)
