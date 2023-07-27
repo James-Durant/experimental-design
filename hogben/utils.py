@@ -151,17 +151,17 @@ def fisher(qs: list[list],
                               'refl1d.experiment.Experiment']],
            step: float = 0.005) -> np.ndarray:
     """Calculates the Fisher information matrix for multiple `models`
-    containing parameters `xi`. The model describes the experiment and is
-    defined using `refnx` or `refl1d`. The lower and upper bounds
-    of each parameter in the model are transformed into a standardized range
-    from 0 to 1, which is used to calculate the Fisher information matrix.
-    Each parameter in the Fisher information matrix will be scaled using an
-    importance parameter. By default, the importance parameter is set to 1
-    for all parameters, and can be set by changing the `importance`
-    attribute of the parameter when setting up the model. For example the
-    importance of the thickness in "layer1" can be set to 2 using
-    `layer1.thickness.importance = 2` or `layer1.thick.importance = 2` in
-    `refnx` and `refl1d` respectively.
+    containing parameters `xi`. The model describes the experiment,
+    including the sample, and is defined using `refnx` or `refl1d`. The
+    lower and upper bounds of each parameter in the model are transformed
+    into a standardized range from 0 to 1, which is used to calculate the
+    Fisher information matrix. Each parameter in the Fisher information
+    matrix is scaled using an importance parameter. By default,
+    the importance parameter is set to 1 for all parameters, and can be set
+    by changing the `importance` attribute of the parameter when setting up
+    the model. For example the relative importance of the thickness in
+    "layer1" can be set to 2 using `layer1.thickness.importance = 2` or
+    `layer1.thick.importance = 2` in `refnx` and `refl1d` respectively.
 
     Args:
         qs: The Q points for each model.
