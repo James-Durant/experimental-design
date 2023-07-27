@@ -1,3 +1,5 @@
+import copy
+
 import bumps.parameter
 import numpy as np
 import pytest
@@ -9,8 +11,6 @@ from hogben.utils import fisher
 from refnx.reflect import SLD as SLD_refnx
 from refl1d.material import SLD as SLD_refl1d
 from unittest.mock import Mock, patch
-
-Q_VALUES = np.array([[0.1, 0.2, 0.4, 0.6, 0.8]])
 
 
 @pytest.fixture
@@ -92,11 +92,14 @@ def get_fisher_information(models, xi=None, counts=None,
     """Obtains the Fisher matrix, and defines the used model parameters"""
     # Provide default values for qs, counts and xi
     if qs is None:
-        qs = Q_VALUES
+        # Add one list of qs per model
+        qs = [np.array([0.1, 0.2, 0.4, 0.6, 0.8]) for _ in models]
     if counts is None:
-        counts = [np.ones(len(qs[0])) * 100]  # Define 100 counts at each q.
+        # Define the incident counts at each q at 100 counts per point
+        count_list = np.ones(len(qs[0])) * 100
+        counts = [count_list for _ in models]  # One list of counts per model
     if xi is None:
-        xi = [] # Concatenate all xi's to a single list of parameters.
+        xi = []  # Concatenate all xi's to a single list of parameters.
         for model in models:
             xi += model.xi
     return fisher(qs, xi, counts, models, step)
@@ -244,9 +247,38 @@ def test_fisher_no_data(model_params, model_class, request):
                                          "mock_refnx_model"))
 @patch('hogben.utils.reflectivity')
 def test_fisher_no_parameters(mock_reflectivity, model_class, request):
-    """Tests whether a model with zero data points properly returns a
+    """Tests whether a model without any parameters properly returns a
     zero array"""
     model = request.getfixturevalue(model_class)
     mock_reflectivity.side_effect = get_mock_reflectivity()
     g = get_fisher_information([model], xi=[])
     np.testing.assert_equal(g.shape, (0, 0))
+
+
+@pytest.mark.parametrize('model_class', ("refnx_model",
+                                         "refl1d_model"))
+def test_multiple_identical_models(model_class, request):
+    """
+    Tests that using two identical models with the same q-points and counts
+    correctly doubles the values on the elements in the Fisher information
+    matrix
+    """
+    model = request.getfixturevalue(model_class)
+    g_single = get_fisher_information([model])
+    g_double = get_fisher_information([model, model], xi=model.xi)
+    np.testing.assert_allclose(g_double, g_single * 2, rtol=1e-08)
+
+
+@pytest.mark.parametrize('model_class', ("refnx_model",
+                                         "refl1d_model"))
+def test_multiple_models_shape(model_class, request):
+    """
+    Tests that shape of the Fisher information matrix is equal to the total
+    sum of parameters in the models.
+    """
+    model = request.getfixturevalue(model_class)
+    model_2 = copy.deepcopy(model)
+    model_2.xi = model_2.xi[:-1]
+    xi_length = len(model.xi) + len(model_2.xi)
+    g_double = get_fisher_information([model, model_2])
+    np.testing.assert_equal(g_double.shape, (xi_length, xi_length))
