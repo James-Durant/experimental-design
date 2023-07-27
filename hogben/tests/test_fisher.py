@@ -87,17 +87,19 @@ def mock_refl1d_model():
     return model
 
 
-def get_fisher_information(model, xi=None, counts=None,
+def get_fisher_information(models, xi=None, counts=None,
                            qs=None, step=0.005):
     """Obtains the Fisher matrix, and defines the used model parameters"""
     # Provide default values for qs, counts and xi
     if qs is None:
         qs = Q_VALUES
     if counts is None:
-        counts = [np.ones(len(qs[0])) * 100]  # Define 100 counts at each q
+        counts = [np.ones(len(qs[0])) * 100]  # Define 100 counts at each q.
     if xi is None:
-        xi = model.xi
-    return fisher(qs, xi, counts, [model], step)
+        xi = [] # Concatenate all xi's to a single list of parameters.
+        for model in models:
+            xi += model.xi
+    return fisher(qs, xi, counts, models, step)
 
 
 def get_reflectivity_given_datapoints(data_points):
@@ -130,7 +132,7 @@ def test_fisher_workflow_refnx(refnx_model):
     Runs the entire fisher workflow for the refnx model, and checks that the
     corresponding results are consistent with the expected values
     """
-    g = get_fisher_information(refnx_model, step=0.005)
+    g = get_fisher_information([refnx_model], step=0.005)
     expected_fisher = [
         [5.17704306e-06, 2.24179068e-06, -5.02221954e-07, -7.91886209e-07],
         [2.24179068e-06, 1.00559528e-06, -2.09433754e-07, -3.18583142e-07],
@@ -145,7 +147,7 @@ def test_fisher_workflow_refl1d(refl1d_model):
     Runs the entire fisher workflow for the refl1d model, and checks that the
     corresponding results are consistent with the expected values
     """
-    g = get_fisher_information(refl1d_model, step=0.005)
+    g = get_fisher_information([refl1d_model], step=0.005)
     expected_fisher = [
         [4.58294661e-06, 2.07712766e-06, -4.23068571e-07, -6.80596824e-07],
         [2.07712766e-06, 9.76175381e-07, -1.84017555e-07, -2.83513452e-07],
@@ -171,7 +173,7 @@ def test_fisher_correct_values(mock_reflectivity, model_class, request):
         [0.5125, 0.205, 10.25],
         [25.625, 10.25, 512.5]
     ]
-    g_reference = get_fisher_information(model, xi=xi)
+    g_reference = get_fisher_information([model], xi=xi)
     np.testing.assert_allclose(g_reference, g_correct, rtol=1e-08)
 
 
@@ -184,8 +186,8 @@ def test_fisher_consistent_steps(step, model_class, request):
     changing step size using the refnx model
     """
     model = request.getfixturevalue(model_class)
-    g_reference = get_fisher_information(model, step=0.005)
-    g_compare = get_fisher_information(model, step=step)
+    g_reference = get_fisher_information([model], step=0.005)
+    g_compare = get_fisher_information([model], step=step)
     np.testing.assert_allclose(g_reference, g_compare, rtol=1e-02, atol=0)
 
 
@@ -204,7 +206,7 @@ def test_fisher_shape(mock_reflectivity, model_params, model_class, request):
     mock_reflectivity.side_effect = get_mock_reflectivity()
 
     expected_shape = (model_params, model_params)
-    g = get_fisher_information(model, xi=xi)
+    g = get_fisher_information([model], xi=xi)
     np.testing.assert_array_equal(g.shape, expected_shape)
 
 
@@ -221,7 +223,7 @@ def test_fisher_diagonal_positive(mock_reflectivity, qs, model_class, request):
      are positively valued"""
     model = request.getfixturevalue(model_class)
     mock_reflectivity.side_effect = get_reflectivity_given_datapoints(len(qs))
-    g = get_fisher_information(model, qs=[qs])
+    g = get_fisher_information([model], qs=[qs])
     np.testing.assert_array_less(np.zeros(len(g)), np.diag(g))
 
 
@@ -234,7 +236,7 @@ def test_fisher_no_data(model_params, model_class, request):
     model = request.getfixturevalue(model_class)
     xi = model.xi[:model_params]
     qs = []
-    g = get_fisher_information(model, qs=[qs], xi=xi)
+    g = get_fisher_information([model], qs=[qs], xi=xi)
     np.testing.assert_equal(g, np.zeros((len(xi), len(xi))))
 
 
@@ -246,5 +248,5 @@ def test_fisher_no_parameters(mock_reflectivity, model_class, request):
     zero array"""
     model = request.getfixturevalue(model_class)
     mock_reflectivity.side_effect = get_mock_reflectivity()
-    g = get_fisher_information(model, xi=[])
+    g = get_fisher_information([model], xi=[])
     np.testing.assert_equal(g.shape, (0, 0))
