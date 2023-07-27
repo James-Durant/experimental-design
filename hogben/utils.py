@@ -148,7 +148,7 @@ def fisher(qs: list[list],
                           'bumps.parameter.Parameter']],
            counts: list[int],
            models: list[Union['refnx.reflect.ReflectModel',
-                        'refl1d.experiment.Experiment']],
+                              'refl1d.experiment.Experiment']],
            step: float = 0.005,
            importance: Optional[list[float]] = None) -> np.ndarray:
     """Calculates the Fisher information matrix for multiple `models`
@@ -213,13 +213,19 @@ def fisher(qs: list[list],
             lb = np.array([param.bounds.limits[0] for param in xi])
             ub = np.array([param.bounds.limits[1] for param in xi])
 
-        if importance is None:  # Default importance equals one for each param
-            importance = np.diag(np.ones(len(xi)))
-        # Using the equations from the paper for the coordinate transform.
-        H = np.diag(1 / (ub - lb))
-        g = np.dot(np.dot(np.dot(H.T, g), H), importance)
+        # Scale each parameter with their specified importance,
+        # scale with one if no importance was specified.
+        importance_array = []
+        for param in xi:
+            if hasattr(param, "importance"):
+                importance_array.append(param.importance)
+            else:
+                importance_array.append(1)
+        importance = np.diag(importance_array)
+        H = np.diag(1 / (ub - lb))  # Unit scaling
+        g = np.dot(np.dot(np.dot(H.T, g), H), importance)  # Importance scaling
 
-    # Return the Fisher information matrix.
+        # Return the Fisher information matrix.
     return g
 
 
