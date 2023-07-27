@@ -151,8 +151,8 @@ def fisher(qs: list[list],
                               'refl1d.experiment.Experiment']],
            step: float = 0.005) -> np.ndarray:
     """Calculates the Fisher information matrix for multiple `models`
-    containing parameters `xi`. The models are defined using a sample
-    description specified in `refnx` or `refl1d`. The lower and upper bounds
+    containing parameters `xi`. The model describes the experiment and is
+    defined using `refnx` or `refl1d`. The lower and upper bounds
     of each parameter in the model are transformed into a standardized range
     from 0 to 1, which is used to calculate the Fisher information matrix.
     Each parameter in the Fisher information matrix will be scaled using an
