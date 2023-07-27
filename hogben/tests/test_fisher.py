@@ -43,7 +43,7 @@ def mock_refl1d_model():
 
 
 def get_fisher_information(model, xi=None, counts=None,
-                           qs=None, step=0.005, importance = None):
+                           qs=None, step=0.005):
     """Obtains the Fisher matrix, and defines the used model parameters"""
     # Provide default values for qs, counts and xi
     if qs is None:
@@ -52,7 +52,7 @@ def get_fisher_information(model, xi=None, counts=None,
         counts = [np.ones(len(qs[0])) * 100]  # Define 100 counts at each q
     if xi is None:
         xi = model.xi
-    return fisher(qs, xi, counts, [model], step, importance)
+    return fisher(qs, xi, counts, [model, model], step)
 
 def get_mock_reflectivity():
     """
@@ -64,6 +64,9 @@ def get_mock_reflectivity():
         yield r[0]
         yield r[1]
 
+@patch('hogben.utils.reflectivity')
+@pytest.mark.parametrize('model_class', ("mock_refl1d_model",
+                                         "mock_refnx_model"))
 def test_fisher_correct_values(mock_reflectivity, model_class, request):
     """
     Tests that the values of the calculated Fisher information matrix
@@ -83,19 +86,21 @@ def test_fisher_correct_values(mock_reflectivity, model_class, request):
 @patch('hogben.utils.reflectivity')
 @pytest.mark.parametrize('model_class', ("mock_refl1d_model",
                                          "mock_refnx_model"))
-def test_fisher_correct_values(mock_reflectivity, model_class, request):
+def test_fisher_importance_correct_values(mock_reflectivity, model_class,
+                                       request):
     """
     Tests that the values of the calculated Fisher information matrix
     are calculated correctly.
     """
     model = request.getfixturevalue(model_class)
     xi = model.xi[:3]
+    for index, param in enumerate(xi):
+        param.importance = index + 1
     mock_reflectivity.side_effect = get_mock_reflectivity()
-    importance = np.diag([1,2,3])
     g_correct = [
         [1.28125, 1.025, 76.875],
         [0.5125, 0.41, 30.75],
         [25.625, 20.5, 1537.5]
     ]
-    g_reference = get_fisher_information(model, xi=xi, importance = importance)
+    g_reference = get_fisher_information(model, xi=xi)
     np.testing.assert_allclose(g_reference, g_correct, rtol=1e-08)
