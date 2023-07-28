@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 import refnx
 import refl1d.experiment
+from typing import Optional, Union
 
 from hogben.simulate import simulate
 from hogben.utils import fisher
@@ -57,10 +58,15 @@ def refnx_model():
 
 @pytest.fixture
 def mock_refnx_model():
-    """Define a bilayer sample, and return the associated refnx model"""
-    # Define sample
-    parameter_values = [(20, 15, 25), (50, 45, 55), (10, 7.5, 8.5), (2, 1.5,
-                                                                     2.5)]
+    """
+    Create a mock of the refl1d model with a given set of parameters and their
+    bounds
+    """
+    # Parameters described as tuples: (value, left bound, right bound)
+    parameter_values = \
+        [(20, 15, 25), (50, 45, 55), (10, 7.5, 8.5), (2, 1.5, 2.5)]
+
+    # Fill parameter values
     parameters = [
         Mock(spec=refnx.analysis.Parameter, value=value,
              bounds=Mock(lb=lb, ub=ub))
@@ -73,10 +79,15 @@ def mock_refnx_model():
 
 @pytest.fixture
 def mock_refl1d_model():
-    """Define a bilayer sample, and return the associated refnx model"""
-    # Define sample
-    parameter_values = [(20, 15, 25), (50, 45, 55), (10, 7.5, 8.5), (2, 1.5,
-                                                                     2.5)]
+    """
+    Create a mock of the refl1d model with a given set of parameters and their
+    bounds
+    """
+    # Parameters described as tuples: (value, left bound, right bound)
+    parameter_values = \
+        [(20, 15, 25), (50, 45, 55), (10, 7.5, 8.5), (2, 1.5, 2.5)]
+
+    # Fill parameter values
     parameters = [
         Mock(spec=bumps.parameter.Parameter, value=value,
              bounds=Mock(limits=[lb, ub]))
@@ -87,9 +98,25 @@ def mock_refl1d_model():
     return model
 
 
-def get_fisher_information(models, xi=None, counts=None,
-                           qs=None, step=0.005):
-    """Obtains the Fisher matrix, and defines the used model parameters"""
+def get_fisher_information(models,
+                           xi: Optional[
+                               list[Union['refnx.reflect.ReflectModel',
+                               'refl1d.experiment.Experiment']]] = None,
+                           counts: Optional[list[int]] = None,
+                           qs: Optional[list[list]] = None,
+                           step: float = 0.005):
+    """
+    Obtains the Fisher matrix given a specified model, the optional
+    parameters are given a default value if not specified.
+    Args:
+        models: List of models that describe the experiment.
+        xi: The varying model parameters.
+        counts: incident neutron counts corresponding to each Q value.
+        qs: The Q points for each model.
+        step: step size to take when calculating gradient.
+    Returns:
+        numpy.ndarray: Fisher information matrix for given models and data.
+    """
     # Provide default values for qs, counts and xi
     if qs is None:
         # Add one list of qs per model
@@ -114,8 +141,9 @@ def get_reflectivity_given_datapoints(data_points):
     """
     r = list(np.linspace(1, 0, num=data_points))  # Reflectivity from 1 to 0
     while True:
-        r = [abs(value - 0.41) for value in r]  # Change reflectivity after
-        # each call
+        # Change reflectivity by 0.41 after each call, sort of arbitrarily
+        # chosen such that different values will be generated each time.
+        r = [abs(value - 0.41) for value in r]
         yield r
 
 
@@ -163,10 +191,11 @@ def test_fisher_workflow_refl1d(refl1d_model):
 @patch('hogben.utils.reflectivity')
 @pytest.mark.parametrize('model_class', ("mock_refl1d_model",
                                          "mock_refnx_model"))
-def test_fisher_correct_values(mock_reflectivity, model_class, request):
+def test_fisher_no_importance_correct_values(mock_reflectivity, model_class,
+                                             request):
     """
     Tests that the values of the calculated Fisher information matrix
-    are calculated correctly.
+    are calculated correctly when no importance scaling is given
     """
     model = request.getfixturevalue(model_class)
     xi = model.xi[:3]
@@ -175,6 +204,29 @@ def test_fisher_correct_values(mock_reflectivity, model_class, request):
         [1.28125, 0.5125, 25.625],
         [0.5125, 0.205, 10.25],
         [25.625, 10.25, 512.5]
+    ]
+    g_reference = get_fisher_information([model], xi=xi)
+    np.testing.assert_allclose(g_reference, g_correct, rtol=1e-08)
+
+
+@patch('hogben.utils.reflectivity')
+@pytest.mark.parametrize('model_class', ("mock_refl1d_model",
+                                         "mock_refnx_model"))
+def test_fisher_importance_correct_values(mock_reflectivity, model_class,
+                                          request):
+    """
+    Tests that the values of the calculated Fisher information matrix
+    are calculated correctly when an importance scaling is applied.
+    """
+    model = request.getfixturevalue(model_class)
+    xi = model.xi[:3]
+    for index, param in enumerate(xi):
+        param.importance = index + 1
+    mock_reflectivity.side_effect = get_mock_reflectivity()
+    g_correct = [
+        [1.28125, 1.025, 76.875],
+        [0.5125, 0.41, 30.75],
+        [25.625, 20.5, 1537.5]
     ]
     g_reference = get_fisher_information([model], xi=xi)
     np.testing.assert_allclose(g_reference, g_correct, rtol=1e-08)
@@ -254,27 +306,6 @@ def test_fisher_no_parameters(mock_reflectivity, model_class, request):
     g = get_fisher_information([model], xi=[])
     np.testing.assert_equal(g.shape, (0, 0))
 
-@patch('hogben.utils.reflectivity')
-@pytest.mark.parametrize('model_class', ("mock_refl1d_model",
-                                         "mock_refnx_model"))
-def test_fisher_importance_correct_values(mock_reflectivity, model_class,
-                                       request):
-    """
-    Tests that the values of the calculated Fisher information matrix
-    are calculated correctly.
-    """
-    model = request.getfixturevalue(model_class)
-    xi = model.xi[:3]
-    for index, param in enumerate(xi):
-        param.importance = index + 1
-    mock_reflectivity.side_effect = get_mock_reflectivity()
-    g_correct = [
-        [1.28125, 1.025, 76.875],
-        [0.5125, 0.41, 30.75],
-        [25.625, 20.5, 1537.5]
-    ]
-    g_reference = get_fisher_information([model], xi=xi)
-    np.testing.assert_allclose(g_reference, g_correct, rtol=1e-08)
 
 @pytest.mark.parametrize('model_class', ("refnx_model",
                                          "refl1d_model"))
@@ -295,7 +326,7 @@ def test_multiple_identical_models(model_class, request):
 def test_multiple_models_shape(model_class, request):
     """
     Tests that shape of the Fisher information matrix is equal to the total
-    sum of parameters in the models.
+    sum of parameters over all models.
     """
     model = request.getfixturevalue(model_class)
     model_2 = copy.deepcopy(model)
