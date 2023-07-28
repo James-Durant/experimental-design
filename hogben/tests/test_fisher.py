@@ -62,7 +62,7 @@ def mock_refnx_model():
     Create a mock of the refl1d model with a given set of parameters and their
     bounds
     """
-    # Parameters described as tuples: (value, left bound, right bound)
+    # Parameters described as tuples: (value, lower bound, upper bound)
     parameter_values = \
         [(20, 15, 25), (50, 45, 55), (10, 7.5, 8.5), (2, 1.5, 2.5)]
 
@@ -83,7 +83,7 @@ def mock_refl1d_model():
     Create a mock of the refl1d model with a given set of parameters and their
     bounds
     """
-    # Parameters described as tuples: (value, left bound, right bound)
+    # Parameters described as tuples: (value, lower bound, upper bound)
     parameter_values = \
         [(20, 15, 25), (50, 45, 55), (10, 7.5, 8.5), (2, 1.5, 2.5)]
 
