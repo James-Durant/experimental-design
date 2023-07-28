@@ -143,7 +143,7 @@ class Sampler:
         return fig
 
 
-def fisher(qs: list[list],
+def fisher(qs: list[list[float]],
            xi: list[Union['refnx.analysis.Parameter',
                           'bumps.parameter.Parameter']],
            counts: list[int],
