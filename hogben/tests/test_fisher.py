@@ -98,11 +98,11 @@ def mock_refl1d_model():
     return model
 
 
-def get_fisher_information(models,
+def get_fisher_information(models: list[Union['refnx.reflect.ReflectModel',
+                                              'refl1d.experiment.Experiment']],
                            xi: Optional[
-                               list[
-                                Union['refnx.reflect.ReflectModel',
-                                      'refl1d.experiment.Experiment']]] = None,
+                           list[Union['refnx.analysis.Parameter',
+                                      'bumps.parameter.Parameter']]] = None,
                            counts: Optional[list[int]] = None,
                            qs: Optional[list[list[float]]] = None,
                            step: float = 0.005) -> np.ndarray:
