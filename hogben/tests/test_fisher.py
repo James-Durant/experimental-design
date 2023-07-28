@@ -100,11 +100,12 @@ def mock_refl1d_model():
 
 def get_fisher_information(models,
                            xi: Optional[
-                               list[Union['refnx.reflect.ReflectModel',
-                               'refl1d.experiment.Experiment']]] = None,
+                               list[
+                                Union['refnx.reflect.ReflectModel',
+                                      'refl1d.experiment.Experiment']]] = None,
                            counts: Optional[list[int]] = None,
-                           qs: Optional[list[list]] = None,
-                           step: float = 0.005):
+                           qs: Optional[list[list[float]]] = None,
+                           step: float = 0.005) -> np.ndarray:
     """
     Obtains the Fisher matrix given a specified model, the optional
     parameters are given a default value if not specified.
