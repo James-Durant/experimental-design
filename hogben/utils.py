@@ -184,7 +184,6 @@ def fisher(qs: list[list],
     # Calculate the gradient of model reflectivity with every model parameter
     # for every model data point.
     for i, parameter in enumerate(xi):
-        parameter = xi[i]
         old = parameter.value
 
         # Calculate reflectance for each model for first part of gradient.
@@ -252,4 +251,3 @@ def save_plot(fig, save_path, filename):
 
     file_path = os.path.join(save_path, filename + '.png')
     fig.savefig(file_path, dpi=600)
-
