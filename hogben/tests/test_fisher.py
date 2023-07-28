@@ -66,7 +66,7 @@ def mock_refnx_model():
     parameter_values = \
         [(20, 15, 25), (50, 45, 55), (10, 7.5, 8.5), (2, 1.5, 2.5)]
 
-    # Fill parameter values
+    # Fill parameter values and bounds
     parameters = [
         Mock(spec=refnx.analysis.Parameter, value=value,
              bounds=Mock(lb=lb, ub=ub))
@@ -87,7 +87,7 @@ def mock_refl1d_model():
     parameter_values = \
         [(20, 15, 25), (50, 45, 55), (10, 7.5, 8.5), (2, 1.5, 2.5)]
 
-    # Fill parameter values
+    # Fill parameter values and bounds
     parameters = [
         Mock(spec=bumps.parameter.Parameter, value=value,
              bounds=Mock(limits=[lb, ub]))
