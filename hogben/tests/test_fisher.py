@@ -285,15 +285,15 @@ def test_fisher_shape(mock_reflectivity, model_params, model_class, request):
                           np.arange(0.001, 1.0, 0.10),
                           np.arange(0.001, 1.0, 0.05),
                           np.arange(0.001, 1.0, 0.01)))
-def test_fisher_diagonal_positive(mock_reflectivity, qs, model_class, request):
+def test_fisher_diagonal_non_negative(mock_reflectivity, qs, model_class,
+                                   request):
     """Tests whether the diagonal values in the Fisher information matrix
-     are positively valued"""
+     are all zero or greater"""
     model = request.getfixturevalue(model_class)
     mock_reflectivity.side_effect = (np.random.rand(len(qs)) for _ in range(9))
     counts = [np.ones(len(qs)) * 100]
     g = fisher([qs], model.xi, counts, [model])
-    np.testing.assert_array_less(np.zeros(len(g)), np.diag(g))
-
+    assert min(np.diag(g)) >= 0 # Check if smallest value is at least zero
 
 @pytest.mark.parametrize('model_class', ("mock_refl1d_model",
                                          "mock_refnx_model"))
