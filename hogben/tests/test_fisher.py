@@ -55,6 +55,9 @@ def refnx_model():
     model.xi = [layer1.rough, layer2.rough, layer1.thick, layer2.thick]
     return model
 
+QS = [np.array([0.1, 0.2, 0.4, 0.6, 0.8])]
+COUNTS = [np.ones(len(QS[0])) * 100]
+
 
 @pytest.fixture
 def mock_refnx_model():
@@ -63,8 +66,8 @@ def mock_refnx_model():
     bounds
     """
     # Parameters described as tuples: (value, lower bound, upper bound)
-    parameter_values = \
-        [(20, 15, 25), (50, 45, 55), (10, 7.5, 8.5), (2, 1.5, 2.5)]
+    parameter_values = [(20, 15, 25), (50, 45, 55), (10, 7.5, 8.5),
+                        (2, 1.5, 2.5)]
 
     # Fill parameter values and bounds
     parameters = [
@@ -84,8 +87,8 @@ def mock_refl1d_model():
     bounds
     """
     # Parameters described as tuples: (value, lower bound, upper bound)
-    parameter_values = \
-        [(20, 15, 25), (50, 45, 55), (10, 7.5, 8.5), (2, 1.5, 2.5)]
+    parameter_values = [(20, 15, 25), (50, 45, 55), (10, 7.5, 8.5),
+                        (2, 1.5, 2.5)]
 
     # Fill parameter values and bounds
     parameters = [
@@ -97,61 +100,16 @@ def mock_refl1d_model():
     model.xi = parameters
     return model
 
-
-def get_fisher_information(models: list[Union['refnx.reflect.ReflectModel',
-                                              'refl1d.experiment.Experiment']],
-                           xi: Optional[
-                           list[Union['refnx.analysis.Parameter',
-                                      'bumps.parameter.Parameter']]] = None,
-                           counts: Optional[list[int]] = None,
-                           qs: Optional[list[list[float]]] = None,
-                           step: float = 0.005) -> np.ndarray:
-    """
-    Obtains the Fisher matrix given a specified model, the optional
-    parameters are given a default value if not specified.
-    Args:
-        models: List of models that describe the experiment.
-        xi: The varying model parameters.
-        counts: incident neutron counts corresponding to each Q value.
-        qs: The Q points for each model.
-        step: step size to take when calculating gradient.
-    Returns:
-        numpy.ndarray: Fisher information matrix for given models and data.
-    """
-    # Provide default values for qs, counts and xi
-    if qs is None:
-        # Add one list of qs per model
-        qs = [np.array([0.1, 0.2, 0.4, 0.6, 0.8]) for _ in models]
-    if counts is None:
-        # Define the incident counts at each q at 100 counts per point
-        count_list = np.ones(len(qs[0])) * 100
-        counts = [count_list for _ in models]  # One list of counts per model
-    if xi is None:
-        xi = []  # Concatenate all xi's to a single list of parameters.
-        for model in models:
-            xi += model.xi
-    return fisher(qs, xi, counts, models, step)
-
-
-def get_reflectivity_given_datapoints(data_points):
-    """
-    Mocks the reflectivity values in the calculation for an arbitrary
-    amount of data points. The value at each data point is changed from the
-    initial value by a total of 0.41, mimicking a changing parameter in the
-    model. Value should always remain between 0 and 1.
-    """
-    r = list(np.linspace(1, 0, num=data_points))  # Reflectivity from 1 to 0
+def get_random_reflectivity(data_points):
     while True:
-        # Change reflectivity by 0.41 after each call, sort of arbitrarily
-        # chosen such that different values will be generated each time.
-        r = [abs(value - 0.41) for value in r]
-        yield r
+        yield np.random.rand(data_points)
 
 
-def get_mock_reflectivity():
+def generate_reflectivity_data():
     """
-    Mocks the reflectivity values in the calculation, using two lists. The
-    lists are yielded alternating when called.
+    Generates predefined reflectivity.The reflectivity values are yielded
+    alternatingly between two predefined lists of reflectivity values,
+    simulating a change in reflectivity between two data points
     """
     r = [[1.0, 0.5, 0.4, 0.2, 0.1], [0.95, 0.45, 0.35, 0.15, 0.05]]
     while True:
@@ -164,7 +122,7 @@ def test_fisher_workflow_refnx(refnx_model):
     Runs the entire fisher workflow for the refnx model, and checks that the
     corresponding results are consistent with the expected values
     """
-    g = get_fisher_information([refnx_model], step=0.005)
+    g = fisher(QS, refnx_model.xi, COUNTS, [refnx_model])
     expected_fisher = [
         [5.17704306e-06, 2.24179068e-06, -5.02221954e-07, -7.91886209e-07],
         [2.24179068e-06, 1.00559528e-06, -2.09433754e-07, -3.18583142e-07],
@@ -179,7 +137,7 @@ def test_fisher_workflow_refl1d(refl1d_model):
     Runs the entire fisher workflow for the refl1d model, and checks that the
     corresponding results are consistent with the expected values
     """
-    g = get_fisher_information([refl1d_model], step=0.005)
+    g = fisher(QS, refl1d_model.xi, COUNTS, [refl1d_model])
     expected_fisher = [
         [4.58294661e-06, 2.07712766e-06, -4.23068571e-07, -6.80596824e-07],
         [2.07712766e-06, 9.76175381e-07, -1.84017555e-07, -2.83513452e-07],
@@ -192,44 +150,98 @@ def test_fisher_workflow_refl1d(refl1d_model):
 @patch('hogben.utils.reflectivity')
 @pytest.mark.parametrize('model_class', ("mock_refl1d_model",
                                          "mock_refnx_model"))
-def test_fisher_no_importance_correct_values(mock_reflectivity, model_class,
+def test_fisher_analytical_values(mock_reflectivity, model_class,
                                              request):
     """
-    Tests that the values of the calculated Fisher information matrix
-    are calculated correctly when no importance scaling is given
+    Tests that the values of the calculated Fisher information matrix (FIM)
+    are calculated correctly when no importance scaling is given.
+
+    The FIM is calculated using matrix multiplication given:
+    g = J.T x M x J
+
+
+    Where J describes the Jacobian of the reflectance with respect to the
+    parameter value, and M describe the diagonal matrix of the incident count
+    divided by the model reflectances. J.T describes the transpose of J.
+
+    For this unit test the values for J and M are known:
+    J = [-0.25, -0.1 , -0.5 ],
+        [-0.25, -0.1 , -0.5 ],
+        [-0.25, -0.1 , -0.5 ],
+        [-0.25, -0.1 , -0.5 ],
+        [-0.25, -0.1 , -0.5 ]
+
+    M is given by by:
+    M =  [ 100.,    0.,    0.,    0.,    0.],
+         [   0.,  200.,    0.,    0.,    0.],
+         [   0.,    0.,  250.,    0.,    0.],
+         [   0.,    0.,    0.,  500.,    0.],
+         [   0.,    0.,    0.,    0., 1000.]
+
+    Resulting in g = J.T x M x J:
+    g =  [128.125,  51.25 , 256.25 ],
+       [ 51.25 ,  20.5  , 102.5  ],
+       [256.25 , 102.5  , 512.5  ]
+
+    After this, the elements are scaled to the bounds of each unit. Using:
+    g_scaled = H.T * g *H
+    Where H is a diagonal matrix where the diagonal elements for each
+    parameter are given by H_ij = 1/(upper_bound - lower_bound), resulting in:
+    H = [0.1, 0. , 0. ],
+       [0. , 0.1, 0. ],
+       [0. , 0. , 1. ]
+
+    Which should finally result in the FIM matrix equal to:
+    g = [1.28125, 0.5125, 25.625],
+        [0.5125, 0.205, 10.25],
+        [25.625, 10.25, 512.5]
     """
     model = request.getfixturevalue(model_class)
     xi = model.xi[:3]
-    mock_reflectivity.side_effect = get_mock_reflectivity()
+    mock_reflectivity.side_effect = generate_reflectivity_data()
     g_correct = [
         [1.28125, 0.5125, 25.625],
         [0.5125, 0.205, 10.25],
         [25.625, 10.25, 512.5]
     ]
-    g_reference = get_fisher_information([model], xi=xi)
+    g_reference = fisher(QS, xi, COUNTS, [model])
     np.testing.assert_allclose(g_reference, g_correct, rtol=1e-08)
 
 
 @patch('hogben.utils.reflectivity')
 @pytest.mark.parametrize('model_class', ("mock_refl1d_model",
                                          "mock_refnx_model"))
-def test_fisher_importance_correct_values(mock_reflectivity, model_class,
+def test_fisher_importance_scaling(mock_reflectivity, model_class,
                                           request):
     """
     Tests that the values of the calculated Fisher information matrix
     are calculated correctly when an importance scaling is applied.
+
+    The importance scaling is applied by scaling each parameter of the FIM
+    to a given importance value using g_scaled = g * importance
+    Where g is the unscaled FIM, and importance is a diagonal matrix with
+    the importance scaling of each parameter on the diagonals. For this unit
+    test the importance matrix is equal to:
+    importance = [1, 0 , 0]
+                 [0, 2, 0]
+                [0, 0, 3]
+    Yielding a FIM where every column should be scaled by the corresponding
+    diagonal in the importance matrix:
+    g = [1.28125, 1.025, 76.875],
+        [0.5125, 0.41, 30.75],
+        [25.625, 20.5, 1537.5]
     """
     model = request.getfixturevalue(model_class)
     xi = model.xi[:3]
     for index, param in enumerate(xi):
         param.importance = index + 1
-    mock_reflectivity.side_effect = get_mock_reflectivity()
+    mock_reflectivity.side_effect = generate_reflectivity_data()
     g_correct = [
         [1.28125, 1.025, 76.875],
         [0.5125, 0.41, 30.75],
         [25.625, 20.5, 1537.5]
     ]
-    g_reference = get_fisher_information([model], xi=xi)
+    g_reference = fisher(QS, xi, COUNTS, [model])
     np.testing.assert_allclose(g_reference, g_correct, rtol=1e-08)
 
 
@@ -242,8 +254,8 @@ def test_fisher_consistent_steps(step, model_class, request):
     changing step size using the refnx model
     """
     model = request.getfixturevalue(model_class)
-    g_reference = get_fisher_information([model], step=0.005)
-    g_compare = get_fisher_information([model], step=step)
+    g_reference = fisher(QS, model.xi, COUNTS, [model], step=0.005)
+    g_compare = fisher(QS, model.xi, COUNTS, [model], step=step)
     np.testing.assert_allclose(g_reference, g_compare, rtol=1e-02, atol=0)
 
 
@@ -259,10 +271,10 @@ def test_fisher_shape(mock_reflectivity, model_params, model_class, request):
     model = request.getfixturevalue(model_class)
     xi = model.xi[:model_params]
 
-    mock_reflectivity.side_effect = get_mock_reflectivity()
+    mock_reflectivity.side_effect = generate_reflectivity_data()
 
     expected_shape = (model_params, model_params)
-    g = get_fisher_information([model], xi=xi)
+    g = fisher(QS, xi, COUNTS, [model])
     np.testing.assert_array_equal(g.shape, expected_shape)
 
 
@@ -278,8 +290,9 @@ def test_fisher_diagonal_positive(mock_reflectivity, qs, model_class, request):
     """Tests whether the diagonal values in the Fisher information matrix
      are positively valued"""
     model = request.getfixturevalue(model_class)
-    mock_reflectivity.side_effect = get_reflectivity_given_datapoints(len(qs))
-    g = get_fisher_information([model], qs=[qs])
+    mock_reflectivity.side_effect = (np.random.rand(len(qs)) for _ in range(9))
+    counts = [np.ones(len(qs)) * 100]
+    g = fisher([qs], model.xi, counts, [model])
     np.testing.assert_array_less(np.zeros(len(g)), np.diag(g))
 
 
@@ -291,8 +304,7 @@ def test_fisher_no_data(model_params, model_class, request):
     matrix of the correct shape"""
     model = request.getfixturevalue(model_class)
     xi = model.xi[:model_params]
-    qs = []
-    g = get_fisher_information([model], qs=[qs], xi=xi)
+    g = fisher([], xi, COUNTS, [model])
     np.testing.assert_equal(g, np.zeros((len(xi), len(xi))))
 
 
@@ -303,22 +315,25 @@ def test_fisher_no_parameters(mock_reflectivity, model_class, request):
     """Tests whether a model without any parameters properly returns a
     zero array"""
     model = request.getfixturevalue(model_class)
-    mock_reflectivity.side_effect = get_mock_reflectivity()
-    g = get_fisher_information([model], xi=[])
+    mock_reflectivity.side_effect = generate_reflectivity_data()
+    g = fisher(QS, [], COUNTS, [model])
     np.testing.assert_equal(g.shape, (0, 0))
 
 
 @pytest.mark.parametrize('model_class', ("refnx_model",
                                          "refl1d_model"))
-def test_multiple_identical_models(model_class, request):
+def test_fisher_doubling_with_two_identical_models(model_class, request):
     """
     Tests that using two identical models with the same q-points and counts
     correctly doubles the values on the elements in the Fisher information
     matrix
     """
     model = request.getfixturevalue(model_class)
-    g_single = get_fisher_information([model])
-    g_double = get_fisher_information([model, model], xi=model.xi)
+    g_single = fisher(QS, model.xi, COUNTS, [model], 0.005)
+
+    counts = [COUNTS[0], COUNTS[0]]
+    qs = [QS[0], QS[0]]
+    g_double = fisher(qs, model.xi, counts, [model, model], 0.005)
     np.testing.assert_allclose(g_double, g_single * 2, rtol=1e-08)
 
 
@@ -332,6 +347,9 @@ def test_multiple_models_shape(model_class, request):
     model = request.getfixturevalue(model_class)
     model_2 = copy.deepcopy(model)
     model_2.xi = model_2.xi[:-1]
+    xi = model.xi + model_2.xi
     xi_length = len(model.xi) + len(model_2.xi)
-    g_double = get_fisher_information([model, model_2])
+    counts = [COUNTS[0], COUNTS[0]]
+    qs = [QS[0], QS[0]]
+    g_double = fisher(qs, xi, counts, [model, model_2], 0.005)
     np.testing.assert_equal(g_double.shape, (xi_length, xi_length))
