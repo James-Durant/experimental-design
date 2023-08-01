@@ -101,11 +101,6 @@ def mock_refl1d_model():
     return model
 
 
-def get_random_reflectivity(data_points):
-    while True:
-        yield np.random.rand(data_points)
-
-
 def generate_reflectivity_data():
     """
     Generates predefined reflectivity.The reflectivity values are yielded
@@ -255,7 +250,7 @@ def test_fisher_consistent_steps(step, model_class, request):
     model = request.getfixturevalue(model_class)
     g_reference = fisher(QS, model.xi, COUNTS, [model], step=0.005)
     g_compare = fisher(QS, model.xi, COUNTS, [model], step=step)
-    np.testing.assert_allclose(g_reference, g_compare, rtol=1e-02, atol=0)
+    np.testing.assert_allclose(g_reference, g_compare, rtol=1e-02)
 
 
 @patch('hogben.utils.reflectivity')
@@ -293,7 +288,7 @@ def test_fisher_diagonal_non_negative(mock_reflectivity, qs, model_class,
     mock_reflectivity.side_effect = (np.random.rand(len(qs)) for _ in range(9))
     counts = [np.ones(len(qs)) * 100]
     g = fisher([qs], model.xi, counts, [model])
-    assert min(np.diag(g)) >= 0 # Check if smallest value is at least zero
+    assert np.all(np.diag(g)) >= 0
 
 @pytest.mark.parametrize('model_class', ("mock_refl1d_model",
                                          "mock_refnx_model"))
