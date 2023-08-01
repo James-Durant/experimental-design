@@ -5,13 +5,16 @@ import numpy as np
 import pytest
 import refnx
 import refl1d.experiment
-from typing import Optional, Union
 
 from hogben.simulate import simulate
 from hogben.utils import fisher
 from refnx.reflect import SLD as SLD_refnx
 from refl1d.material import SLD as SLD_refl1d
 from unittest.mock import Mock, patch
+
+
+QS = [np.array([0.1, 0.2, 0.4, 0.6, 0.8])]
+COUNTS = [np.ones(len(QS[0])) * 100]
 
 
 @pytest.fixture
@@ -55,9 +58,6 @@ def refnx_model():
     model.xi = [layer1.rough, layer2.rough, layer1.thick, layer2.thick]
     return model
 
-QS = [np.array([0.1, 0.2, 0.4, 0.6, 0.8])]
-COUNTS = [np.ones(len(QS[0])) * 100]
-
 
 @pytest.fixture
 def mock_refnx_model():
@@ -99,6 +99,7 @@ def mock_refl1d_model():
     model = Mock(spec=refl1d.experiment.Experiment, xi=parameters)
     model.xi = parameters
     return model
+
 
 def get_random_reflectivity(data_points):
     while True:
@@ -150,8 +151,7 @@ def test_fisher_workflow_refl1d(refl1d_model):
 @patch('hogben.utils.reflectivity')
 @pytest.mark.parametrize('model_class', ("mock_refl1d_model",
                                          "mock_refnx_model"))
-def test_fisher_analytical_values(mock_reflectivity, model_class,
-                                             request):
+def test_fisher_analytical_values(mock_reflectivity, model_class, request):
     """
     Tests that the values of the calculated Fisher information matrix (FIM)
     are calculated correctly when no importance scaling is given.
@@ -211,8 +211,7 @@ def test_fisher_analytical_values(mock_reflectivity, model_class,
 @patch('hogben.utils.reflectivity')
 @pytest.mark.parametrize('model_class', ("mock_refl1d_model",
                                          "mock_refnx_model"))
-def test_fisher_importance_scaling(mock_reflectivity, model_class,
-                                          request):
+def test_fisher_importance_scaling(mock_reflectivity, model_class, request):
     """
     Tests that the values of the calculated Fisher information matrix
     are calculated correctly when an importance scaling is applied.
