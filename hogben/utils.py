@@ -229,8 +229,8 @@ def fisher(qs: list[np.ndarray],
                 importance_array.append(1)
         importance = np.diag(importance_array)
         H = np.diag(1 / (ub - lb))  # Get unit scaling Jacobian.
-        g = np.dot(np.dot(H.T, g), H) # Perform unit scaling.
-        g = np.dot(g, importance) # Perform importance scaling.
+        g = np.dot(np.dot(H.T, g), H)  # Perform unit scaling.
+        g = np.dot(g, importance)  # Perform importance scaling.
 
         # Return the Fisher information matrix.
     return g
