@@ -150,7 +150,7 @@ def angle_choice_with_time(
     anim_length = 4000  # Animation length in milliseconds.
     frames = len(time_range)  # Number of frames for animation.
     anim = FuncAnimation(fig, animate, init_func=init, blit=True,
-                         frames=frames, interval=anim_length//frames)
+                         frames=frames, interval=anim_length // frames)
     plt.close()
 
     # Save the animation as a .gif file.
