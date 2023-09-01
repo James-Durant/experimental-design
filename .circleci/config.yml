@@ -57,7 +57,7 @@ jobs:
       - run:
           name: Lint with flake8
           # This assumes flake8 is installed via the install-package step above
-          command: flake8 .
+          command: flake8 hogben
 
 
 # Invoke jobs via workflows
