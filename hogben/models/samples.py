@@ -257,7 +257,8 @@ class Sample(BaseSample):
             sld, sld_imag = component.sld.real.value, component.sld.imag.value
             thick, rough = component.thick.value, component.rough.value
 
-            # Add the component in the opposite direction to the refnx definition.
+            # Add the component in the opposite direction to the refnx
+            # definition.
             layer = refl1d.material.SLD(rho=sld, irho=sld_imag, name=name)(
                 thick, rough)
             structure = layer | structure
@@ -280,9 +281,10 @@ class Sample(BaseSample):
                 Parameter(component.material.irho.value)
             thick, rough = component.thickness.value, component.interface.value
 
-            # Add the component in the opposite direction to the Refl1D definition.
-            structure |= refnx.reflect.SLD([sld, sld_imag], name=name)(thick,
-                                                                   rough)
+            # Add the component in the opposite direction to the Refl1D
+            # definition.
+            structure |= refnx.reflect.SLD([sld, sld_imag], name=name)(
+                thick, rough)
 
         # Update the current structure to use the new version.
         structure.name = self.structure.name
