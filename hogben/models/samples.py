@@ -1,6 +1,4 @@
 import os
-import sys
-
 import matplotlib.pyplot as plt
 
 import numpy as np
@@ -23,7 +21,7 @@ from hogben.utils import fisher, Sampler, save_plot
 from hogben.models.base import BaseSample
 from refnx.analysis import Parameter
 
-plt.rcParams['figure.figsize'] = (9,7)
+plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
 
 
@@ -37,6 +35,7 @@ class Sample(BaseSample):
         params (list): varying parameters of sample.
 
     """
+
     def __init__(self, structure):
         self.structure = structure
         self.name = structure.name
@@ -61,12 +60,18 @@ class Sample(BaseSample):
             # Vary the SLD and thickness of each component (layer).
             for component in structure[1:-1]:
                 sld = component.sld.real
-                sld_bounds = (sld.value*(1-bound_size), sld.value*(1+bound_size))
+                sld_bounds = (
+                    sld.value * (1 - bound_size),
+                    sld.value * (1 + bound_size),
+                )
                 sld.setp(vary=True, bounds=sld_bounds)
                 params.append(sld)
 
                 thick = component.thick
-                thick_bounds = (thick.value*(1-bound_size), thick.value*(1+bound_size))
+                thick_bounds = (
+                    thick.value * (1 - bound_size),
+                    thick.value * (1 + bound_size),
+                )
                 thick.setp(vary=True, bounds=thick_bounds)
                 params.append(thick)
 
@@ -75,11 +80,11 @@ class Sample(BaseSample):
             # Vary the SLD and thickness of each component (layer).
             for component in structure[1:-1]:
                 sld = component.material.rho
-                sld.pmp(bound_size*100)
+                sld.pmp(bound_size * 100)
                 params.append(sld)
 
                 thick = component.thickness
-                thick.pmp(bound_size*100)
+                thick.pmp(bound_size * 100)
                 params.append(thick)
 
         # Otherwise, the structure is invalid.
@@ -101,7 +106,7 @@ class Sample(BaseSample):
         """
         # Return the Fisher information matrix calculated from simulated data.
         model, data = simulate(self.structure, angle_times)
-        qs, counts, models = [data[:,0]], [data[:,3]], [model]
+        qs, counts, models = [data[:, 0]], [data[:, 3]], [model]
         return fisher(qs, self.params, counts, models)
 
     def sld_profile(self, save_path):
@@ -117,8 +122,8 @@ class Sample(BaseSample):
 
         # Determine if the structure was defined in Refl1D.
         elif isinstance(self.structure, refl1d.model.Stack):
-            q = np.geomspace(0.005, 0.3, 500) # This is not used.
-            scale, bkg, dq = 1, 1e-6, 2 # These are not used.
+            q = np.geomspace(0.005, 0.3, 500)  # This is not used.
+            scale, bkg, dq = 1, 1e-6, 2  # These are not used.
             experiment = refl1d_experiment(self.structure, q, scale, bkg, dq)
             z, slds, _ = experiment.smooth_profile()
 
@@ -142,8 +147,16 @@ class Sample(BaseSample):
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'sld_profile')
 
-    def reflectivity_profile(self, save_path, q_min=0.005, q_max=0.4,
-                             points=500, scale=1, bkg=1e-7, dq=2):
+    def reflectivity_profile(
+        self,
+        save_path: str,
+        q_min: float = 0.005,
+        q_max: float = 0.4,
+        points: int = 500,
+        scale: float = 1,
+        bkg: float = 1e-7,
+        dq: float = 2,
+    ) -> None:
         """Plots the reflectivity profile of the sample.
 
         Args:
@@ -161,7 +174,9 @@ class Sample(BaseSample):
 
         # Determine if the structure was defined in refnx.
         if isinstance(self.structure, refnx.reflect.Structure):
-            model = refnx.reflect.ReflectModel(self.structure, scale=scale, bkg=bkg, dq=dq)
+            model = refnx.reflect.ReflectModel(
+                self.structure, scale=scale, bkg=bkg, dq=dq
+            )
 
         # Determine if the structure was defined in Refl1D.
         elif isinstance(self.structure, refl1d.model.Stack):
@@ -190,7 +205,11 @@ class Sample(BaseSample):
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'reflectivity_profile')
 
-    def nested_sampling(self, angle_times, save_path, filename, dynamic=False):
+    def nested_sampling(self,
+                        angle_times: list,
+                        save_path: str,
+                        filename: str,
+                        dynamic: bool = False) -> None:
         """Runs nested sampling on simulated data of the sample.
 
         Args:
@@ -205,7 +224,9 @@ class Sample(BaseSample):
 
         # Determine if the structure was defined in refnx.
         if isinstance(self.structure, refnx.reflect.Structure):
-            dataset = refnx.reflect.ReflectDataset([data[:,0], data[:,1], data[:,2]])
+            dataset = refnx.reflect.ReflectDataset(
+                [data[:, 0], data[:, 1], data[:, 2]]
+            )
             objective = refnx.anaylsis.Objective(model, dataset)
 
         # Determine if the structure was defined in Refl1D.
@@ -222,7 +243,7 @@ class Sample(BaseSample):
 
         # Save the sampling corner plot.
         save_path = os.path.join(save_path, self.name)
-        save_plot(fig, save_path, filename+'_nested_sampling')
+        save_plot(fig, save_path, filename + '_nested_sampling')
 
     def to_refl1d(self):
         """Converts the refnx structure to an equivalent Refl1D structure."""
@@ -267,6 +288,7 @@ class Sample(BaseSample):
         structure.name = self.structure.name
         self.structure = structure
 
+
 def simple_sample():
     """Defines a 2-layer simple sample.
 
@@ -282,6 +304,7 @@ def simple_sample():
     structure = air | layer1 | layer2 | substrate
     structure.name = 'simple_sample'
     return Sample(structure)
+
 
 def many_param_sample():
     """Defines a 5-layer sample with many parameters.
@@ -302,6 +325,7 @@ def many_param_sample():
     structure.name = 'many_param_sample'
     return Sample(structure)
 
+
 def thin_layer_sample_1():
     """Defines a 2-layer sample with thin layers.
 
@@ -317,6 +341,7 @@ def thin_layer_sample_1():
     structure = air | layer1 | layer2 | substrate
     structure.name = 'thin_layer_sample_1'
     return Sample(structure)
+
 
 def thin_layer_sample_2():
     """Defines a 3-layer sample with thin layers.
@@ -335,6 +360,7 @@ def thin_layer_sample_2():
     structure.name = 'thin_layer_sample_2'
     return Sample(structure)
 
+
 def similar_sld_sample_1():
     """Defines a 2-layer sample with layers of similar SLD.
 
@@ -350,6 +376,7 @@ def similar_sld_sample_1():
     structure = air | layer1 | layer2 | substrate
     structure.name = 'similar_sld_sample_1'
     return Sample(structure)
+
 
 def similar_sld_sample_2():
     """Defines a 3-layer sample with layers of similar SLD.
@@ -367,6 +394,7 @@ def similar_sld_sample_2():
     structure = air | layer1 | layer2 | layer3 | substrate
     structure.name = 'similar_sld_sample_2'
     return Sample(structure)
+
 
 if __name__ == '__main__':
     save_path = '../results'
