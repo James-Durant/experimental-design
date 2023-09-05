@@ -8,6 +8,7 @@ on:
 name: CI
 jobs:
   build:
+    name: Build-and-test
     runs-on: ubuntu-latest
     steps:
      - uses: actions/checkout@v3
